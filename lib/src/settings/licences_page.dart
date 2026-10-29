@@ -194,11 +194,7 @@ class _LicencesPageState extends State<LicencesPage> {
     return [
       Padding(
         padding: const EdgeInsets.only(top: 16),
-        child: Row(
-          children: [
-            Expanded(child: SettingsHeading(group)),
-          ],
-        ),
+        child: Row(children: [Expanded(child: SettingsHeading(group))]),
       ),
       for (final r in rows)
         _LicenceRow(

@@ -224,8 +224,7 @@ class _CorePageState extends State<CorePage> {
               'The host is the Core process. Off, BubblePaw opens with it '
               'stopped until you start it here.',
           value: host.prefs.startHost,
-          onChanged: (v) =>
-              host.updatePrefs(host.prefs.copyWith(startHost: v)),
+          onChanged: (v) => host.updatePrefs(host.prefs.copyWith(startHost: v)),
         ),
         const SettingsHeading('Settings', top: 24),
         SettingsRow(

@@ -36,13 +36,14 @@ const LucideGlyph glyphChevronUp = (
 );
 
 /// [glyph] at [size] in [color], hidden from semantics.
-Widget glyphIcon(
-  LucideGlyph glyph, {
-  double size = 18,
-  required Color color,
-}) => ExcludeSemantics(
-  child: LucideIcon(lucideWeight(glyph, size, 1.5), size: size, color: color),
-);
+Widget glyphIcon(LucideGlyph glyph, {double size = 18, required Color color}) =>
+    ExcludeSemantics(
+      child: LucideIcon(
+        lucideWeight(glyph, size, 1.5),
+        size: size,
+        color: color,
+      ),
+    );
 
 /// One settings page: a title (a top bar with a back button at compact
 /// width) over [children], scrolling, no wider than 640.
@@ -190,7 +191,11 @@ class SwitchRow extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 8),
                   child: Text(
                     value ? 'On' : 'Off',
-                    style: ts(theme.typeScale.uiSmall, theme.muted, weight: 600),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: 600,
+                    ),
                   ),
                 ),
               ),

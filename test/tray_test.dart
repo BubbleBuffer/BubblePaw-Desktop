@@ -176,9 +176,8 @@ void main() {
     });
 
     test('Restart is off before the host is set up', () {
-      final restart = trayMenu(
-        phase: HostPhase.setup,
-      ).firstWhere((i) => i.key == 'restart');
+      final restart = trayMenu(phase: HostPhase.setup)
+          .firstWhere((i) => i.key == 'restart');
       expect(restart.enabled, isFalse);
     });
   });
@@ -212,37 +211,40 @@ void main() {
       expect(r.tray.disposed, isTrue);
     });
 
-    test('Open BubblePaw shows the window; Restart restarts the host', () async {
-      var starts = 0;
-      final store = MemoryConfigStore(sampleConfig);
-      final host = HostController(
-        store: store,
-        starter: (c) {
-          starts++;
-          return Played().start(c);
-        },
-        fileExists: (_) => true,
-      );
-      final tray = FakeTray();
-      final window = FakeWindow();
-      final desktop = DesktopIntegration(
-        host: host,
-        tray: tray,
-        window: window,
-        startup: FakeStartup(),
-        pollInterval: null,
-        windowsIcons: false,
-      );
-      await host.init();
-      await desktop.init();
-      tray.choose(TrayItem.open);
-      await _pump();
-      expect(window.shown, 1);
-      tray.choose(TrayItem.restart);
-      await _pump();
-      expect(starts, 2);
-      await desktop.dispose();
-    });
+    test(
+      'Open BubblePaw shows the window; Restart restarts the host',
+      () async {
+        var starts = 0;
+        final store = MemoryConfigStore(sampleConfig);
+        final host = HostController(
+          store: store,
+          starter: (c) {
+            starts++;
+            return Played().start(c);
+          },
+          fileExists: (_) => true,
+        );
+        final tray = FakeTray();
+        final window = FakeWindow();
+        final desktop = DesktopIntegration(
+          host: host,
+          tray: tray,
+          window: window,
+          startup: FakeStartup(),
+          pollInterval: null,
+          windowsIcons: false,
+        );
+        await host.init();
+        await desktop.init();
+        tray.choose(TrayItem.open);
+        await _pump();
+        expect(window.shown, 1);
+        tray.choose(TrayItem.restart);
+        await _pump();
+        expect(starts, 2);
+        await desktop.dispose();
+      },
+    );
 
     test('Quit stops the host and ends the app', () async {
       final r = _Rig();
@@ -300,24 +302,27 @@ void main() {
       expect(r.window.destroyed, isTrue);
     });
 
-    test('the login entry follows Open at login and Start in the tray', () async {
-      final r = _Rig();
-      await r.start();
-      expect(r.startup.calls, isEmpty);
+    test(
+      'the login entry follows Open at login and Start in the tray',
+      () async {
+        final r = _Rig();
+        await r.start();
+        expect(r.startup.calls, isEmpty);
 
-      await r.host.updatePrefs(r.host.prefs.copyWith(openAtLogin: true));
-      await _pump();
-      expect(r.startup.calls.last, (enabled: true, hidden: false));
+        await r.host.updatePrefs(r.host.prefs.copyWith(openAtLogin: true));
+        await _pump();
+        expect(r.startup.calls.last, (enabled: true, hidden: false));
 
-      await r.host.updatePrefs(r.host.prefs.copyWith(startInTray: true));
-      await _pump();
-      expect(r.startup.calls.last, (enabled: true, hidden: true));
+        await r.host.updatePrefs(r.host.prefs.copyWith(startInTray: true));
+        await _pump();
+        expect(r.startup.calls.last, (enabled: true, hidden: true));
 
-      await r.host.updatePrefs(r.host.prefs.copyWith(openAtLogin: false));
-      await _pump();
-      expect(r.startup.calls.last, (enabled: false, hidden: false));
-      await r.desktop.dispose();
-    });
+        await r.host.updatePrefs(r.host.prefs.copyWith(openAtLogin: false));
+        await _pump();
+        expect(r.startup.calls.last, (enabled: false, hidden: false));
+        await r.desktop.dispose();
+      },
+    );
 
     test('a refused login entry is reported on the controller', () async {
       final r = _Rig(

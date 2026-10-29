@@ -107,7 +107,9 @@ class _AboutPageState extends State<AboutPage> {
                   label: 'View release',
                   onTap: () => unawaited(widget.services.open(latest.page)),
                 ),
-              ] else if (_check == _Check.done && latest != null && current == null)
+              ] else if (_check == _Check.done &&
+                  latest != null &&
+                  current == null)
                 OutlineButton(
                   key: const ValueKey('core-release-link'),
                   label: 'View release',
@@ -121,7 +123,9 @@ class _AboutPageState extends State<AboutPage> {
                       : _check == _Check.idle
                       ? 'Check for updates'
                       : 'Check again',
-                  onTap: _check == _Check.checking ? null : () => unawaited(_run()),
+                  onTap: _check == _Check.checking
+                      ? null
+                      : () => unawaited(_run()),
                 ),
             ],
           ),

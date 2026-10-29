@@ -85,11 +85,7 @@ class SystemTray extends TrayAdapter with TrayListener {
           if (item.isSeparator)
             MenuItem.separator()
           else
-            MenuItem(
-              key: item.key,
-              label: item.label,
-              disabled: !item.enabled,
-            ),
+            MenuItem(key: item.key, label: item.label, disabled: !item.enabled),
       ],
     ),
   );

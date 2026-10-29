@@ -52,11 +52,7 @@ List<TrayItem> trayMenu({required HostPhase phase, int waitingChats = 0}) => [
           : '$waitingChats chats waiting for you',
     ),
   const TrayItem.separator(),
-  TrayItem(
-    TrayItem.restart,
-    'Restart host',
-    enabled: phase != HostPhase.setup,
-  ),
+  TrayItem(TrayItem.restart, 'Restart host', enabled: phase != HostPhase.setup),
   const TrayItem.separator(),
   const TrayItem(TrayItem.quit, 'Quit BubblePaw'),
 ];

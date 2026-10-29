@@ -142,9 +142,7 @@ void main() {
   });
 
   group('settings', () {
-    testWidgets('first run opens Core and starts on save', (
-      tester,
-    ) async {
+    testWidgets('first run opens Core and starts on save', (tester) async {
       final store = MemoryConfigStore();
       final scripted = Scripted();
       final controller = HostController(
@@ -193,10 +191,7 @@ void main() {
       await settle(tester);
       expect(find.byKey(const ValueKey('page-general')), findsOneWidget);
       for (final section in ['general', 'core', 'models', 'about']) {
-        expect(
-          find.byKey(ValueKey('settings-nav-$section')),
-          findsOneWidget,
-        );
+        expect(find.byKey(ValueKey('settings-nav-$section')), findsOneWidget);
       }
       expect(find.textContaining('Remote'), findsNothing);
 

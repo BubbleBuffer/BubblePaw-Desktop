@@ -89,7 +89,10 @@ class DesktopIntegration with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     await _apply(force: true);
     if (pollInterval != null) {
-      _timer = Timer.periodic(pollInterval!, (_) => unawaited(refreshWaiting()));
+      _timer = Timer.periodic(
+        pollInterval!,
+        (_) => unawaited(refreshWaiting()),
+      );
     }
     unawaited(refreshWaiting());
   }
@@ -103,9 +106,7 @@ class DesktopIntegration with WidgetsBindingObserver {
     final phaseChanged = _appliedPhase != host.phase;
     _appliedPrefs = prefs;
     _appliedPhase = host.phase;
-    if (force ||
-        before == null ||
-        before.keepInTray != prefs.keepInTray) {
+    if (force || before == null || before.keepInTray != prefs.keepInTray) {
       await window.setPreventClose(prefs.keepInTray && _trayShown);
     }
     if (force ||

@@ -40,9 +40,7 @@ Future<ReleaseInfo> fetchLatestCoreRelease() async {
     request.headers.set('Accept', 'application/vnd.github+json');
     final response = await request.close().timeout(const Duration(seconds: 10));
     if (response.statusCode != 200) {
-      throw ReleaseCheckException(
-        'GitHub answered ${response.statusCode}.',
-      );
+      throw ReleaseCheckException('GitHub answered ${response.statusCode}.');
     }
     final body = await response
         .transform(utf8.decoder)
