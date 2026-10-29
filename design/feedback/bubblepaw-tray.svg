@@ -4,7 +4,7 @@
 <metadata id="pawth-style" type="application/json">{"version":1,"kit":"kits/bubblebuffer.kit.svg"}</metadata>
 <metadata id="pawth-icon" type="application/json">{"version":1,"template":"android-adaptive"}</metadata>
 <g id="background" data-name="Background" data-icon-layer="background">
-<rect id="tile" data-name="Ivory tile" x="0" y="0" width="1280" height="1280" fill="#F2EBDD"/>
+
 </g>
 <g id="safe-fit" data-name="Safe-circle fit" transform="translate(640 640) scale(0.8676) translate(-636 -627)">
 <g id="burst" data-name="Power-up burst" data-part="effect/sparkles">
