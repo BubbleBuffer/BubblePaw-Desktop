@@ -71,6 +71,21 @@ started host and shows the same "BubblePaw stopped" notice at once. A host that
 was restarted or closed on purpose is ignored (the future never completes on a
 deliberate dispose, and a stale one is dropped by generation).
 
+### Switching workspace
+
+The stdio host is bound to one workspace, so switching means a new host. The
+rail header's workspace button (the kit's `onSwitchWorkspace`) opens
+`WorkspaceMenu`: the recent workspaces (`AppConfig.recentWorkspaces`, newest
+first, at most 8, the open one marked) and "Open folder…", which asks the
+`file_selector` plugin for a directory. Picking calls
+`HostController.switchWorkspace(path)`: the config gets that workspace (the
+previous one stays in the list) and is saved, the running backend is disposed
+and a new one started. The data directory is not touched. Picking the open
+workspace does nothing; cancelling the picker does nothing. Saving a different
+workspace in Settings joins the list too. The tests pass their own folder
+picker (`BubblePawApp.pickFolder`); the plugin is built into the Windows and
+Linux runners only, which this repository's CI does not build.
+
 ## Failure notices
 
 Every failure is a title, a cause with its consequence, and two actions: Restart
@@ -124,6 +139,7 @@ dark setting, and the form factor is always desktop.
 | `test/scenes.dart` | Scripted hosts the tests and goldens share |
 | `test/guarded_backend_test.dart` | The host-exit detector |
 | `test/config_test.dart` | Config file and app-support paths |
+| `test/workspace_switch_test.dart` | Recent workspaces (order, repeats, cap of 8, JSON), the rail menu, switching restarts the host with the same data directory, Open folder, a cancelled picker |
 | `test/golden_test.dart` | Main screen, settings, a failure notice, plan, question and context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
 | `test/live_test.dart` | Opt-in (`BP_TEST_BIN`): the real host with the offline demo provider |
 

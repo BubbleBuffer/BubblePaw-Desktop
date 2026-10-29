@@ -46,12 +46,17 @@ Future<void> pumpApp(
   Size size = wide,
   Brightness brightness = Brightness.light,
   bool init = true,
+  Future<String?> Function()? pickFolder,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    BubblePawApp(controller: controller, brightness: brightness),
+    BubblePawApp(
+      controller: controller,
+      brightness: brightness,
+      pickFolder: pickFolder ?? (() async => null),
+    ),
   );
   if (init) await tester.runAsync(controller.init);
   await settle(tester);

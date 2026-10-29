@@ -13,14 +13,24 @@ import 'package:flutter/widgets.dart';
 
 import 'guarded_backend.dart';
 import 'host_controller.dart';
+import 'pick_folder.dart' as picker;
 import 'screens/diff_review.dart';
 import 'screens/notice.dart';
 import 'screens/settings_screen.dart';
+import 'screens/workspace_menu.dart';
 
 class BubblePawApp extends StatefulWidget {
-  const BubblePawApp({super.key, required this.controller, this.brightness});
+  const BubblePawApp({
+    super.key,
+    required this.controller,
+    this.brightness,
+    this.pickFolder = picker.pickFolder,
+  });
 
   final HostController controller;
+
+  /// Asks for a folder (the native picker); tests pass their own.
+  final Future<String?> Function() pickFolder;
 
   /// Forces light or dark; follows the platform when null.
   final Brightness? brightness;
@@ -64,15 +74,23 @@ class _BubblePawAppState extends State<BubblePawApp> {
       brightness: widget.brightness ?? MediaQuery.platformBrightnessOf(context),
       child: child!,
     ),
-    home: AppShell(controller: widget.controller),
+    home: AppShell(
+      controller: widget.controller,
+      pickFolder: widget.pickFolder,
+    ),
   );
 }
 
 /// Draws the state of [controller]: settings, a notice, or the workbench.
 class AppShell extends StatelessWidget {
-  const AppShell({super.key, required this.controller});
+  const AppShell({
+    super.key,
+    required this.controller,
+    this.pickFolder = picker.pickFolder,
+  });
 
   final HostController controller;
+  final Future<String?> Function() pickFolder;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -125,6 +143,11 @@ class AppShell extends StatelessWidget {
           workspaceName: controller.workspaceLabel,
           initials: controller.workspaceInitials,
           onSettings: controller.openSettings,
+          workspace: controller.config?.workspaceDirectory ?? '',
+          workspaces: controller.recentWorkspaces,
+          onSwitchWorkspace: (path) =>
+              unawaited(controller.switchWorkspace(path)),
+          pickFolder: pickFolder,
         ),
       };
     },
@@ -139,6 +162,10 @@ class Workbench extends StatefulWidget {
     required this.workspaceName,
     required this.initials,
     required this.onSettings,
+    this.workspace = '',
+    this.workspaces = const [],
+    this.onSwitchWorkspace,
+    this.pickFolder,
     this.createdChats,
     this.now,
   });
@@ -149,6 +176,16 @@ class Workbench extends StatefulWidget {
   final String workspaceName;
   final String initials;
   final VoidCallback onSettings;
+
+  /// The open workspace's path and the recent ones the rail menu lists.
+  final String workspace;
+  final List<String> workspaces;
+
+  /// Switches to a workspace; the host restarts with it.
+  final ValueChanged<String>? onSwitchWorkspace;
+
+  /// Asks for a folder for "Open folder…".
+  final Future<String?> Function()? pickFolder;
 
   @override
   State<Workbench> createState() => _WorkbenchState();
@@ -182,6 +219,23 @@ class _WorkbenchState extends State<Workbench> {
     super.dispose();
   }
 
+  void _openWorkspaceMenu() {
+    final switchTo = widget.onSwitchWorkspace;
+    if (switchTo == null) return;
+    unawaited(
+      showWorkspaceMenu(
+        context,
+        current: widget.workspace,
+        workspaces: widget.workspaces,
+        onPick: switchTo,
+        onOpenFolder: () async {
+          final path = await widget.pickFolder?.call();
+          if (path != null && path.trim().isNotEmpty) switchTo(path);
+        },
+      ),
+    );
+  }
+
   void _showDiff(FileDiff diff) => setState(() => _review = diff);
 
   @override
@@ -200,6 +254,7 @@ class _WorkbenchState extends State<Workbench> {
               : (context, tab) => const SizedBox.shrink(),
           now: widget.now,
           onSettings: widget.onSettings,
+          onSwitchWorkspace: _openWorkspaceMenu,
           onReviewApproval: (approval) {
             final diff = approval.diff;
             if (diff != null) _showDiff(diff);
