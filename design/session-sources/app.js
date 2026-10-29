@@ -136,7 +136,7 @@
   function cur() { return M.sel.k === 'chat' ? null : oById(M.sel.id); }
   function statusPill(o) { return o.run ? pill(`Running in ${SRC[o.src][2]}`, 'ok') : pill('Idle', ''); }
   function previewBanner(o, phone) {
-    return `<div class="notice info prevnote">${ic('eye', 16)}<div class="grow">Started in ${SRC[o.src][2]}. This is a read-only preview. Show in BubblePaw adds it to ${o.proj} as the same session on Studio PC, not a copy.</div>${phone ? '' : btn('Show in BubblePaw', { kind: 'primary', act: 'show', arg: o.id })}</div>${phone ? `<div style="padding:0 12px 4px">${btn('Show in BubblePaw', { kind: 'primary', act: 'show', arg: o.id, cls: 'wide' })}</div>` : ''}`;
+    return `<div class="notice info prevnote">${ic('eye', 16)}<div class="grow">Started in ${SRC[o.src][2]}. Add it to ${o.proj} to reply here.</div>${phone ? '' : btn(`Add to ${o.proj}`, { kind: 'primary', act: 'show', arg: o.id })}</div>${phone ? `<div style="padding:0 12px 4px">${btn(`Add to ${o.proj}`, { kind: 'primary', act: 'show', arg: o.id, cls: 'wide' })}</div>` : ''}`;
   }
   function impNote(o) {
     return `<div class="notice info prevnote">${ic('circle-check', 16)}<div class="grow">Added to ${o.proj}. It is the same session on Studio PC. Hide puts it back under Other sessions.</div></div>`;
