@@ -68,7 +68,7 @@
   const iconBtn = (name, label, act, arg) => `<button class="iconbtn" aria-label="${label}" title="${label}" ${A(act, arg)}>${ic(name, 18)}</button>`;
   const pill = (txt, kind) => `<span class="pill ${kind}">${txt}</span>`;
   const sec = (title, body, right = '') => `<section class="sec"><h2><span>${title}</span>${right}</h2>${body}</section>`;
-  const appIcon = (s) => `<img class="appicon" src="icon-128.png" width="${s}" height="${s}" alt="">`;
+  const appIcon = (s) => `<img class="appicon" src="bubblepaw-icon.svg" width="${s}" height="${s}" alt="">`;
   const firstLine = (t) => t.split('\n')[0];
   const dateOf = (id) => id.slice(0, 10) + ' ' + id.slice(11, 13) + ':' + id.slice(13, 15);
 
@@ -185,7 +185,7 @@
     const mi = (label, o = {}) => `<button class="wi ${o.bold ? 'bold' : ''} ${o.status ? 'status' : ''}" role="menuitem" ${o.act ? A(o.act, o.arg) : ''} ${o.dis ? 'disabled' : ''}><span class="wck"></span><span class="wl">${label}</span></button>`;
     const sep = '<div class="wsep" role="separator"></div>';
     const menu = S.tmenu ? `<div class="winmenu" role="menu" aria-label="BubblePaw">${mi('Open BubblePaw', { bold: true, act: 'screen', arg: 'chat' })}${sep}${mi('Host running', { status: true, dis: true })}${mi('2 chats waiting for you', { act: 'screen', arg: 'chat' })}${sep}${mi('Restart host', { act: 'noop' })}${mi('Send feedback', { act: 'trayFb' })}${sep}${mi('Quit BubblePaw', { act: 'noop' })}</div>` : '';
-    return `<div class="tray-scr win">${menu}<div class="taskbar"><span class="grow"></span><span class="tbi">${ic('chevron-up', 16)}</span><button class="tbi tray-btn" aria-label="BubblePaw" aria-expanded="${S.tmenu}" aria-haspopup="menu" ${A('tmenu')}><img class="appmini" src="icon-128.png" width="18" height="18" alt=""></button><span class="clock"><div>22:14</div><div>29/10/2026</div></span></div></div>`;
+    return `<div class="tray-scr win">${menu}<div class="taskbar"><span class="grow"></span><span class="tbi">${ic('chevron-up', 16)}</span><button class="tbi tray-btn" aria-label="BubblePaw" aria-expanded="${S.tmenu}" aria-haspopup="menu" ${A('tmenu')}><img class="appmini" src="bubblepaw-tray.svg" width="20" height="20" alt=""></button><span class="clock"><div>22:14</div><div>29/10/2026</div></span></div></div>`;
   }
 
   /* ---------- review bar ---------- */
