@@ -20,6 +20,7 @@ class StartedBackend {
     this.dispose, {
     this.createdChats,
     this.now,
+    this.connectionLost,
   });
 
   final AgentBackend backend;
@@ -31,6 +32,11 @@ class StartedBackend {
   /// The time ages are measured against, when it is not the wall clock (the
   /// scripted backend runs on its own clock).
   final DateTime? now;
+
+  /// Completes with the error that ended the connection to the host, even
+  /// when no chat is open. Null when the backend has no such signal. Must not
+  /// complete when the app ends the host on purpose.
+  final Future<Object>? connectionLost;
 }
 
 typedef BackendStarter = Future<StartedBackend> Function(AppConfig config);
@@ -43,11 +49,13 @@ Future<StartedBackend> startBubblePaw(AppConfig config) async {
     binaryPath: config.binaryPath,
     workspaceDirectory: config.workspaceDirectory,
     dataDirectory: config.dataDirectory,
+    arguments: config.hostArguments,
   );
   return StartedBackend(
     backend,
     backend.dispose,
     createdChats: backend.createdChats,
+    connectionLost: backend.connectionLost,
   );
 }
 
@@ -83,6 +91,20 @@ class HostController extends ChangeNotifier {
 
   /// Whether the scripted backend (not a host) is the one in use.
   bool get usingScripted => !_real;
+
+  /// The rail avatar's letters: up to two, from the words of [workspaceLabel].
+  String get workspaceInitials {
+    final words = workspaceLabel
+        .split(RegExp(r'[\s_.-]+|(?<=[a-z])(?=[A-Z])'))
+        .where((w) => w.isNotEmpty)
+        .map((w) => w.runes.map(String.fromCharCode).toList())
+        .toList();
+    if (words.isEmpty) return '';
+    final letters = words.length == 1
+        ? words.single.take(2)
+        : [words[0].first, words[1].first];
+    return letters.join().toUpperCase();
+  }
 
   /// The project switcher's label: the workspace's folder name.
   String get workspaceLabel {
@@ -165,6 +187,8 @@ class HostController extends ChangeNotifier {
       _createdChats = started.createdChats;
       _now = started.now;
       _backend = GuardedBackend(started.backend, onFailure: _hostFailed);
+      final lost = started.connectionLost;
+      if (lost != null) unawaited(_watchConnection(lost, ticket));
       _phase = HostPhase.running;
       _notify();
     } on Object catch (error) {
@@ -172,6 +196,15 @@ class HostController extends ChangeNotifier {
       // message for anything that is not a known host failure.
       _fail(ticket, HostFailure.from(error) ?? HostFailure.startFailed());
     }
+  }
+
+  /// Shows the failure notice when the host goes away while no command or
+  /// event stream is open. A host that was replaced or closed on purpose is
+  /// ignored.
+  Future<void> _watchConnection(Future<Object> lost, int ticket) async {
+    final error = await lost;
+    if (ticket != _generation) return;
+    _hostFailed(HostFailure.from(error) ?? HostFailure.exited(null));
   }
 
   void _hostFailed(HostFailure failure) {

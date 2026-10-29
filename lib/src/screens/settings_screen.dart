@@ -1,4 +1,5 @@
-// Settings: the BubblePaw binary, the workspace and the data directory.
+// Settings: the BubblePaw binary, the workspace, the data directory and extra
+// host arguments.
 // Shown on first run, when the binary is missing, and from the rail.
 
 import 'package:agent_kit/agent_kit.dart';
@@ -42,6 +43,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     text: widget.initial.workspaceDirectory,
   );
   late final _data = TextEditingController(text: widget.initial.dataDirectory);
+  late final _arguments = TextEditingController(
+    text: widget.initial.extraArguments,
+  );
   String? _error;
 
   @override
@@ -49,6 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _binary.dispose();
     _workspace.dispose();
     _data.dispose();
+    _arguments.dispose();
     super.dispose();
   }
 
@@ -57,6 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       binaryPath: _binary.text.trim(),
       workspaceDirectory: _workspace.text.trim(),
       dataDirectory: _data.text.trim(),
+      extraArguments: _arguments.text.trim(),
     );
     final missing = [
       if (config.binaryPath.isEmpty) 'binary',
@@ -129,6 +135,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     controller: _data,
                     mono: true,
                     fieldKey: const ValueKey('settings-data'),
+                    onSubmitted: (_) => _save(),
+                  ),
+                ),
+                SettingsRow(
+                  label: 'Extra host arguments',
+                  description:
+                      'Added to the host’s command line, for example '
+                      '--provider demo. Optional.',
+                  stack: true,
+                  trailing: SettingsField(
+                    controller: _arguments,
+                    mono: true,
+                    placeholder: 'None',
+                    fieldKey: const ValueKey('settings-arguments'),
                     onSubmitted: (_) => _save(),
                   ),
                 ),

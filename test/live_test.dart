@@ -11,7 +11,6 @@ library;
 
 import 'dart:io';
 
-import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
@@ -20,6 +19,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support.dart';
 
 const demoReply = 'Offline demo completed through native capabilities.';
+
+/// What is typed in "Extra host arguments". Single quotes keep the double
+/// quotes of TOML values.
+const extraArguments =
+    "--provider demo --no-auto-summarize "
+    "--set 'agent.execution_mode=\"native\"' "
+    "--set \"approvals.tools.exec='ask'\"";
 
 Future<void> until(
   bool Function() done, {
@@ -48,39 +54,16 @@ void main() {
       final data = await Directory('${root.path}/data').create();
 
       // The demo provider writes one new file and runs one command; exec is
-      // set to ask, so the approval path is exercised.
-      Future<StartedBackend> start(AppConfig config) async {
-        final backend = await BubblePawBackend.start(
-          binaryPath: config.binaryPath,
-          workspaceDirectory: config.workspaceDirectory,
-          dataDirectory: config.dataDirectory,
-          arguments: const [
-            '--provider',
-            'demo',
-            '--no-auto-summarize',
-            '--set',
-            'agent.execution_mode="native"',
-            '--set',
-            "approvals.tools.exec='ask'",
-          ],
-        );
-        return StartedBackend(
-          backend,
-          backend.dispose,
-          createdChats: backend.createdChats,
-        );
-      }
-
-      final controller = HostController(
-        store: MemoryConfigStore(),
-        starter: start,
-      );
+      // set to ask, so the approval path is exercised. The arguments go in
+      // through the settings field, as a person would type them.
+      final controller = HostController(store: MemoryConfigStore());
       addTearDown(controller.close);
       await controller.saveAndStart(
         AppConfig(
           binaryPath: binary!,
           workspaceDirectory: workspace.path,
           dataDirectory: data.path,
+          extraArguments: extraArguments,
         ),
       );
       expect(
