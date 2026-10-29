@@ -18,7 +18,7 @@ GuardedBackend       AgentBackend wrapper that spots a dead host
 ## Dependencies
 
 `agent_kit`, `agent_kit_core` and `agent_kit_bubblepaw` come from
-`BubbleBuffer/agent-kit` at a commit hash (currently kit PR 45, the adapter for BubblePaw-Core v0.3.0, on v0.15.4; to become the next kit tag). The ref is the commit hash
+`BubbleBuffer/agent-kit` at a commit hash (currently kit PR 47, on top of v0.15.6, which lists every chat and builds the rail lazily; to become the next kit tag). The ref is the commit hash
 because the kit's packages depend on each other by path inside that repository,
 and pub resolves those to the hash; a tag in the app would conflict with it.
 v0.15.2 added `BubblePawBackend.connectionLost` (idle exit detection); v0.15.3
@@ -121,6 +121,7 @@ message.
   implements that as a new chat and announces it on `createdChats`; `Workbench`
   opens it (the original chat is untouched). The ledger beside the chat is left
   out when there is no crew or job to show.
+- **Crew**: child agents show in the kit's ledger beside the chat (task, state, activity), and a child's open question appears in the transcript with the kit's "Answer yourself" action, which calls `question.answer_child`. Both come from the backend's snapshot; the app adds nothing.
 - **DiffReview**: "Review diff" on an approval or an edit row covers the workbench
   with the kit's `DiffView` and a Close button. The kit's workspace panes are not
   used.
@@ -139,8 +140,9 @@ dark setting, and the form factor is always desktop.
 | `test/scenes.dart` | Scripted hosts the tests and goldens share |
 | `test/guarded_backend_test.dart` | The host-exit detector |
 | `test/config_test.dart` | Config file and app-support paths |
+| `test/crew_test.dart` | Crew: the ledger lists a running and a finished child, a child's open question shows in the parent and is answered (reaches `answerChildQuestion`), no answer action without the capability; rail: 2000 chats, rows build lazily and the last is reachable |
 | `test/workspace_switch_test.dart` | Recent workspaces (order, repeats, cap of 8, JSON), the rail menu, switching restarts the host with the same data directory, Open folder, a cancelled picker |
-| `test/golden_test.dart` | Main screen, settings, a failure notice, plan, question and context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
+| `test/golden_test.dart` | Main screen, settings, a failure notice, plan, question, crew and context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
 | `test/live_test.dart` | Opt-in (`BP_TEST_BIN`): the real host with the offline demo provider |
 
 Goldens are rendered on Linux with the bundled fonts and the Flutter version CI
@@ -148,7 +150,10 @@ pins; renders from another platform will not match.
 
 ## Known gaps
 
-- Chats the kit lists are the newest 64 (the stdio backend has no cursor).
+- Chats: the stdio host returns every chat from `session.list`, with no cursor or limit. The adapter passes them all (it used to keep 64) and the rail builds rows lazily, so thousands stay cheap. There is no paging; the host does the whole list on every refresh.
+- **No session-level model choice (Core gap).** `session.open` takes only a title (and ids for loading or a parent). The model is chosen per run with `options.model` on `run.start`, and agent profiles exist only in JS. So there is no new-chat sheet.
+- **No provider list (Core gap).** Stdio has no method to list providers or models or to set the default; those exist only on the HTTP host (`GET /api/providers`, `PUT /api/roles/main`). There is no provider settings section. The host reads `$BUBBLEPAW_CONFIG`, else `~/.bubblepaw/config.toml` and `<workspace>/.bubblepaw/config.toml`; provider keys come from environment variables the config names, and the app never handles keys.
+- Jobs: the stdio host reports none, and there is no cancel-child method.
 - Worktrees, crew and the Context pane show only what the stdio backend reports. With BubblePaw-Core v0.3.0 that includes the context (pane, summaries, history ranges) and child questions; it still reports no jobs. Compaction needs a real model, so the demo provider shows an empty structure.
 - The header shows a branch only when the backend reports one; the
   stdio host reports none, so none is shown.

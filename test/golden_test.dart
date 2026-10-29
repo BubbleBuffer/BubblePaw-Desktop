@@ -60,6 +60,14 @@ void main() {
       ).controller(),
       after: null,
     ),
+    // Child agents: one running with an open question, one finished.
+    'crew': (
+      controller: () => Played(
+        scripts: [crewScript()],
+        capabilities: crewCapabilities,
+      ).controller(),
+      after: null,
+    ),
     // A backend with the context capability: the pane opens from the meter.
     'context': (
       controller: () => Played().controller(),

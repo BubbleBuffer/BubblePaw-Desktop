@@ -119,3 +119,58 @@ class Played {
         fileExists: (_) => true,
       );
 }
+
+/// What the stdio host offers for child agents: their questions can be
+/// answered from the parent. The host reports no jobs.
+final crewCapabilities = KitCapabilities([
+  ...KitCapability.values.where(
+    (c) => stdioCapabilities.has(c) || c == KitCapability.answerChildQuestion,
+  ),
+]);
+
+/// A parent run with two child agents: one still running that has asked a
+/// question, and one that has finished.
+ChatScript crewScript() => ChatScript(
+  chatId: 'crew-chat',
+  title: 'Check the retry paths',
+  steps: [
+    const ScriptStep(Duration.zero, {
+      'kind': 'message.user',
+      'itemId': 'u1',
+      'text': 'Check how the client retries and report back.',
+    }),
+    const ScriptStep(Duration.zero, {
+      'kind': 'run.started',
+      'runId': 'run-crew-1',
+    }),
+    const ScriptStep(Duration(seconds: 1), {
+      'kind': 'child.spawned',
+      'childId': 'child-run',
+      'task': 'Read the reconnect code',
+      'callId': 'k1',
+      'runId': 'run-crew-1',
+    }),
+    const ScriptStep(Duration.zero, {
+      'kind': 'child.spawned',
+      'childId': 'child-done',
+      'task': 'List the retry settings',
+      'callId': 'k2',
+      'runId': 'run-crew-1',
+    }),
+    const ScriptStep(Duration(seconds: 2), {
+      'kind': 'child.finished',
+      'childId': 'child-done',
+      'state': 'done',
+      'result': 'Three settings: attempts, delay and a cap.',
+    }),
+    const ScriptStep(Duration(seconds: 2), {
+      'kind': 'child.question.asked',
+      'question': {
+        'id': 'cq-retry',
+        'childId': 'child-run',
+        'text': 'Should I include the web client?',
+        'options': ['Yes', 'No'],
+      },
+    }),
+  ],
+);
