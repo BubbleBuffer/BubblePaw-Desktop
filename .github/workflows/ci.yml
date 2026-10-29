@@ -1,0 +1,67 @@
+# Private repository: the self-hosted build01 runner only. No GitHub-hosted
+# runners. One job runs every check in turn, so a single runner slot is used;
+# each step runs even when an earlier one failed.
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # The BubblePaw-Core release the live check runs against.
+  BP_VERSION: v0.3.0
+
+jobs:
+  checks:
+    name: format, analyze, test, goldens, live host
+    runs-on: [self-hosted, build01]
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+      - run: flutter pub get
+      - name: dart format
+        if: always()
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: flutter analyze
+        if: always()
+        run: flutter analyze
+      - name: flutter test
+        if: always()
+        run: flutter test --exclude-tags golden
+      # Goldens are rendered on Linux with the bundled fonts. To accept new
+      # renders, run `flutter test --tags golden --update-goldens` on Linux and
+      # commit test/goldens.
+      - name: goldens
+        if: always()
+        run: flutter test --tags golden
+      - name: Save golden failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures
+          path: test/failures
+          if-no-files-found: ignore
+      # Scripted provider only: no model is called.
+      - name: live host (scripted provider)
+        if: always()
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/bubblepaw-$BP_VERSION"
+          rm -rf "$dir" && mkdir -p "$dir"
+          base="https://github.com/BubbleBuffer/BubblePaw-Core/releases/download/$BP_VERSION"
+          archive="bubblepaw-$BP_VERSION-x86_64-unknown-linux-gnu.tar.gz"
+          curl -sSfL -o "$dir/SHA256SUMS" "$base/SHA256SUMS"
+          curl -sSfL -o "$dir/$archive" "$base/$archive"
+          (cd "$dir" && grep " $archive\$" SHA256SUMS | sha256sum -c - && tar xzf "$archive")
+          BP_TEST_BIN="$dir/bubblepaw-$BP_VERSION-x86_64-unknown-linux-gnu/bubblepaw" \
+            flutter test --tags live test/live_test.dart

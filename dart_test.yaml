@@ -1,0 +1,5 @@
+tags:
+  golden:
+    description: Renders screens and compares them with the committed PNGs.
+  live:
+    description: Starts a real BubblePaw host (BP_TEST_BIN); scripted provider only.
