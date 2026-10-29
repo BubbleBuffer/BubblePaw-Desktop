@@ -10,10 +10,14 @@ import 'preferences.dart';
 
 /// Which `bubblepaw` binary the host is started from.
 enum BinarySource {
-  /// The one that ships next to the app (see [bundledBinaryPath]).
-  bundled,
+  /// Core that BubblePaw downloaded into its own folder (the default).
+  downloaded,
 
-  /// One the person installed; [AppConfig.binaryPath] says where.
+  /// A `bubblepaw` the person installed; it is found on PATH or in the
+  /// standard install locations.
+  installed,
+
+  /// One the person chose; [AppConfig.binaryPath] says where.
   custom,
 }
 
@@ -27,6 +31,7 @@ class AppConfig {
     this.extraArguments = '',
     this.recentWorkspaces = const [],
     this.binarySource = BinarySource.custom,
+    this.coreVersion = '',
   });
 
   /// How many recent workspaces the rail's menu lists.
@@ -36,7 +41,11 @@ class AppConfig {
   /// custom.
   final BinarySource binarySource;
 
-  /// The custom `bubblepaw` executable. Kept when [binarySource] is bundled,
+  /// The downloaded Core version to run, such as `0.3.1`. Empty runs the
+  /// newest one stored.
+  final String coreVersion;
+
+  /// The custom `bubblepaw` executable. Kept when [binarySource] is not custom,
   /// so switching back finds it again.
   final String binaryPath;
 
@@ -56,9 +65,9 @@ class AppConfig {
   /// [extraArguments] as a list, ready for the host's command line.
   List<String> get hostArguments => splitArguments(extraArguments);
 
-  /// Whether every field has a value. A bundled binary needs no path.
+  /// Whether every field has a value. Only a custom binary needs a path.
   bool get isComplete =>
-      (binarySource == BinarySource.bundled || binaryPath.trim().isNotEmpty) &&
+      (binarySource != BinarySource.custom || binaryPath.trim().isNotEmpty) &&
       workspaceDirectory.trim().isNotEmpty &&
       dataDirectory.trim().isNotEmpty;
 
@@ -69,8 +78,10 @@ class AppConfig {
     String? extraArguments,
     List<String>? recentWorkspaces,
     BinarySource? binarySource,
+    String? coreVersion,
   }) => AppConfig(
     binarySource: binarySource ?? this.binarySource,
+    coreVersion: coreVersion ?? this.coreVersion,
     binaryPath: binaryPath ?? this.binaryPath,
     workspaceDirectory: workspaceDirectory ?? this.workspaceDirectory,
     dataDirectory: dataDirectory ?? this.dataDirectory,
@@ -96,6 +107,7 @@ class AppConfig {
 
   Map<String, Object?> toJson() => {
     'binarySource': binarySource.name,
+    if (coreVersion.isNotEmpty) 'coreVersion': coreVersion,
     'binaryPath': binaryPath,
     'workspaceDirectory': workspaceDirectory,
     'dataDirectory': dataDirectory,
@@ -112,16 +124,22 @@ class AppConfig {
     final data = json['dataDirectory'];
     final extra = json['extraArguments'] ?? '';
     final recent = json['recentWorkspaces'];
+    final core = json['coreVersion'] ?? '';
     if (binary is! String ||
         workspace is! String ||
         data is! String ||
-        extra is! String) {
+        extra is! String ||
+        core is! String) {
       return null;
     }
     return AppConfig(
-      binarySource: source == BinarySource.bundled.name
-          ? BinarySource.bundled
-          : BinarySource.custom,
+      // "bundled" is what the app used to call the Core it shipped with.
+      binarySource: switch (source) {
+        'downloaded' || 'bundled' => BinarySource.downloaded,
+        'installed' => BinarySource.installed,
+        _ => BinarySource.custom,
+      },
+      coreVersion: core,
       binaryPath: binary,
       workspaceDirectory: workspace,
       dataDirectory: data,
@@ -136,6 +154,7 @@ class AppConfig {
   bool operator ==(Object other) =>
       other is AppConfig &&
       other.binarySource == binarySource &&
+      other.coreVersion == coreVersion &&
       other.binaryPath == binaryPath &&
       other.workspaceDirectory == workspaceDirectory &&
       other.dataDirectory == dataDirectory &&
@@ -145,6 +164,7 @@ class AppConfig {
   @override
   int get hashCode => Object.hash(
     binarySource,
+    coreVersion,
     binaryPath,
     workspaceDirectory,
     dataDirectory,
@@ -190,6 +210,7 @@ class ConfigStore {
   AppConfig get defaults {
     final sep = Platform.pathSeparator;
     return AppConfig(
+      binarySource: BinarySource.downloaded,
       binaryPath: '',
       workspaceDirectory: '${directory.path}${sep}workspace',
       dataDirectory: '${directory.path}${sep}data',
@@ -270,21 +291,4 @@ List<String> splitArguments(String text) {
 String workspaceFolderName(String path) {
   final parts = path.split(RegExp(r'[\\/]')).where((p) => p.isNotEmpty);
   return parts.isEmpty ? path : parts.last;
-}
-
-/// The `bubblepaw` (`bubblepaw.exe`) that sits next to [executable], the
-/// app's own executable; null when there is none. [exists] replaces the file
-/// check.
-String? bundledBinaryPath({
-  String? executable,
-  bool? isWindows,
-  bool Function(String path)? exists,
-}) {
-  final windows = isWindows ?? Platform.isWindows;
-  final exe = executable ?? Platform.resolvedExecutable;
-  final cut = exe.lastIndexOf(RegExp(r'[\\/]'));
-  if (cut < 0) return null;
-  final name = windows ? 'bubblepaw.exe' : 'bubblepaw';
-  final path = '${exe.substring(0, cut + 1)}$name';
-  return (exists ?? (p) => File(p).existsSync())(path) ? path : null;
 }

@@ -30,6 +30,8 @@ dependencies:
       url: https://github.com/BubbleBuffer/bb-ui
       ref: v0.6.0
       path: packages/bb_ui
+  # SHA256 of downloaded Core and app updates (dart:io has no hash).
+  crypto: ^3.0.6
   file_selector: ^1.1.0
   # Tray, window hiding and login start. tray_manager stays on the classic
   # plugin (0.5.x): 0.7+ builds on native assets.
@@ -48,6 +50,7 @@ flutter:
   assets:
     - assets/fonts/licenses/
     - assets/icon/tray/
+    - assets/icon/png/icon-128.png
   fonts:
     - family: Bricolage Grotesque
       fonts:

@@ -155,6 +155,10 @@ void main() {
       expect(controller.phase, HostPhase.setup);
       expect(find.byKey(const ValueKey('page-core')), findsOneWidget);
       expect(find.text('Not set up'), findsWidgets);
+      // Core is downloaded by default; the path field is for a custom binary.
+      expect(find.text('Binary path'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('binary-custom')));
+      await settle(tester);
       expect(find.text('Binary path'), findsOneWidget);
       expect(find.text('Workspace'), findsNothing);
       expect(find.text('Data directory'), findsOneWidget);

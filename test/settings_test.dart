@@ -1,11 +1,15 @@
 // The settings pages: General, Core, Models and About with Licences.
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
-import 'package:bubblepaw_desktop/src/platform/releases.dart';
+import 'package:bubblepaw_desktop/src/core/core_manager.dart';
+import 'package:bubblepaw_desktop/src/platform/download.dart';
+import 'package:bubblepaw_desktop/src/semver.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
+import 'package:bubblepaw_desktop/src/updates/update_controller.dart';
 import 'package:bubblepaw_desktop/src/settings/licences_page.dart';
 import 'package:bubblepaw_desktop/src/versions.dart';
 import 'package:flutter/foundation.dart'
@@ -13,14 +17,14 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
 
-const _bundledPath = '/opt/app/bubblepaw';
-
 HostController _controller({
   MemoryConfigStore? store,
-  String? bundled,
+  CoreManager? core,
+  UpdateController? updates,
   HostVersionReader? versionReader,
   AppConfig? config = sampleConfig,
 }) {
@@ -29,7 +33,8 @@ HostController _controller({
     // A fresh scripted host for every start, as a restart gets.
     starter: (c) => Played().start(c),
     fileExists: (_) => true,
-    bundledBinary: bundled,
+    core: core,
+    updates: updates,
     versionReader: versionReader,
   );
 }
@@ -138,45 +143,97 @@ void main() {
   });
 
   group('Core', () {
-    testWidgets('bundled is unavailable with a reason when absent', (
+    testWidgets('a first run offline says Core is not downloaded, with Retry', (
+      tester,
+    ) async {
+      final store = MemoryConfigStore();
+      final controller = _controller(store: store, config: null);
+      await pumpApp(tester, controller);
+      expect(controller.phase, HostPhase.setup);
+      expect(find.byKey(const ValueKey('settings-binary')), findsNothing);
+      expect(find.byKey(const ValueKey('core-download-error')), findsOneWidget);
+      expect(find.textContaining('offline'), findsWidgets);
+      expect(find.byKey(const ValueKey('core-retry')), findsOneWidget);
+    });
+
+    testWidgets('a downloaded Core shows its version, Update and Remove', (
+      tester,
+    ) async {
+      final harness = CoreHarness(releases: ['0.4.0']);
+      addTearDown(harness.dispose);
+      harness.storeVersion('0.3.1');
+      final store = MemoryConfigStore(
+        sampleConfig.copyWith(
+          binarySource: BinarySource.downloaded,
+          coreVersion: '0.3.1',
+        ),
+      );
+      await pumpApp(tester, _controller(store: store, core: harness.manager));
+      await tester.runAsync(harness.manager.refresh);
+      await _open(tester, 'core');
+      expect(find.byKey(const ValueKey('settings-binary')), findsNothing);
+      expect(_text(tester, 'core-version'), '0.3.1');
+      expect(find.byKey(const ValueKey('core-update-button')), findsOneWidget);
+      expect(find.byKey(const ValueKey('core-remove')), findsOneWidget);
+      expect(find.byKey(const ValueKey('core-download')), findsNothing);
+    });
+
+    testWidgets('a download in progress shows its progress and Cancel', (
+      tester,
+    ) async {
+      final harness = CoreHarness(releases: ['0.4.0']);
+      addTearDown(harness.dispose);
+      harness.storeVersion('0.3.1');
+      final store = MemoryConfigStore(
+        sampleConfig.copyWith(binarySource: BinarySource.downloaded),
+      );
+      final controller = _controller(store: store, core: harness.manager);
+      await pumpApp(tester, controller);
+      harness.manager.debugSetState(
+        CoreDownloading(SemVer.parse('0.4.0'), 400, 1000),
+      );
+      await _open(tester, 'core');
+      expect(find.byKey(const ValueKey('core-progress')), findsOneWidget);
+      expect(find.byKey(const ValueKey('core-cancel')), findsOneWidget);
+    });
+
+    testWidgets('Installed says when the Core found is not supported', (
+      tester,
+    ) async {
+      final harness = CoreHarness(installed: ['/usr/bin/bubblepaw']);
+      addTearDown(harness.dispose);
+      harness.detectedVersions['/usr/bin/bubblepaw'] = '0.2.4';
+      await pumpApp(tester, _controller(core: harness.manager));
+      await _open(tester, 'core');
+      await tester.tap(find.byKey(const ValueKey('binary-installed')));
+      await settle(tester);
+      expect(find.textContaining('0.2.4'), findsWidgets);
+      expect(find.textContaining('not supported'), findsWidgets);
+    });
+
+    testWidgets('Installed with nothing found lists where it looked', (
       tester,
     ) async {
       await pumpApp(tester, _controller());
       await _open(tester, 'core');
-      expect(find.text('Bundled with BubblePaw'), findsOneWidget);
-      expect(find.textContaining('no bubblepaw executable'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('binary-bundled')));
+      await tester.tap(find.byKey(const ValueKey('binary-installed')));
       await settle(tester);
-      // Still the custom binary: its path field is showing.
-      expect(find.byKey(const ValueKey('settings-binary')), findsOneWidget);
-    });
-
-    testWidgets('a first run with a bundled binary needs no setup', (
-      tester,
-    ) async {
-      final store = MemoryConfigStore();
-      final controller = _controller(
-        store: store,
-        bundled: _bundledPath,
-        config: null,
-      );
-      await pumpApp(tester, controller);
-      expect(controller.phase, HostPhase.running);
-      expect(store.saved?.binarySource, BinarySource.bundled);
-      await _open(tester, 'core');
-      expect(find.byKey(const ValueKey('settings-binary')), findsNothing);
+      expect(find.byKey(const ValueKey('core-detect-notice')), findsOneWidget);
+      expect(find.byKey(const ValueKey('core-detect')), findsOneWidget);
     });
 
     testWidgets('Custom binary shows the path and Browse fills it', (
       tester,
     ) async {
+      final harness = CoreHarness();
+      addTearDown(harness.dispose);
+      harness.storeVersion('0.3.1');
       final store = MemoryConfigStore(
-        sampleConfig.copyWith(binarySource: BinarySource.bundled),
+        sampleConfig.copyWith(binarySource: BinarySource.downloaded),
       );
-      final controller = _controller(store: store, bundled: _bundledPath);
       await pumpApp(
         tester,
-        controller,
+        _controller(store: store, core: harness.manager),
         pickBinary: () async => '/home/user/bin/bubblepaw',
       );
       await _open(tester, 'core');
@@ -193,17 +250,20 @@ void main() {
     testWidgets('Save and restart stores the choice and restarts the host', (
       tester,
     ) async {
+      final harness = CoreHarness();
+      addTearDown(harness.dispose);
+      harness.storeVersion('0.3.1');
       final store = MemoryConfigStore(sampleConfig);
-      final controller = _controller(store: store, bundled: _bundledPath);
+      final controller = _controller(store: store, core: harness.manager);
       await pumpApp(tester, controller);
       await _open(tester, 'core');
 
-      await tester.tap(find.byKey(const ValueKey('binary-bundled')));
+      await tester.tap(find.byKey(const ValueKey('binary-downloaded')));
       await settle(tester);
       await tester.ensureVisible(find.byKey(const ValueKey('settings-save')));
       await tester.tap(find.byKey(const ValueKey('settings-save')));
       await settle(tester);
-      expect(store.saved?.binarySource, BinarySource.bundled);
+      expect(store.saved?.binarySource, BinarySource.downloaded);
       // The custom path stays for switching back.
       expect(store.saved?.binaryPath, sampleConfig.binaryPath);
       expect(controller.phase, HostPhase.running);
@@ -299,68 +359,125 @@ void main() {
       expect(find.textContaining('Check for app'), findsNothing);
     });
 
-    testWidgets('a newer Core release shows Update available with a link', (
+    testWidgets('the Core row of a downloaded Core offers the update', (
       tester,
     ) async {
-      final opened = <Uri>[];
-      final page = Uri.parse('https://github.com/BubbleBuffer/x/releases/v9');
-      await pumpApp(
-        tester,
-        _controller(versionReader: (_) async => '0.3.1'),
-        services: PlatformServices(
-          latestCoreRelease: () async =>
-              ReleaseInfo(version: 'v0.4.0', page: page),
-          open: (url) async => opened.add(url),
+      final harness = CoreHarness(releases: ['0.4.0']);
+      addTearDown(harness.dispose);
+      harness.storeVersion('0.3.1');
+      final store = MemoryConfigStore(
+        sampleConfig.copyWith(
+          binarySource: BinarySource.downloaded,
+          coreVersion: '0.3.1',
         ),
       );
+      await pumpApp(tester, _controller(store: store, core: harness.manager));
+      await tester.runAsync(harness.manager.refresh);
       await _open(tester, 'about');
-      expect(find.byKey(const ValueKey('core-update')), findsNothing);
-
-      await tester.tap(find.byKey(const ValueKey('core-check')));
-      await settle(tester);
-      expect(find.byKey(const ValueKey('core-update')), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('core-release-link')));
-      await settle(tester);
-      expect(opened, [page]);
+      expect(_text(tester, 'about-core-title'), contains('0.3.1'));
+      expect(_text(tester, 'about-core-title'), contains('downloaded'));
+      expect(_text(tester, 'about-core-line'), contains('0.4.0'));
+      expect(find.byKey(const ValueKey('about-core-update')), findsOneWidget);
     });
 
-    testWidgets('an up-to-date Core says so', (tester) async {
-      await pumpApp(
-        tester,
-        _controller(versionReader: (_) async => '0.4.0'),
-        services: PlatformServices(
-          latestCoreRelease: () async => ReleaseInfo(
-            version: 'v0.4.0',
-            page: Uri.parse('https://example.com'),
-          ),
-          open: (_) async {},
-        ),
-      );
-      await _open(tester, 'about');
-      await tester.tap(find.byKey(const ValueKey('core-check')));
-      await settle(tester);
-      expect(find.byKey(const ValueKey('core-update')), findsNothing);
-      expect(find.textContaining('is the latest release'), findsOneWidget);
-    });
-
-    testWidgets('a failed check says what failed and can be repeated', (
+    testWidgets('an installed Core is updated outside BubblePaw', (
       tester,
     ) async {
-      await pumpApp(
-        tester,
-        _controller(versionReader: (_) async => '0.3.1'),
-        services: PlatformServices(
-          latestCoreRelease: () => Future<ReleaseInfo>.error(
-            const ReleaseCheckException('GitHub did not answer.'),
-          ),
-          open: (_) async {},
-        ),
+      final harness = CoreHarness(installed: ['/usr/bin/bubblepaw']);
+      addTearDown(harness.dispose);
+      harness.detectedVersions['/usr/bin/bubblepaw'] = '0.3.2';
+      final store = MemoryConfigStore(
+        sampleConfig.copyWith(binarySource: BinarySource.installed),
       );
+      await pumpApp(tester, _controller(store: store, core: harness.manager));
+      await tester.runAsync(harness.manager.detect);
       await _open(tester, 'about');
-      await tester.tap(find.byKey(const ValueKey('core-check')));
+      expect(_text(tester, 'about-core-line'), 'Updated outside BubblePaw.');
+      expect(find.byKey(const ValueKey('about-core-update')), findsNothing);
+    });
+
+    testWidgets('a custom Core is updated outside BubblePaw', (tester) async {
+      await pumpApp(tester, _controller());
+      await _open(tester, 'about');
+      expect(_text(tester, 'about-core-title'), contains('Custom binary'));
+      expect(_text(tester, 'about-core-line'), 'Updated outside BubblePaw.');
+    });
+
+    testWidgets('Check now offers a newer version and Review opens it', (
+      tester,
+    ) async {
+      final rig = _updateRig();
+      addTearDown(rig.dispose);
+      rig.publish('0.2.0');
+      await pumpApp(tester, _controller(updates: rig.updates));
+      await _open(tester, 'about');
+      expect(find.byKey(const ValueKey('update-state')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('update-check')));
       await settle(tester);
-      expect(find.textContaining('GitHub did not answer.'), findsOneWidget);
-      expect(find.text('Check again'), findsOneWidget);
+      expect(_text(tester, 'update-state'), '0.2.0 available');
+      expect(find.byKey(const ValueKey('update-dialog')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('update-review')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('update-dialog')), findsOneWidget);
+      expect(_text(tester, 'update-title'), contains('0.2.0'));
+    });
+
+    testWidgets('a check with nothing newer says Up to date', (tester) async {
+      final rig = _updateRig();
+      addTearDown(rig.dispose);
+      rig.publish('0.1.0');
+      await pumpApp(tester, _controller(updates: rig.updates));
+      await _open(tester, 'about');
+      await tester.tap(find.byKey(const ValueKey('update-check')));
+      await settle(tester);
+      expect(_text(tester, 'update-state'), 'Up to date');
+    });
+
+    testWidgets('an offline check says what failed', (tester) async {
+      final rig = _updateRig();
+      addTearDown(rig.dispose);
+      rig.fetcher.failWith = const FetchException(
+        FetchFailure.offline,
+        'unreachable',
+      );
+      await pumpApp(tester, _controller(updates: rig.updates));
+      await _open(tester, 'about');
+      await tester.tap(find.byKey(const ValueKey('update-check')));
+      await settle(tester);
+      expect(
+        find.textContaining('Could not check. This computer is offline.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Nightly shows its notice; the switch is saved', (
+      tester,
+    ) async {
+      final rig = _updateRig();
+      addTearDown(rig.dispose);
+      final store = MemoryConfigStore(sampleConfig);
+      await pumpApp(tester, _controller(store: store, updates: rig.updates));
+      await _open(tester, 'about');
+      expect(find.byKey(const ValueKey('nightly-notice')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('channel-nightly')));
+      await settle(tester);
+      expect(store.prefs.updateChannel, UpdateChannel.nightly);
+      expect(find.byKey(const ValueKey('nightly-notice')), findsOneWidget);
+    });
+
+    testWidgets('Check automatically is on and can be switched off', (
+      tester,
+    ) async {
+      final store = MemoryConfigStore(sampleConfig);
+      await pumpApp(tester, _controller(store: store));
+      await _open(tester, 'about');
+      expect(store.prefs.checkUpdates, isTrue);
+      await tester.tap(find.byKey(const ValueKey('toggle-auto-update')));
+      await settle(tester);
+      expect(store.prefs.checkUpdates, isFalse);
     });
 
     testWidgets('Licences are grouped, searchable and expandable', (
@@ -454,4 +571,57 @@ void main() {
       expect(licenceGroup('http'), 'App packages');
     });
   });
+}
+
+String _text(WidgetTester tester, String key) {
+  final finder = find.byKey(ValueKey(key));
+  final widget = tester.widget(finder);
+  if (widget is Text) return widget.data ?? '';
+  return tester
+          .widget<Text>(
+            find.descendant(of: finder, matching: find.byType(Text)).first,
+          )
+          .data ??
+      '';
+}
+
+/// An update controller over a fake fetcher, for a build at 0.1.0 on Linux.
+({
+  UpdateController updates,
+  FakeFetcher fetcher,
+  void Function(String version) publish,
+  void Function() dispose,
+})
+_updateRig() {
+  final fetcher = FakeFetcher();
+  final dir = Directory.systemTemp.createTempSync('bp-ui-update');
+  final updates = UpdateController(
+    fetcher: fetcher,
+    downloads: dir,
+    installer: FakeInstaller(canInstall: false),
+    platform: 'linux-x64',
+    current: SemVer.parse('0.1.0'),
+  );
+  return (
+    updates: updates,
+    fetcher: fetcher,
+    publish: (version) {
+      fetcher.texts[manifestUrl(UpdateChannel.stable).toString()] = jsonEncode({
+        'channel': 'stable',
+        'version': version,
+        'assets': {
+          'linux-x64': {
+            'url': 'https://example.test/bubblepaw.tar.gz',
+            'sha256': 'a' * 64,
+            'size': 100,
+            'kind': 'tar.gz',
+          },
+        },
+      });
+    },
+    dispose: () {
+      updates.dispose();
+      if (dir.existsSync()) dir.deleteSync(recursive: true);
+    },
+  );
 }

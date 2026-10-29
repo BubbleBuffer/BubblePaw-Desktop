@@ -9,11 +9,15 @@ import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:flutter/foundation.dart';
 
 import 'config.dart';
+import 'core/attach.dart';
+import 'core/core_manager.dart';
 import 'guarded_backend.dart';
 import 'host_failure.dart';
 import 'preferences.dart';
 import 'scripted.dart';
+import 'semver.dart';
 import 'settings/settings_section.dart';
+import 'updates/update_controller.dart';
 
 /// A started backend and how to end it.
 class StartedBackend {
@@ -23,9 +27,17 @@ class StartedBackend {
     this.createdChats,
     this.now,
     this.connectionLost,
+    this.attached = false,
+    this.version,
   });
 
   final AgentBackend backend;
+
+  /// The host was already running; [dispose] only disconnects from it.
+  final bool attached;
+
+  /// The version of an attached host, when it said.
+  final String? version;
   final Future<void> Function() dispose;
 
   /// Chats the backend creates by itself (a rewind makes a new one).
@@ -77,15 +89,29 @@ class HostController extends ChangeNotifier {
     this.starter,
     this.scripted = false,
     bool Function(String path)? fileExists,
-    this.bundledBinary,
     this.versionReader,
-  }) : _fileExists = fileExists ?? ((path) => File(path).existsSync());
+    CoreManager? core,
+    UpdateController? updates,
+    this.attacher = attachToRunningHost,
+  }) : _fileExists = fileExists ?? ((path) => File(path).existsSync()),
+       core = core ?? CoreManager.unavailable(),
+       updates = updates ?? UpdateController.unavailable() {
+    this.updates.bind(prefs: () => _prefs, save: updatePrefs);
+    this.core.addListener(_notify);
+    this.updates.addListener(_notify);
+  }
 
   final ConfigStore store;
   final bool scripted;
 
-  /// The `bubblepaw` that ships next to the app, when there is one.
-  final String? bundledBinary;
+  /// The Core that BubblePaw downloads and the one installed on this computer.
+  final CoreManager core;
+
+  /// Checks for and installs new versions of the app.
+  final UpdateController updates;
+
+  /// Connects to a host already running on the data directory.
+  final HostAttacher attacher;
 
   /// Asks a binary for its version, for Settings. Null: not shown.
   final HostVersionReader? versionReader;
@@ -108,6 +134,7 @@ class HostController extends ChangeNotifier {
   bool _trayNoticePending = false;
   bool _trayAvailable = true;
   bool _startupFailed = false;
+  bool _attached = false;
   late bool _real = !scripted;
   int _generation = 0;
   bool _disposed = false;
@@ -147,24 +174,28 @@ class HostController extends ChangeNotifier {
   /// The version the running host binary reports, when it could be read.
   String? get hostVersion => _hostVersion;
 
-  /// Whether the bundled binary exists next to the app.
-  bool get bundledAvailable => bundledBinary != null;
+  /// Whether the running host was already running when BubblePaw connected
+  /// to it. Detach disconnects and leaves it running.
+  bool get attached => _attached;
 
-  /// The binary [config] starts: the bundled one or the custom path.
-  String binaryFor(AppConfig config) =>
-      config.binarySource == BinarySource.bundled
-      ? (bundledBinary ?? '')
-      : config.binaryPath;
+  /// The version `bubblepaw --version` reports for the binary at [path].
+  Future<String?> readVersion(String path) async {
+    final reader = versionReader;
+    if (reader == null) return null;
+    try {
+      return await reader(path);
+    } on Object {
+      return null;
+    }
+  }
 
   /// The config the settings form starts from: the saved one, or the
-  /// defaults with the bundled binary chosen when there is one.
-  AppConfig get formConfig =>
-      _config ??
-      store.defaults.copyWith(
-        binarySource: bundledAvailable
-            ? BinarySource.bundled
-            : BinarySource.custom,
-      );
+  /// defaults, which run downloaded Core.
+  AppConfig get formConfig => _config ?? store.defaults;
+
+  /// The downloaded Core version [config] runs, when one is stored.
+  SemVer? coreVersionFor(AppConfig config) =>
+      core.versionToRun(config.coreVersion);
 
   /// Whether a tray icon is showing. False on a system without one.
   bool get trayAvailable => _trayAvailable;
@@ -234,9 +265,12 @@ class HostController extends ChangeNotifier {
       await _start();
       return;
     }
-    if (_config == null && bundledAvailable) {
-      // Nothing to ask: the bundled binary and the default directories.
-      _config = formConfig;
+    core.loadStored();
+    if (_config == null && core.downloaded.isNotEmpty) {
+      // Core was downloaded before a config was saved: nothing to ask.
+      _config = formConfig.copyWith(
+        coreVersion: core.downloaded.first.toString(),
+      );
       try {
         await store.save(_config!);
       } on Object {
@@ -246,12 +280,22 @@ class HostController extends ChangeNotifier {
     if (_config == null || !_config!.isComplete) {
       _phase = HostPhase.setup;
       _notify();
+      if (_config == null) unawaited(_firstRunDownload());
     } else if (!_prefs.startHost) {
       _phase = HostPhase.stopped;
       _notify();
     } else {
       await _start();
     }
+  }
+
+  /// The first start has no Core: download it, then start with it. A failed
+  /// download leaves Settings open on Core, with Retry.
+  Future<void> _firstRunDownload() async {
+    final version = await core.download();
+    if (version == null || _disposed || _config != null) return;
+    if (_phase != HostPhase.setup) return;
+    await saveAndStart(formConfig.copyWith(coreVersion: version.toString()));
   }
 
   /// Saves [config] and starts the host with it.
@@ -318,15 +362,40 @@ class HostController extends ChangeNotifier {
     _notify();
     final useScripted = !_real;
     final config = formConfig;
-    final binary = binaryFor(config);
-    if (!useScripted && (binary.isEmpty || !_fileExists(binary))) {
-      _fail(
-        ticket,
-        config.binarySource == BinarySource.bundled
-            ? HostFailure.bundledMissing()
-            : HostFailure.binaryMissing(binary),
-      );
-      return;
+    var binary = '';
+    if (!useScripted) {
+      // A host already running on this data directory is used, not doubled.
+      StartedBackend? running;
+      try {
+        running = await attacher(config);
+      } on Object {
+        running = null;
+      }
+      if (ticket != _generation || _disposed) {
+        await running?.dispose();
+        return;
+      }
+      if (running != null) {
+        _adopt(running, ticket);
+        return;
+      }
+      final resolved = await _resolveBinary(config);
+      if (ticket != _generation || _disposed) return;
+      final failure = resolved.failure;
+      if (failure != null) {
+        _fail(ticket, failure);
+        return;
+      }
+      binary = resolved.path ?? '';
+      if (binary.isEmpty || !_fileExists(binary)) {
+        _fail(
+          ticket,
+          config.binarySource == BinarySource.custom
+              ? HostFailure.binaryMissing(binary)
+              : HostFailure.coreMissing(),
+        );
+        return;
+      }
     }
     try {
       final BackendStarter start = useScripted
@@ -337,20 +406,98 @@ class HostController extends ChangeNotifier {
         await started.dispose();
         return;
       }
-      _dispose = started.dispose;
-      _createdChats = started.createdChats;
-      _now = started.now;
-      _backend = GuardedBackend(started.backend, onFailure: _hostFailed);
-      final lost = started.connectionLost;
-      if (lost != null) unawaited(_watchConnection(lost, ticket));
-      _phase = HostPhase.running;
-      _notify();
-      unawaited(_readVersion(binary, ticket));
+      _adopt(started, ticket, binary: binary);
     } on Object catch (error) {
       // Startup errors can carry local paths or provider text: show a fixed
       // message for anything that is not a known host failure.
       _fail(ticket, HostFailure.from(error) ?? HostFailure.startFailed());
     }
+  }
+
+  void _adopt(StartedBackend started, int ticket, {String? binary}) {
+    _dispose = started.dispose;
+    _createdChats = started.createdChats;
+    _now = started.now;
+    _attached = started.attached;
+    _backend = GuardedBackend(started.backend, onFailure: _hostFailed);
+    final lost = started.connectionLost;
+    if (lost != null) unawaited(_watchConnection(lost, ticket));
+    _phase = HostPhase.running;
+    _hostVersion = started.attached ? started.version : null;
+    _notify();
+    if (binary != null) unawaited(_readVersion(binary, ticket));
+  }
+
+  /// The executable [config] starts, or why there is none.
+  Future<({String? path, HostFailure? failure})> _resolveBinary(
+    AppConfig config,
+  ) async {
+    switch (config.binarySource) {
+      case BinarySource.custom:
+        return (path: config.binaryPath, failure: null);
+      case BinarySource.downloaded:
+        final version = coreVersionFor(config);
+        final path = version == null ? null : core.binaryPath(version);
+        return path == null
+            ? (path: null, failure: HostFailure.coreMissing())
+            : (path: path, failure: null);
+      case BinarySource.installed:
+        final found = await core.detect();
+        if (found.usable) return (path: found.path, failure: null);
+        return (path: null, failure: HostFailure.coreUnusable(found.problem));
+    }
+  }
+
+  /// Downloads the newest compatible Core. With no config yet, or a config
+  /// that runs downloaded Core, the new version is saved and the host starts
+  /// with it; otherwise it is only stored, for the form to use when saved.
+  Future<void> downloadCore() async {
+    final version = await core.download();
+    if (version == null || _disposed) return;
+    final saved = _config;
+    if (saved == null) {
+      if (_phase == HostPhase.setup) {
+        await saveAndStart(
+          formConfig.copyWith(coreVersion: version.toString()),
+        );
+      }
+      return;
+    }
+    if (saved.binarySource != BinarySource.downloaded) return;
+    final next = saved.copyWith(coreVersion: version.toString());
+    try {
+      await store.save(next);
+    } on Object {
+      // The new version still runs this session.
+    }
+    _config = next;
+    await _start();
+    unawaited(core.prune(version));
+  }
+
+  /// Deletes the stored Core [version]. A host running it is stopped first.
+  Future<void> removeCore(SemVer version) async {
+    final saved = _config;
+    final inUse =
+        saved != null &&
+        saved.binarySource == BinarySource.downloaded &&
+        coreVersionFor(saved) == version;
+    if (inUse && _real) {
+      _generation++;
+      await _stopBackend();
+      _phase = HostPhase.stopped;
+      _notify();
+    }
+    await core.remove(version);
+  }
+
+  /// Disconnects from an attached host and leaves it running.
+  Future<void> detach() async {
+    if (!_attached) return;
+    _generation++;
+    await _stopBackend();
+    _phase = HostPhase.stopped;
+    _notify();
   }
 
   Future<void> _readVersion(String binary, int ticket) async {
@@ -401,6 +548,7 @@ class HostController extends ChangeNotifier {
     _backend = null;
     _createdChats = null;
     _dispose = null;
+    _attached = false;
     if (dispose != null) await _quietly(dispose);
   }
 
@@ -425,6 +573,8 @@ class HostController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    core.removeListener(_notify);
+    updates.removeListener(_notify);
     _generation++;
     final dispose = _dispose;
     _backend?.closing();
