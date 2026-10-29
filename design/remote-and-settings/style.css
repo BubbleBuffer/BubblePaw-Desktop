@@ -420,3 +420,43 @@ button.wi:hover:not(:disabled) { background: var(--w-hover); }
 .wi:disabled { color: var(--w-mut); opacity: .6; }
 .wck { width: 32px; flex: none; display: inline-flex; justify-content: center; }
 .wsep { height: 1px; margin: 4px 8px; background: var(--w-line); }
+
+/* Chat list across projects */
+.rail-scroll { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+.rail-label .cnt { margin-left: 6px; font-weight: 600; color: var(--attn-ink); }
+.tag { display: inline-block; max-width: 100%; margin-left: auto; padding: 0 6px; font: 400 11px/16px var(--mono); color: var(--muted); border: 1px solid var(--seam); border-radius: var(--r-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+.chatrow .s .st { flex: none; }
+.chatrow .s.run { color: var(--ok-ink); }
+.chatrow .s.run::before { background: var(--ok-ink); }
+.sub .tag, .topbar .tag { margin-left: 6px; }
+.ghead { display: flex; align-items: center; gap: 2px; }
+.gtog { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 6px 4px 8px; border: 0; background: transparent; border-radius: var(--r-md); text-align: left; }
+.gtog:hover { background: var(--hover); }
+.gtog .chev { display: inline-flex; color: var(--muted); }
+.gname { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gmeta { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; flex: none; }
+.gmeta.act { color: var(--ok-ink); font-weight: 600; }
+.iconbtn.sm { width: 32px; height: 32px; flex: none; }
+.phone .gtog { min-height: 48px; }
+.phone .ghead .iconbtn.sm { width: 44px; height: 44px; }
+.newrow { position: relative; display: flex; gap: 6px; align-items: stretch; }
+.newrow .grow { flex: 1 1 auto; min-width: 0; justify-content: center; }
+.projpick { flex: 0 1 112px; min-width: 0; display: flex; align-items: center; gap: 4px; padding: 0 8px; min-height: 34px; border: 1px solid var(--thread); border-radius: var(--r-ctl); background: var(--surface2); font-size: 12.5px; }
+.projpick .pn { flex: 1; min-width: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 12px; }
+.projpick[aria-expanded="true"] { background: var(--pressed); }
+.newrow.ph .projpick { flex-basis: 150px; min-height: 48px; }
+.newrow.ph .btn.grow { min-height: 48px; }
+.pickmenu { position: absolute; z-index: 20; right: 0; top: calc(100% + 4px); width: 200px; padding: 4px 0; background: var(--raised); border: 1px solid var(--thread); border-radius: var(--r-panel); box-shadow: var(--seam-shadow-hover); }
+.pickmenu.up { top: auto; bottom: calc(100% + 4px); }
+.pickmenu .pop-i { padding-left: 14px; min-height: 36px; font-family: var(--mono); font-size: 12.5px; }
+.phone .pickmenu .pop-i { min-height: 44px; }
+.pop-i.host { min-height: 44px; padding-left: 14px; gap: 10px; }
+.pop-i.host .two { flex: 1; min-width: 0; }
+.pop-i.host .t { font-weight: 600; }
+.pop-i.host .s { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.newbar .newrow { padding: 0; }
+.rail .gtog { flex-wrap: wrap; row-gap: 0; min-height: 40px; }
+.rail .gtog .gname { flex: 1; width: calc(100% - 24px); }
+.rail .gmeta { flex-basis: 100%; margin-left: 20px; order: 3; font-size: 11.5px; }
+.rail .chatrow .s { flex-wrap: wrap; row-gap: 2px; }
+.rail .chatrow .tag { margin-left: 0; }

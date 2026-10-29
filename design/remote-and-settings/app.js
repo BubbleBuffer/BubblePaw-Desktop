@@ -52,7 +52,7 @@
     ],
     def: 'deepseek-v4.1-flash',
     dlg: null, add: { step: 1 }, addDone: false, back: 'phone',
-    pview: H.pview === 'chat' ? 'chat' : 'list', sheet: H.sheet === '1', sw: H.sw !== '0', pop: H.pop !== '0', dsel: { h: 'local', w: 'bubblepaw-base' }, expD: new Set(['local']), expP: new Set([H.active || 'h1']), active: H.active || 'h1', ws: 'bubblepaw-base',
+    pview: H.pview === 'chat' ? 'chat' : 'list', sheet: H.sheet === '1', sw: H.sw !== '0', pop: H.pop !== '0', dsel: { h: H.dsel || 'local' }, expR: new Set(), lastProj: 'bubblepaw-base', ppick: H.ppick === '1', active: H.active || 'h1',
     fail2: false,
   };
   if (S.screen === 'pair') M.dlg = { type: 'pair', step: +(H.step || 1), left: 292, code: 'K7M2Q-9XFD4', prof: 'edit' };
@@ -405,44 +405,73 @@
         <div class="acts">${btn('Approve', { kind: 'primary' })}${btn('For session')}${btn('Deny')}</div></div></div>`;
   }
   function composer(p, host) {
-    return `<div class="composer"><div class="ph">${p ? 'Message ' + (host || 'a host') : 'Steer the agent…'}</div><div class="bar2">${p ? '' : '<span>workspace ▾</span>'}<span>${M.def} ▾</span><span class="grow"></span>${btn('Stop')}${btn('Send', { kind: 'primary', icon: 'arrow-up' })}</div>${p ? '<div class="homebar"></div>' : ''}</div>`;
+    return `<div class="composer"><div class="ph">${p ? 'Message ' + (host || 'a host') : 'Steer the agent…'}</div><div class="bar2"><span>${M.def} ▾</span><span class="grow"></span>${btn('Stop')}${btn('Send', { kind: 'primary', icon: 'arrow-up' })}</div>${p ? '<div class="homebar"></div>' : ''}</div>`;
   }
   const activeHost = () => M.hosts.find((h) => h.id === M.active);
+  const SEL = 'Quota bar flickers on reconnect';
+  const PROJ = [
+    { id: 'bubblepaw-base', last: 'Now', chats: [{ t: SEL, st: 'approval', s: 'Needs approval' }, { t: 'Review the pairing copy', st: 'running', s: 'Running' }, { t: 'Plan the settings page', st: 'idle', s: 'Finished 2h ago' }] },
+    { id: 'agent-kit', last: '12 minutes ago', chats: [{ t: 'Which provider should the kit default to?', st: 'answer', s: 'Needs an answer' }, { t: 'Run the golden tests', st: 'running', s: 'Running' }] },
+    { id: 'scratch', last: 'Yesterday', chats: [{ t: 'Rename the vault tags', st: 'idle', s: 'Finished yesterday' }] },
+    { id: 'notes', last: '3 days ago', chats: [{ t: 'Draft the release notes', st: 'idle', s: 'Finished 3 days ago' }] },
+  ];
+  function projStat(p) {
+    const run = p.chats.filter((c) => c.st === 'running').length;
+    const wait = p.chats.filter((c) => c.st === 'approval' || c.st === 'answer').length;
+    return { run, wait, act: run + wait > 0 };
+  }
+  function chatList(phone) {
+    const cls = (c) => (c.st === 'idle' ? 'plain' : c.st === 'running' ? 'run' : '');
+    const row = (c, p, tag) => `<button class="chatrow ${!phone && c.t === SEL ? 'on' : ''}" ${phone ? A('pview', 'chat') : ''}><div class="t">${c.t}</div><div class="s ${cls(c)}"><span class="st">${c.s}</span>${tag ? `<span class="tag">${p.id}</span>` : ''}</div></button>`;
+    const needs = [];
+    PROJ.forEach((p) => p.chats.forEach((c) => { if (c.st === 'approval' || c.st === 'answer') needs.push([c, p]); }));
+    const top = needs.length ? `<div class="rail-label">Needs you<span class="cnt">${needs.length}</span></div>${needs.map(([c, p]) => row(c, p, true)).join('')}` : '';
+    const groups = PROJ.map((p) => {
+      const open = M.expR.has(p.id), st = projStat(p);
+      const meta = st.act ? [st.run && `${st.run} running`, st.wait && `${st.wait} waiting`].filter(Boolean).join(' \u00b7 ') : p.last;
+      return `<div class="pgrp"><div class="ghead"><button class="gtog" aria-expanded="${open}" ${A('togR', p.id)}><span class="chev">${ic(open ? 'chevron-down' : 'chevron-right', 14)}</span><span class="gname">${p.id}</span><span class="gmeta ${st.act ? 'act' : ''}">${meta}</span></button><button class="iconbtn sm" aria-label="New chat in ${p.id}" title="New chat in ${p.id}" ${A('newIn', p.id)}>${ic('plus', 16)}</button></div>${open ? p.chats.map((c) => row(c, p, false)).join('') : ''}</div>`;
+    }).join('');
+    return top + `<div class="rail-label">Projects</div>` + groups;
+  }
+  function newRow(disabled, phone) {
+    const menu = M.ppick ? `<div class="pickmenu ${phone ? 'up' : ''}" role="menu" aria-label="Project for the new chat">${PROJ.map((p) => `<button class="pop-i ${M.lastProj === p.id ? 'on' : ''}" role="menuitemradio" aria-checked="${M.lastProj === p.id}" ${A('pickProj', p.id)}>${p.id}${M.lastProj === p.id ? `<span class="ck">${ic('check', 15)}</span>` : ''}</button>`).join('')}</div>` : '';
+    return `<div class="newrow ${phone ? 'ph' : ''}">${btn('New chat', { kind: 'primary', icon: 'square-pen', act: 'newChat', disabled, cls: 'grow' })}<button class="projpick" aria-haspopup="menu" aria-expanded="${M.ppick}" aria-label="Project for the new chat: ${M.lastProj}" ${A('ppick')}><span class="pn">${M.lastProj}</span>${ic('chevron-down', 14)}</button>${menu}</div>`;
+  }
   function phoneChat() {
     const ah = activeHost();
     const offline = ah && !ah.online;
     const status = ah ? (ah.online ? `<span class="on">${dotOn} Online</span>` : '<span class="off"><span class="dot off"></span> Offline</span>') : '';
     const frameOpen = (inner) => `<div class="phone-col ${M.sheet ? 'show-sheet' : ''}" style="position:relative"><div class="statusgap"></div>${inner}</div>`;
     if (M.pview === 'chat') {
-      return frameOpen(`<div class="main"><div class="topbar">${iconBtn('chevron-left', 'Back to chats', 'pview', 'list')}<div class="two"><div class="ct">Quota bar flickers on reconnect</div><div class="sub"><span>${ah ? ah.name : 'No host'}</span>${status}</div></div></div>
+      return frameOpen(`<div class="main"><div class="topbar">${iconBtn('chevron-left', 'Back to chats', 'pview', 'list')}<div class="two"><div class="ct">${SEL}</div><div class="sub"><span>${ah ? ah.name : 'No host'}</span>${status}<span class="tag">${M.lastProj}</span></div></div></div>
         <div class="stream">${transcript(true)}</div>${composer(true, ah && ah.name)}</div>`);
     }
-    const row = (t, s, plain) => `<button class="chatrow" ${A('pview', 'chat')}><div class="t">${t}</div><div class="s ${plain ? 'plain' : ''}">${s}</div></button>`;
-    const chats = ah ? `<div class="rail-label">Today</div>${row('Quota bar flickers on reconnect', 'Waiting for you', false)}${row('Plan the settings page', 'Finished 2h ago', true)}<div class="rail-label">Yesterday</div>${row('Trace the socket reconnect', 'Finished yesterday', true)}` : '<div class="empty">No host selected. Open the host menu and add a host to see its chats.</div>';
-    const wsRow = (h, n) => `<button class="ws ${M.active === h.id && M.ws === n ? 'on' : ''}" ${h.online ? A('setWs', h.id + '|' + n) : 'disabled'}>${n}${M.active === h.id && M.ws === n ? `<span class="ck">${ic('check', 16)}</span>` : ''}</button>`;
-    const items = M.hosts.map((h) => { const open = M.expP.has(h.id); return `<div class="host-item ${h.online ? '' : 'is-off'}"><button class="host-line" aria-expanded="${open}" aria-controls="ws-${h.id}" ${A('togP', h.id)}>${ic('monitor', 18)}<span class="two"><div class="t">${h.name}</div><div class="s">${h.online ? `${dotOn}Online · ${h.type}` : `<span class="dot off"></span>Offline${h.seen ? ' · ' + h.seen : ''}`}</div></span><span class="chev">${ic(open ? 'chevron-down' : 'chevron-right', 16)}</span></button>${open ? `<div id="ws-${h.id}">${wsRow(h, 'bubblepaw-base')}${wsRow(h, 'scratch')}</div>` : ''}</div>`; }).join('');
-    const hb = `<button class="hostbtn" aria-haspopup="dialog" ${A('sheet', 1)} style="min-height:48px"><span class="two"><div class="h">${ah ? (ah.online ? `${dotOn} ${ah.name} · Online` : `<span class="dot off"></span> ${ah.name} · Offline`) : 'No host'}</div><div class="w">${ah ? M.ws : 'Add a host'}</div></span>${ic('chevron-down', 16)}</button>`;
+    const items = M.hosts.map((h) => `<div class="host-item"><button class="host-line" role="radio" aria-checked="${M.active === h.id}" ${A('setHost', h.id)}>${ic('monitor', 18)}<span class="two"><div class="t">${h.name}</div><div class="s">${h.online ? `${dotOn}Online \u00b7 ${h.type}` : `<span class="dot off"></span>Offline${h.seen ? ' \u00b7 ' + h.seen : ''}`}</div></span>${M.active === h.id ? `<span class="ck">${ic('check', 16)}</span>` : ''}</button></div>`).join('');
+    const hb = `<button class="hostbtn" aria-haspopup="dialog" ${A('sheet', 1)} style="min-height:48px"><span class="two"><div class="h">${ah ? (ah.online ? `${dotOn} Online` : '<span class="dot off"></span> Offline') : 'No host'}</div><div class="w">${ah ? ah.name : 'Add a host'}</div></span>${ic('chevron-down', 16)}</button>`;
     return frameOpen(`<div class="main"><div class="topbar" style="gap:4px">${hb}${iconBtn('settings', 'Settings', 'toSettings')}</div>
       <div class="phone-body" style="padding:8px 8px 12px">
         ${offline ? `<div class="notice" style="margin:4px 8px 12px">${ic('wifi-off', 16)}<div>${ah.name} is offline. ${ah.seen ? ah.seen.charAt(0).toUpperCase() + ah.seen.slice(1) + '. ' : ''}You can start a new chat when it is back online.</div></div>` : ''}
-        <div class="rail-search" style="min-height:44px">${ic('search', 16)}Search</div>${chats}</div>
-      <div class="newbar">${btn('New chat', { kind: 'primary', icon: 'square-pen', cls: 'block', act: 'pview', arg: 'chat', disabled: !ah || offline })}<div class="homebar"></div></div></div>
+        <div class="rail-search" style="min-height:44px">${ic('search', 16)}Search all projects</div>${ah ? chatList(true) : '<div class="empty">No host selected. Open the host menu and add a host to see its chats.</div>'}</div>
+      <div class="newbar">${newRow(!ah || offline, true)}<div class="homebar"></div></div></div>
       <div class="scrim" ${A('sheet', 0)}></div>
-      <aside class="bsheet" role="dialog" aria-label="Hosts and workspaces"><div class="bsheet-h"><span class="t">Hosts and workspaces</span>${iconBtn('x', 'Close', 'sheet', 0)}</div><div class="hostlist" style="margin:0 12px 8px">${items}<div class="host-item"><button class="host-line" ${A('startAdd')} style="min-height:48px">${ic('plus', 18)}<span class="two"><div class="t">Add a host</div></span></button></div></div><div style="height:34px"></div></aside>`);
+      <aside class="bsheet" role="dialog" aria-label="Hosts"><div class="bsheet-h"><span class="t">Hosts</span>${iconBtn('x', 'Close', 'sheet', 0)}</div><div class="hostlist" role="radiogroup" aria-label="Hosts" style="margin:0 12px 8px">${items}<div class="host-item"><button class="host-line" ${A('startAdd')} style="min-height:48px">${ic('plus', 18)}<span class="two"><div class="t">Add a host</div></span></button></div></div><div style="height:34px"></div></aside>`);
   }
   function desktopChat() {
-    const sel = M.dsel;
-    const selHost = sel.h === 'local' ? 'This computer' : (M.hosts.find((h) => h.id === sel.h) || {}).name || 'This computer';
-    const wsBtn = (h, w, off) => `<button class="pop-i ${sel.h === h && sel.w === w ? 'on' : ''}" ${off ? 'disabled' : A('dsel', h + '|' + w)}>${w}${sel.h === h && sel.w === w ? `<span class="ck">${ic('check', 15)}</span>` : ''}</button>`;
-    const grp = (id, icon, name, state, wss, off) => { const open = M.expD.has(id); return `<div class="pop-group ${off ? 'is-off' : ''}"><button class="pop-h" aria-expanded="${open}" ${A('togD', id)}>${ic(icon, 16)}<span class="t">${name}</span><span class="s">${state}</span><span class="chev">${ic(open ? 'chevron-down' : 'chevron-right', 15)}</span></button>${open ? wss.map((w) => wsBtn(id, w, off)).join('') : ''}</div>`; };
-    const pop = M.pop ? `<div class="popover" role="menu">${grp('local', 'laptop', 'This computer', `${dotOn} Running`, ['bubblepaw-base', 'scratch'], false)}
-      ${M.hosts.map((h) => grp(h.id, 'monitor', h.name, h.online ? `${dotOn} Online · ${h.type}` : '<span class="dot off"></span> Offline', ['bubblepaw-base', 'notes'], !h.online)).join('')}
+    const sel = M.dsel.h;
+    const sh = sel === 'local' ? null : M.hosts.find((h) => h.id === sel);
+    const selName = sel === 'local' ? 'This computer' : (sh || {}).name || 'This computer';
+    const offline = sh && !sh.online;
+    const hrow = (id, icon, name, state) => `<button class="pop-i host ${sel === id ? 'on' : ''}" role="menuitemradio" aria-checked="${sel === id}" ${A('dsel', id)}>${ic(icon, 16)}<span class="two"><div class="t">${name}</div><div class="s">${state}</div></span>${sel === id ? `<span class="ck">${ic('check', 15)}</span>` : ''}</button>`;
+    const pop = M.pop ? `<div class="popover" role="menu" aria-label="Hosts"><div class="pop-group">${hrow('local', 'laptop', 'This computer', `${dotOn} Running`)}${M.hosts.map((h) => hrow(h.id, 'monitor', h.name, h.online ? `${dotOn} Online \u00b7 ${h.type}` : '<span class="dot off"></span> Offline')).join('')}</div>
       <div class="pop-group"><button class="pop-i plain" ${A('startAdd')}>${ic('plus', 15)}Add a host</button></div></div>` : '';
-    return `<div class="app"><aside class="rail"><div class="rail-head"><button class="hostbtn" aria-expanded="${M.pop}" aria-haspopup="menu" ${A('pop')}><span class="two"><div class="h">${selHost}</div><div class="w">${sel.w}</div></span>${ic('chevron-down', 15)}</button>${iconBtn('square-pen', 'New chat')}${iconBtn('panel-left', 'Hide the rail')}</div>
-      <div class="rail-search">${ic('search', 16)}Search<kbd>Ctrl K</kbd></div><div class="rail-label">Today</div>
-      <button class="chatrow on"><div class="t">Quota bar flickers on reconnect</div><div class="s">Waiting for you</div></button><button class="chatrow"><div class="t">Plan the settings page</div><div class="s plain">Finished 2h ago</div></button>
+    const stat = sel === 'local' ? `${dotOn} Running` : sh && sh.online ? `${dotOn} Online` : '<span class="dot off"></span> Offline';
+    return `<div class="app"><aside class="rail"><div class="rail-head"><button class="hostbtn" aria-expanded="${M.pop}" aria-haspopup="menu" ${A('pop')}><span class="two"><div class="h">${stat}</div><div class="w">${selName}</div></span>${ic('chevron-down', 15)}</button>${iconBtn('panel-left', 'Hide the rail')}</div>
+      ${newRow(!!offline, false)}
+      <div class="rail-search">${ic('search', 16)}Search all projects<kbd>Ctrl K</kbd></div>
+      ${offline ? `<div class="notice" style="margin:2px 0">${ic('wifi-off', 16)}<div>${sh.name} is offline.${sh.seen ? ' ' + sh.seen.charAt(0).toUpperCase() + sh.seen.slice(1) + '.' : ''}</div></div>` : ''}
+      <div class="rail-scroll">${chatList(false)}</div>
       <div class="rail-foot"><button class="btn" ${A('toSettings')}>${ic('settings', 16)}Settings</button><span class="avatar">BP</span></div>${pop}</aside>
-      <div class="main"><div class="topbar"><span class="ct">Quota bar flickers on reconnect</span>${pill('Waiting for you', 'attn')}<span class="muted mono" style="font-size:12px;margin-left:4px">${ic('git-branch', 13)} bp/quota-reconnect</span></div>
+      <div class="main"><div class="topbar"><span class="ct">${SEL}</span>${pill('Needs approval', 'attn')}<span class="tag" style="margin-left:4px">bubblepaw-base</span><span class="muted mono" style="font-size:12px;margin-left:4px">${ic('git-branch', 13)} bp/quota-reconnect</span></div>
       <div class="stream">${transcript(false)}</div>${composer(false)}</div></div>`;
   }
 
@@ -571,7 +600,7 @@
     M.addDone = true; M.add.step = 3;
   }
   function openDlg(d) { M.dlg = d; }
-  function clearPairings() { M.devices = []; M.hosts = []; M.active = null; M.dsel = { h: 'local', w: M.dsel.w }; }
+  function clearPairings() { M.devices = []; M.hosts = []; M.active = null; M.dsel = { h: 'local' }; }
   function newKey() { M.key = { id: rid(), fp: hex().slice(0, 29) }; }
   const goTab = (id) => {
     M.dlg = null; S.screen = id;
@@ -638,7 +667,7 @@
     simfail: () => { M.fail = !M.fail; },
     dlg: (v) => { const [t, id] = v.split(':'); if (t === 'export') { M.f.pass1 = M.f.pass2 = ''; } if (t === 'import') { M.f.keyFile = ''; M.f.keySecret = ''; } openDlg({ type: t, id, step: 1 }); },
     doRevoke: () => { M.devices = M.devices.filter((x) => x.id !== M.dlg.id); M.dlg = null; },
-    doRemoveHost: () => { const id = M.dlg.id; M.hosts = M.hosts.filter((x) => x.id !== id); if (M.active === id) { const n = M.hosts.find((h) => h.online); M.active = n ? n.id : null; } if (M.dsel.h === id) M.dsel = { h: 'local', w: 'bubblepaw-base' }; M.dlg = null; },
+    doRemoveHost: () => { const id = M.dlg.id; M.hosts = M.hosts.filter((x) => x.id !== id); if (M.active === id) { const n = M.hosts.find((h) => h.online); M.active = n ? n.id : null; } if (M.dsel.h === id) M.dsel = { h: 'local' }; M.dlg = null; },
     doExport: () => { M.dlg.step = 2; M.f.pass1 = M.f.pass2 = ''; },
     pickKey: () => { M.f.keyFile = 'studio-backup.bpkey'; },
     doImport: () => { newKey(); clearPairings(); M.dlg.step = 2; },
@@ -659,12 +688,14 @@
     pview: (v) => { M.pview = v; },
     sheet: (v) => { M.sheet = v === undefined ? !M.sheet : !!+v; },
     sw: () => { M.sw = !M.sw; },
-    togP: (v) => { if (M.expP.has(v)) M.expP.delete(v); else M.expP.add(v); },
-    togD: (v) => { if (M.expD.has(v)) M.expD.delete(v); else M.expD.add(v); },
-    setHost: (v) => { M.active = v; const h = M.hosts.find((x) => x.id === v); if (h && !h.online) M.sheet = false; },
-    setWs: (v) => { const [h, w] = v.split('|'); M.active = h; M.ws = w; M.sheet = false; },
+    togR: (v) => { if (M.expR.has(v)) M.expR.delete(v); else M.expR.add(v); },
+    ppick: () => { M.ppick = !M.ppick; },
+    pickProj: (v) => { M.lastProj = v; M.ppick = false; },
+    newIn: (v) => { M.lastProj = v; M.ppick = false; if (ph()) M.pview = 'chat'; },
+    newChat: () => { M.ppick = false; if (ph()) M.pview = 'chat'; },
+    setHost: (v) => { M.active = v; M.sheet = false; },
     pop: () => { M.pop = !M.pop; },
-    dsel: (v) => { const [h, w] = v.split('|'); M.dsel = { h, w }; M.pop = false; },
+    dsel: (v) => { M.dsel = { h: v }; M.pop = false; },
   };
   ACT.tab = (v) => goTab(v);
   // the Share/Hosts tab control inside Remote access uses the arg key 'tab' in markup; route it
@@ -695,7 +726,9 @@
     if (k === 'zone') { M.f.zone = ev.target.value; render(); }
   });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && M.dlg) { ACT.close(); render(); } });
-  if (H.exp) H.exp.split(',').forEach((x) => { M.expP.add(x); M.expD.add(x); });
+  PROJ.forEach((p) => { if (projStat(p).act) M.expR.add(p.id); });
+  if (H.exp) H.exp.split(',').forEach((x) => M.expR.add(x));
+  if (H.collapse) H.collapse.split(',').forEach((x) => M.expR.delete(x));
   if (H.other === '1') M.other = true;
   if (H.coreMode) M.coreMode = H.coreMode;
   if (H.lic) M.licOpen.add(H.lic);
