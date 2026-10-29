@@ -11,7 +11,8 @@ import 'package:bubblepaw_desktop/src/scripted.dart';
 
 import 'support.dart';
 
-/// What the BubblePaw stdio host offers at protocol 0.1: no context, children,
+/// What the BubblePaw stdio host offered before v0.3.0 (the context scenes add
+/// the context capability themselves): no context, children,
 /// jobs, fork or archive.
 final stdioCapabilities = KitCapabilities([
   KitCapability.send,

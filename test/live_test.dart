@@ -72,6 +72,12 @@ void main() {
         reason: '${controller.failure?.message}',
       );
       final backend = controller.backend!;
+      expect(
+        backend.capabilities.has(KitCapability.context),
+        isTrue,
+        reason:
+            "v0.3.0 advertises the context feature, so the Context pane shows",
+      );
       printOnFailure(
         'features: capabilities=${backend.capabilities.values.map((c) => c.name).toList()}',
       );
@@ -143,6 +149,15 @@ void main() {
         isEmpty,
         reason: 'the approval is resolved',
       );
+      // A context read on the demo chat: the demo writes no episodes, so only
+      // the shape is asserted.
+      final context = await backend.loadContext(chat.id);
+      for (final summary in context.summaries) {
+        expect((await backend.loadSummary(chat.id, summary.id)).id, summary.id);
+      }
+      final history = await backend.loadHistoryRange(chat.id, 0, 1 << 40);
+      expect(history.messages, isNotEmpty);
+
       expect(controller.phase, HostPhase.running);
 
       // Closing the app ends the child without a failure notice.

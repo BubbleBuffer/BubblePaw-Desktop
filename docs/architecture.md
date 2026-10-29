@@ -18,7 +18,7 @@ GuardedBackend       AgentBackend wrapper that spots a dead host
 ## Dependencies
 
 `agent_kit`, `agent_kit_core` and `agent_kit_bubblepaw` come from
-`BubbleBuffer/agent-kit` at the commit of tag `v0.15.3`. The ref is the commit hash
+`BubbleBuffer/agent-kit` at a commit hash (currently kit PR 45, the adapter for BubblePaw-Core v0.3.0, on v0.15.4; to become the next kit tag). The ref is the commit hash
 because the kit's packages depend on each other by path inside that repository,
 and pub resolves those to the hash; a tag in the app would conflict with it.
 v0.15.2 added `BubblePawBackend.connectionLost` (idle exit detection); v0.15.3
@@ -98,7 +98,7 @@ message.
   draws these from the snapshot, each only when the backend reports data and has
   the capability. The stdio host reports plan, questions and usage (not the branch);
   they appear as it sends them. The **Context pane** needs the `context`
-  capability, which the stdio host lacks, so `Workbench` creates the workspace
+  capability, which the stdio host has since BubblePaw-Core v0.3.0, so `Workbench` creates the workspace
   (and the header's context button) only for a backend that has it. The scripted
   backend has it.
 - **Rewind from here**: the kit puts this on user messages when the backend has
@@ -132,10 +132,8 @@ pins; renders from another platform will not match.
 
 ## Known gaps
 
-- Chats the kit lists are the newest 64 (the stdio backend has no cursor), and
-  there is no older-history paging.
-- Worktrees, crew and the Context pane show only what the stdio backend reports;
-  it reports no context details, children or jobs.
+- Chats the kit lists are the newest 64 (the stdio backend has no cursor).
+- Worktrees, crew and the Context pane show only what the stdio backend reports. With BubblePaw-Core v0.3.0 that includes the context (pane, summaries, history ranges) and child questions; it still reports no jobs. Compaction needs a real model, so the demo provider shows an empty structure.
 - The header shows a branch only when the backend reports one; the
   stdio host reports none, so none is shown.
 - Windows is not built or tested yet.
