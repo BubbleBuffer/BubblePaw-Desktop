@@ -76,6 +76,7 @@ Scene coreScene({
   Map<String, String> detected = const {},
   CoreDownloadState? state,
   String section = 'core',
+  bool failed = false,
 }) {
   late CoreHarness harness;
   return (
@@ -101,7 +102,15 @@ Scene coreScene({
       await tester.runAsync(harness.manager.refresh);
       await tester.runAsync(harness.manager.detect);
       if (state != null) harness.manager.debugSetState(state);
-      await openSettings(tester, section);
+      if (failed) {
+        // The host did not start: Settings opens from the failure notice.
+        await tester.tap(find.byKey(const ValueKey('notice-settings')));
+        await settle(tester);
+        await tester.tap(find.byKey(ValueKey('settings-nav-$section')));
+        await settle(tester);
+      } else {
+        await openSettings(tester, section);
+      }
     },
   );
 }
@@ -278,10 +287,12 @@ void main() {
       config: sampleConfig.copyWith(binarySource: BinarySource.installed),
       installed: ['/usr/local/bin/bubblepaw'],
       detected: {'/usr/local/bin/bubblepaw': '0.2.4'},
+      failed: true,
     ),
     // Installed Core: none on this computer.
     'settings_core_installed_none': coreScene(
       config: sampleConfig.copyWith(binarySource: BinarySource.installed),
+      failed: true,
     ),
     // BubblePaw is attached to a host that was already running.
     'settings_core_attached': (
