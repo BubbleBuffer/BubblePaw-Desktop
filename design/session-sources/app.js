@@ -139,7 +139,7 @@
     return `<div class="notice info prevnote">${ic('eye', 16)}<div class="grow">Started in ${SRC[o.src][2]}. Add it to ${o.proj} to reply here.</div>${phone ? '' : btn(`Add to ${o.proj}`, { kind: 'primary', act: 'show', arg: o.id })}</div>${phone ? `<div style="padding:0 12px 4px">${btn(`Add to ${o.proj}`, { kind: 'primary', act: 'show', arg: o.id, cls: 'wide' })}</div>` : ''}`;
   }
   function impNote(o) {
-    return `<div class="notice info prevnote">${ic('circle-check', 16)}<div class="grow">Added to ${o.proj}. It is the same session on Studio PC. Hide puts it back under Other sessions.</div></div>`;
+    return `<div class="notice info prevnote">${ic('circle-check', 16)}<div class="grow">Added to ${o.proj}.</div></div>`;
   }
   function mainDesktop() {
     const o = cur();
