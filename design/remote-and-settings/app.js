@@ -62,13 +62,8 @@
         { id: 'no-web', name: 'no-web', builtin: false, tools: TOOLS.filter((t) => !t.startsWith('web_')) },
       ],
       appr: { read_file: 'allow', list_files: 'allow', search: 'allow', edit_file: 'ask', write_file: 'ask', run_command: 'ask', web_fetch: 'deny', web_search: 'allow' } },
-    srvOpen: new Set(), srvTry: false, envs: [''], view: '',
-    servers: [
-      { id: 'filesystem', name: 'filesystem', kind: 'cmd', cmd: 'npx', args: '-y @modelcontextprotocol/server-filesystem /home/maya/projects/garden-api', on: true, error: '', tools: [['read_text_file', true], ['list_directory', true], ['search_files', true], ['edit_file', false]] },
-      { id: 'github', name: 'github', kind: 'url', url: 'https://mcp.example.com/github', on: true, error: '', tools: [['list_issues', true], ['get_pull_request', true], ['create_issue_comment', false]] },
-      { id: 'garden-api', name: 'garden-api', kind: 'cmd', cmd: 'node', args: './tools/garden-mcp.js', on: true, error: "Exited with code 1: Cannot find module './tools/garden-mcp.js'", tools: [] },
-      { id: 'sqlite', name: 'sqlite', kind: 'cmd', cmd: 'uvx', args: 'mcp-server-sqlite --db-path ./garden.db', on: false, error: '', tools: [['query', true], ['list_tables', true]] },
-    ],
+    srvOpen: new Set(), srvTry: false, envs: [], view: '',
+    servers: mkServers(), toks: [{ n: '', m: 'value', v: '' }], hdrs: [],
     skillsNone: false,
     skills: [
       { id: 'release-notes', name: 'release-notes', desc: 'Draft release notes from the merged pull requests.', where: 'Project', dir: '.claude/skills', on: true },
@@ -191,39 +186,113 @@
       sec('Tools', TOOLS.map((t) => chk(x.tools.includes(t), t, 'tsTool', t, x.builtin)).join('')) +
       (x.builtin ? '' : `<div class="actions">${btn('Delete toolset', { kind: 'danger', icon: 'trash-2', act: 'dlg', arg: 'delTs:' + x.id, disabled: isMain })}${isMain ? '<span class="hint">Main chat uses this toolset. Choose another one first.</span>' : ''}</div>`);
   }
-  const srvStatus = (v) => (!v.on ? 'stopped' : v.error ? 'error' : 'running');
+  function ent(n, m, v) { return { n, m, v }; }
+  const VAR_RE = /^[A-Za-z_][A-Za-z0-9_]*$/, HDR_RE = /^[A-Za-z0-9-]+$/;
+  const VAR_MSG = 'Use letters, numbers and _, and do not start with a number.';
+  function mkServers() {
+    return [
+      { id: 'filesystem', name: 'filesystem', kind: 'cmd', cmd: 'npx', args: '-y @modelcontextprotocol/server-filesystem /home/maya/projects/garden-api', cwd: '/home/maya/projects/garden-api', env: [ent('LOG_LEVEL', 'value', 'info'), ent('API_TOKEN', 'var', 'GARDEN_TOKEN')], timeout: 60, on: true, error: '', tools: [['read_text_file', true], ['list_directory', true], ['search_files', true], ['edit_file', false]] },
+      { id: 'github', name: 'github', kind: 'url', url: 'https://mcp.example.com/github', auth: 'oauth', o: 'in', account: 'maya@example.com', hdr: [ent('X-Org', 'value', 'garden')], tok: null, timeout: 30, on: true, error: '', tools: [['list_issues', true], ['get_pull_request', true], ['create_issue_comment', false]] },
+      { id: 'docs', name: 'docs', kind: 'url', url: 'https://mcp.example.com/docs', auth: 'oauth', o: 'needed', account: '', hdr: [], tok: null, timeout: 60, on: true, error: '', tools: [] },
+      { id: 'garden-api', name: 'garden-api', kind: 'cmd', cmd: 'node', args: './tools/garden-mcp.js', cwd: '', env: [], timeout: 60, on: true, error: "Exited with code 1: Cannot find module './tools/garden-mcp.js'", tools: [] },
+      { id: 'sqlite', name: 'sqlite', kind: 'cmd', cmd: 'uvx', args: 'mcp-server-sqlite --db-path ./garden.db', cwd: '', env: [], timeout: 60, on: false, error: '', tools: [['query', true], ['list_tables', true]] },
+    ];
+  }
+  const isOauth = (v) => v.kind === 'url' && v.auth === 'oauth';
+  const srvStatus = (v) => (!v.on ? 'stopped' : v.error ? 'error' : isOauth(v) ? (v.o === 'in' ? 'running' : v.o === 'expired' ? 'expired' : 'needed') : 'running');
   const srvLine = (v) => (v.kind === 'url' ? v.url : (v.cmd + ' ' + (v.args || '')).trim());
   function pageMcp() {
     const cards = M.servers.map((v) => {
       const st = srvStatus(v), open = M.srvOpen.has(v.id);
-      const pl = st === 'running' ? pill('Running', 'ok') : st === 'error' ? pill('Error', 'danger') : pill('Stopped', 'off');
+      const pl = st === 'running' ? pill('Running', 'ok') : st === 'error' ? pill('Error', 'danger') : st === 'needed' ? pill('Sign-in needed', 'attn') : st === 'expired' ? pill('Sign-in expired', 'attn') : pill('Stopped', 'off');
+      const signBtn = (st === 'needed' && v.o !== 'waiting') ? btn('Sign in', { kind: 'primary', act: 'srvSignIn', arg: v.id }) : st === 'expired' ? btn('Sign in again', { kind: 'primary', act: 'srvSignIn', arg: v.id }) : '';
       let body = '';
       if (st === 'error') body += `<div class="srv-err">${ic('circle-alert', 15)}<span>${v.error}</span></div>`;
+      if (st === 'needed' && v.o === 'waiting') body += `<div class="srv-wait">${ic('loader', 15, 'spin')}<span class="grow">Waiting for sign-in in your browser</span>${btn('Cancel', { act: 'srvCancel', arg: v.id })}</div>`;
       if (open) {
-        body += st === 'running' ? (v.tools.map(([n, on]) => `<div class="mrow"><div class="grow mono" style="font-size:13.6px">${n}</div>${sw(on, 'Tool ' + n, 'srvTool', false, v.id + '|' + n)}</div>`).join('') || '<div class="srv-note">The server has not listed any tools.</div>')
-          : `<div class="srv-note">${st === 'error' ? 'No tools are listed while the server has an error.' : 'Turn the server on to list its tools.'}</div>`;
+        if (st === 'running') {
+          if (isOauth(v)) body += `<div class="srv-wait">${ic('circle-check', 15)}<span class="grow">${v.account ? 'Signed in as <b>' + v.account + '</b>' : 'Signed in'}</span>${btn('Sign out', { act: 'srvSignOut', arg: v.id })}</div>`;
+          body += (v.tools.map(([n, on]) => `<div class="mrow"><div class="grow mono" style="font-size:13.6px">${n}</div>${sw(on, 'Tool ' + n, 'srvTool', false, v.id + '|' + n)}</div>`).join('') || '<div class="srv-note">The server has not listed any tools.</div>');
+        } else {
+          body += `<div class="srv-note">${{ error: 'No tools are listed while the server has an error.', needed: 'Sign in to list its tools.', expired: 'Tools are not available until you sign in again.', stopped: 'Turn the server on to list its tools.' }[st]}</div>`;
+        }
       }
-      return `<div class="pcard"><div class="srv-h"><button class="srv-main" aria-expanded="${open}" ${A('srvOpen', v.id)}>${ic(open ? 'chevron-down' : 'chevron-right', 16)}<span class="grow"><div class="t">${v.name}</div><div class="s mono">${srvLine(v)}</div></span></button>${pl}${sw(v.on, 'Server ' + v.name, 'srvOn', false, v.id)}</div>${body}</div>`;
+      return `<div class="pcard"><div class="srv-h"><button class="srv-main" aria-expanded="${open}" ${A('srvOpen', v.id)}>${ic(open ? 'chevron-down' : 'chevron-right', 16)}<span class="grow"><div class="t">${v.name}</div><div class="s mono">${srvLine(v)}</div></span></button>${pl}${signBtn}${btn('Edit', { cls: 'quiet', act: 'editSrv', arg: v.id })}${sw(v.on, 'Server ' + v.name, 'srvOn', false, v.id)}</div>${body}</div>`;
     }).join('');
     return sec('Servers', cards, btn('Add server', { icon: 'plus', act: 'addSrv' }));
   }
-  function srvErrors() {
-    const f = M.f, e = { name: '', cmd: '', url: '', env: M.envs.map(() => '') };
-    const n = f.sname.trim();
-    if (n || M.srvTry) e.name = !n ? 'Enter a name.' : !NAME_RE.test(n) ? 'Use letters, numbers, - and _ only.' : M.servers.some((x) => x.name === n) ? `A server named ${n} already exists.` : '';
-    if (f.skind === 'cmd') { if (M.srvTry && !f.scmd.trim()) e.cmd = 'Enter a command.'; }
-    else { const u = f.surl.trim(); if (u || M.srvTry) e.url = !u ? 'Enter a URL.' : /^https?:\/\/[^\s/]+\S*$/.test(u) ? '' : 'Enter a URL that starts with http:// or https://.'; }
-    M.envs.forEach((v, i) => { const t = v.trim(); if (t && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(t)) e.env[i] = 'Use letters, numbers and _, and do not start with a number.'; });
+  /* server form (add and edit share it) */
+  function loadForm(v) {
+    const f = M.f, cp = (l) => (l || []).map((e) => ({ ...e }));
+    f.sname = v ? v.name : ''; f.skind = v ? v.kind : 'cmd'; f.scmd = (v && v.cmd) || ''; f.sargs = (v && v.args) || ''; f.scwd = (v && v.cwd) || '';
+    f.surl = (v && v.url) || ''; f.sauth = (v && v.auth) || 'none'; f.stimeout = String(v ? v.timeout : 60);
+    M.envs = cp(v && v.env); M.hdrs = cp(v && v.hdr); M.toks = [v && v.tok ? { ...v.tok } : ent('', 'value', '')];
+  }
+  function formToServer() {
+    const f = M.f, clean = (l) => l.filter((e) => e.n.trim() || e.v.trim()).map((e) => ({ n: e.n.trim(), m: e.m, v: e.v.trim() }));
+    const o = { name: f.sname.trim(), kind: f.skind, timeout: +f.stimeout };
+    if (f.skind === 'cmd') return Object.assign(o, { cmd: f.scmd.trim(), args: f.sargs.trim(), cwd: f.scwd.trim(), env: clean(M.envs) });
+    return Object.assign(o, { url: f.surl.trim(), auth: f.sauth, hdr: clean(M.hdrs), tok: f.sauth === 'token' ? { n: '', m: M.toks[0].m, v: M.toks[0].v.trim() } : null });
+  }
+  function entErr(en, named, nameRe, nameMsg) {
+    const e = { n: '', v: '' }, v = en.v.trim(), n = en.n.trim();
+    if (named && !n && !v) return e;
+    if (named) e.n = !n ? 'Enter a name.' : !nameRe.test(n) ? nameMsg : '';
+    if (en.m === 'var') e.v = !v ? 'Enter a variable name.' : !VAR_RE.test(v) ? VAR_MSG : '';
+    else e.v = !v ? 'Enter a value.' : '';
     return e;
   }
+  function srvErrors(all) {
+    const f = M.f, self = M.dlg && M.dlg.edit;
+    const e = { name: '', cmd: '', url: '', timeout: '', env: M.envs.map((x) => entErr(x, true, VAR_RE, VAR_MSG)), hdr: M.hdrs.map((x) => entErr(x, true, HDR_RE, 'Use letters, numbers and - only.')), tok: entErr(M.toks[0], false) };
+    const n = f.sname.trim();
+    e.name = !n ? 'Enter a name.' : !NAME_RE.test(n) ? 'Use letters, numbers, - and _ only.' : M.servers.some((x) => x.name === n && x.id !== self) ? `A server named ${n} already exists.` : '';
+    if (f.skind === 'cmd') { if (!f.scmd.trim()) e.cmd = 'Enter a command.'; }
+    else { const u = f.surl.trim(); e.url = !u ? 'Enter a URL.' : /^https?:\/\/[^\s/]+\S*$/.test(u) ? '' : 'Enter a URL that starts with http:// or https://.'; }
+    const t = f.stimeout.trim(); e.timeout = !t ? 'Enter a number of seconds.' : !/^\d+$/.test(t) || +t < 1 || +t > 600 ? 'Enter a whole number of seconds from 1 to 600.' : '';
+    if (f.skind === 'cmd') { e.hdr = []; e.tok = { n: '', v: '' }; } else { e.env = []; }
+    if (f.skind === 'url' && f.sauth !== 'token') e.tok = { n: '', v: '' };
+    if (!all) { // required-field messages wait until the owner has tried to save
+      const q = (s) => (s.startsWith('Enter a') && !s.startsWith('Enter a URL that') && !s.startsWith('Enter a whole') ? '' : s);
+      e.name = q(e.name); e.cmd = q(e.cmd); e.url = q(e.url); e.timeout = q(e.timeout);
+      [...e.env, ...e.hdr, e.tok].forEach((x) => { x.n = q(x.n); x.v = q(x.v); });
+    }
+    return e;
+  }
+  const hasErr = (e) => !!(e.name || e.cmd || e.url || e.timeout || e.tok.n || e.tok.v || [...e.env, ...e.hdr].some((x) => x.n || x.v));
+  function syncEdit() {
+    const id = M.dlg && M.dlg.edit;
+    if (!id || hasErr(srvErrors(true))) return;
+    const s2 = M.servers.find((q) => q.id === id), fresh = formToServer();
+    if (fresh.kind === 'url' && fresh.auth === 'oauth' && !(s2.kind === 'url' && s2.auth === 'oauth')) { s2.o = 'needed'; s2.account = ''; }
+    Object.assign(s2, fresh);
+  }
+  const errLine = (t) => (t ? `<div class="hint errtxt">${t}</div>` : '');
+  function kvRows(kind, list, errs, named, namePh) {
+    return list.map((en, i) => {
+      const er = errs[i] || { n: '', v: '' }, vm = en.m === 'value';
+      const nm = named ? `<div class="field ${er.n ? 'err' : ''}" style="margin:0"><label class="sr" for="f-${kind}${i}n">Name ${i + 1}</label><input id="f-${kind}${i}n" class="input" data-k="${kind}:${i}:n" value="${en.n.replace(/"/g, '&quot;')}" placeholder="${namePh}" autocomplete="off">${errLine(er.n)}</div>` : '';
+      const val = `<div class="field ${er.v ? 'err' : ''}" style="margin:0"><label class="sr" for="f-${kind}${i}v">${vm ? 'Value' : 'Variable name'} ${i + 1}</label><input id="f-${kind}${i}v" class="input" data-k="${kind}:${i}:v" ${vm ? 'type="password"' : ''} value="${en.v.replace(/"/g, '&quot;')}" placeholder="${vm ? 'Value, hidden' : 'VAR_NAME'}" autocomplete="off">${errLine(er.v)}</div>`;
+      const src = `<select class="input srcsel" data-k="${kind}:${i}:m" aria-label="Source of ${named ? 'entry ' + (i + 1) : 'the token'}"><option value="value" ${vm ? 'selected' : ''}>Value</option><option value="var" ${vm ? '' : 'selected'}>From env var</option></select>`;
+      return `<div class="kvrow">${nm}${val}${src}${named ? iconBtn('x', 'Remove entry ' + (i + 1), 'kvDel', kind + '|' + i) : ''}</div>`;
+    }).join('');
+  }
   function addSrvDialog() {
-    const e = srvErrors(), f = M.f;
-    const env = M.envs.map((v, i) => `<div class="envrow"><div class="field ${e.env[i] ? 'err' : ''}" style="margin:0"><label class="sr" for="f-env${i}">Variable name ${i + 1}</label><input id="f-env${i}" class="input" data-k="env:${i}" value="${v.replace(/"/g, '&quot;')}" placeholder="GITHUB_TOKEN" autocapitalize="characters">${e.env[i] ? `<div class="hint errtxt">${e.env[i]}</div>` : ''}</div>${iconBtn('x', 'Remove variable ' + (i + 1), 'envDel', i)}</div>`).join('');
+    const edit = M.dlg.edit, e = srvErrors(M.srvTry || !!edit), f = M.f;
+    const cmd = field('Command', '', 'scmd', { ph: 'npx', err: e.cmd }) + field('Arguments', 'Separated by spaces.', 'sargs', { ph: '-y @modelcontextprotocol/server-filesystem .' }) +
+      field('Working folder', 'Optional.', 'scwd', { ph: '/home/maya/projects/garden-api' }) +
+      `<div class="field"><div class="lab">Environment variables</div><div class="hint">Values are hidden. Choose From env var to read the value from a variable instead.</div>${kvRows('env', M.envs, e.env, true, 'NAME')}<div>${btn('Add variable', { icon: 'plus', cls: 'quiet', act: 'envAdd' })}</div></div>`;
+    const url = field('URL', '', 'surl', { ph: 'https://mcp.example.com/github', err: e.url }) +
+      `<div class="field"><div class="lab">Authentication</div><div>${seg([['none', 'None'], ['oauth', 'OAuth'], ['token', 'Header token']], f.sauth, 'srvAuth')}</div>${f.sauth === 'oauth' ? "<div class=\"hint\">Sign in from the server's row.</div>" : ''}</div>` +
+      (f.sauth === 'token' ? `<div class="field"><div class="lab">Token</div><div class="hint">Sent in the Authorization header. Hidden.</div>${kvRows('tok', M.toks, [e.tok], false)}</div>` : '') +
+      `<div class="field"><div class="lab">Headers</div><div class="hint">Values are hidden. Choose From env var to read the value from a variable instead.</div>${kvRows('hdr', M.hdrs, e.hdr, true, 'Header-Name')}<div>${btn('Add header', { icon: 'plus', cls: 'quiet', act: 'hdrAdd' })}</div></div>`;
     const body = field('Name', '', 'sname', { sans: true, ph: 'filesystem', err: e.name }) +
-      `<div class="field"><div class="lab">Type</div><div>${seg([['cmd', 'Command'], ['url', 'URL']], f.skind, 'srvKind')}</div></div>` +
-      (f.skind === 'cmd' ? field('Command', '', 'scmd', { ph: 'npx', err: e.cmd }) + field('Arguments', 'Separated by spaces.', 'sargs', { ph: '-y @modelcontextprotocol/server-filesystem .' })
-        : field('URL', '', 'surl', { ph: 'https://mcp.example.com/github', err: e.url })) +
-      `<div class="field"><div class="lab">Environment variables</div><div class="hint">Variable names only. Values are never shown.</div>${env}<div>${btn('Add variable', { icon: 'plus', cls: 'quiet', act: 'envAdd' })}</div></div>`;
+      `<div class="field"><div class="lab">Type</div><div>${seg([['cmd', 'Command'], ['url', 'URL']], f.skind, 'srvKind')}</div></div>` + (f.skind === 'cmd' ? cmd : url) +
+      field('Request timeout', 'Seconds.', 'stimeout', { ph: '60', err: e.timeout });
+    if (edit) {
+      const cur = M.servers.find((q) => q.id === edit);
+      return dlgShell(`Edit ${cur.name}`, body, `${btn('Remove server', { kind: 'danger', icon: 'trash-2', act: 'dlg', arg: 'delSrv:' + edit })}<span class="grow"></span>${btn('Done', { kind: 'primary', act: 'close' })}`);
+    }
     return dlgShell('Add server', body, `${btn('Cancel', { act: 'close' })}${btn('Add server', { kind: 'primary', act: 'srvAdd' })}`);
   }
   function pageSkills() {
@@ -470,6 +539,10 @@
         `${btn('Cancel', { act: 'close' })}${btn('Regenerate and clear pairings', { kind: 'danger', icon: 'trash-2', act: 'doRegen' })}`);
     }
     if (d.type === 'addSrv') return addSrvDialog();
+    if (d.type === 'delSrv') {
+      const x = M.servers.find((v) => v.id === d.id);
+      return dlgShell(`Remove ${x.name}?`, `<p style="margin:0">The server ${x.name} and its settings are removed. Its tools are no longer available.</p>`, `${btn('Cancel', { act: 'editSrv', arg: x.id })}${btn(`Remove ${x.name}`, { kind: 'danger', icon: 'trash-2', act: 'doDelSrv' })}`);
+    }
     if (d.type === 'delTs') {
       const x = M.tl.sets.find((v) => v.id === d.id);
       return dlgShell(`Delete ${x.name}?`, `<p style="margin:0">The toolset ${x.name} is removed from the list.</p>`, `${btn('Cancel', { act: 'close' })}${btn(`Delete ${x.name}`, { kind: 'danger', icon: 'trash-2', act: 'doDelTs' })}`);
@@ -717,7 +790,7 @@
 
   const VIEWS = {
     tools: [['tools-list', 'Toolsets'], ['tools-editor', 'Toolset editor'], ['tools-builtin', 'Built-in toolset'], ['tools-error', 'Name error']],
-    mcp: [['mcp-list', 'Server list'], ['mcp-expanded', 'Expanded server'], ['mcp-stopped', 'Stopped server'], ['mcp-error', 'Error server'], ['mcp-add', 'Add server'], ['mcp-add-error', 'Add server, errors']],
+    mcp: [['mcp-list', 'Server list'], ['mcp-expanded', 'Expanded server'], ['mcp-stopped', 'Stopped server'], ['mcp-error', 'Error server'], ['mcp-waiting', 'Waiting for sign-in'], ['mcp-signedin', 'Signed in'], ['mcp-expired', 'Sign-in expired'], ['mcp-add', 'Add server'], ['mcp-add-error', 'Add server, errors'], ['mcp-edit-cmd', 'Edit, command'], ['mcp-edit-url', 'Edit, URL'], ['mcp-edit-errors', 'Edit, errors'], ['mcp-remove', 'Remove server']],
     skills: [['skills-list', 'Skills'], ['skills-empty', 'None found']],
   };
   const curPage = () => (S.screen !== 'settings' ? '' : ph() ? S.ppage : S.page);
@@ -729,9 +802,17 @@
     if (v === 'tools-error') { ACT.openTs('no-web'); M.f.tsName = 'all'; }
     if (v === 'mcp-expanded') M.srvOpen.add('filesystem');
     if (v === 'mcp-stopped') M.srvOpen.add('sqlite');
+    if (v.startsWith('mcp-')) M.servers = mkServers();
     if (v === 'mcp-error') M.srvOpen.add('garden-api');
+    if (v === 'mcp-waiting') M.servers.find((q) => q.id === 'docs').o = 'waiting';
+    if (v === 'mcp-signedin') M.srvOpen.add('github');
+    if (v === 'mcp-expired') { M.servers.find((q) => q.id === 'github').o = 'expired'; M.srvOpen.add('github'); }
     if (v === 'mcp-add' || v === 'mcp-add-error') ACT.addSrv();
-    if (v === 'mcp-add-error') { Object.assign(M.f, { sname: 'filesystem', skind: 'url', surl: 'mcp.example.com/github' }); M.envs = ['1TOKEN']; M.srvTry = true; }
+    if (v === 'mcp-add-error') { Object.assign(M.f, { sname: 'filesystem', skind: 'url', surl: 'mcp.example.com/github', sauth: 'none', stimeout: '0' }); M.hdrs = [ent('X Org', 'value', 'garden')]; M.srvTry = true; }
+    if (v === 'mcp-edit-cmd') ACT.editSrv('filesystem');
+    if (v === 'mcp-edit-url') ACT.editSrv('github');
+    if (v === 'mcp-edit-errors') { ACT.editSrv('github'); Object.assign(M.f, { sauth: 'token', stimeout: '0' }); M.toks = [ent('', 'var', '')]; M.hdrs = [ent('X Org', 'value', 'garden'), ent('X-Team', 'var', '1TEAM')]; }
+    if (v === 'mcp-remove') M.dlg = { type: 'delSrv', id: 'filesystem' };
     if (v === 'skills-empty') M.skillsNone = true;
     M.view = v;
   }
@@ -749,18 +830,24 @@
     srvOn: (v) => { const x = M.servers.find((q) => q.id === v); x.on = !x.on; },
     srvTool: (v) => { const [id, n] = v.split('|'); const t = M.servers.find((q) => q.id === id).tools.find((q) => q[0] === n); t[1] = !t[1]; },
     skillOn: (v) => { const x = M.skills.find((q) => q.id === v); x.on = !x.on; },
-    addSrv: () => { M.f.sname = M.f.scmd = M.f.sargs = M.f.surl = ''; M.f.skind = 'cmd'; M.envs = ['']; M.srvTry = false; openDlg({ type: 'addSrv' }); },
+    addSrv: () => { loadForm(null); M.srvTry = false; openDlg({ type: 'addSrv' }); },
+    editSrv: (v) => { loadForm(M.servers.find((q) => q.id === v)); M.srvTry = true; openDlg({ type: 'addSrv', edit: v }); },
     srvKind: (v) => { M.f.skind = v; },
-    envAdd: () => { M.envs.push(''); },
-    envDel: (v) => { M.envs.splice(+v, 1); if (!M.envs.length) M.envs = ['']; },
+    srvAuth: (v) => { M.f.sauth = v; },
+    envAdd: () => { M.envs.push(ent('', 'value', '')); },
+    hdrAdd: () => { M.hdrs.push(ent('', 'value', '')); },
+    kvDel: (v) => { const [k, i] = v.split('|'); (k === 'env' ? M.envs : M.hdrs).splice(+i, 1); },
     srvAdd: () => {
       M.srvTry = true;
-      const e = srvErrors();
-      if (e.name || e.cmd || e.url || e.env.some(Boolean)) return;
-      const f = M.f, n = f.sname.trim();
-      M.servers.push(f.skind === 'cmd' ? { id: n, name: n, kind: 'cmd', cmd: f.scmd.trim(), args: f.sargs.trim(), on: true, error: '', tools: [] } : { id: n, name: n, kind: 'url', url: f.surl.trim(), on: true, error: '', tools: [] });
+      if (hasErr(srvErrors(true))) return;
+      const n = M.f.sname.trim();
+      M.servers.push(Object.assign({ id: n, on: true, error: '', tools: [], o: 'needed', account: '' }, formToServer()));
       M.dlg = null; M.srvTry = false;
     },
+    doDelSrv: () => { const id = M.dlg.id; M.servers = M.servers.filter((q) => q.id !== id); M.srvOpen.delete(id); M.dlg = null; },
+    srvSignIn: (v) => { const x = M.servers.find((q) => q.id === v); x.o = 'waiting'; later(() => { if (x.o === 'waiting') { x.o = 'in'; x.account = x.id === 'github' ? 'maya@example.com' : ''; x.tools = x.tools.length ? x.tools : [['search_docs', true], ['get_page', true]]; } }, 2500); },
+    srvCancel: (v) => { M.servers.find((q) => q.id === v).o = 'needed'; },
+    srvSignOut: (v) => { M.servers.find((q) => q.id === v).o = 'needed'; },
     sub: (v) => { S.sub = v; M.f.licq = ''; },
     subBack: () => { S.sub = ''; },
     coreMode: (v) => { M.coreMode = v; },
@@ -856,17 +943,20 @@
     else if (ROUTE[a]) ROUTE[a](v, el);
     else if (ACT[a]) ACT[a](v);
     else return;
+    syncEdit();
     writeHash();
     render();
   });
   document.addEventListener('input', (ev) => {
     const k = ev.target.dataset && ev.target.dataset.k;
     if (!k) return;
-    if (k.startsWith('env:')) { M.envs[+k.slice(4)] = ev.target.value; render(); return; }
+    const kv = /^(env|hdr|tok):(\d+):([nvm])$/.exec(k);
+    if (kv) { const en = { env: M.envs, hdr: M.hdrs, tok: M.toks }[kv[1]][+kv[2]]; en[kv[3]] = ev.target.value; if (kv[3] === 'm') en.v = ''; syncEdit(); render(); return; }
     M.f[k] = ev.target.value;
     if (k === 'tsName' && !tsError()) { M.tl.sets.find((x) => x.id === M.tl.edit).name = M.f.tsName.trim(); }
+    syncEdit();
     // fields that gate a button or message re-render in place
-    if (['token', 'addCode', 'pass1', 'pass2', 'keySecret', 'apiKey', 'pairName', 'hostname', 'licq', 'tsName', 'sname', 'scmd', 'sargs', 'surl'].includes(k)) render();
+    if (['token', 'addCode', 'pass1', 'pass2', 'keySecret', 'apiKey', 'pairName', 'hostname', 'licq', 'tsName', 'sname', 'scmd', 'sargs', 'surl', 'scwd', 'stimeout'].includes(k)) render();
   });
   document.addEventListener('change', (ev) => {
     const k = ev.target.dataset && ev.target.dataset.k;
