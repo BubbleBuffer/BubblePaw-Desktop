@@ -18,11 +18,11 @@ GuardedBackend       AgentBackend wrapper that spots a dead host
 ## Dependencies
 
 `agent_kit`, `agent_kit_core` and `agent_kit_bubblepaw` come from
-`BubbleBuffer/agent-kit` at the commit of tag `v0.15.2`. The ref is the commit hash
+`BubbleBuffer/agent-kit` at the commit of tag `v0.15.3`. The ref is the commit hash
 because the kit's packages depend on each other by path inside that repository,
 and pub resolves those to the hash; a tag in the app would conflict with it.
-The pin is v0.15.2, the first tag with `BubblePawBackend.connectionLost`, which
-idle exit detection needs.
+v0.15.2 added `BubblePawBackend.connectionLost` (idle exit detection); v0.15.3
+added "Rewind from here" and hides the empty ledger.
 `bb_ui` is pinned to `v0.6.0`, the kit's own pin. The kit's fonts are bundled in
 `assets/fonts` (the kit says hosts do that), with their OFL licences.
 
@@ -101,6 +101,11 @@ message.
   capability, which the stdio host lacks, so `Workbench` creates the workspace
   (and the header's context button) only for a backend that has it. The scripted
   backend has it.
+- **Rewind from here**: the kit puts this on user messages when the backend has
+  the rewind capability, and calls the port's `rewind`. `BubblePawBackend`
+  implements that as a new chat and announces it on `createdChats`; `Workbench`
+  opens it (the original chat is untouched). The ledger beside the chat is left
+  out when there is no crew or job to show.
 - **DiffReview**: "Review diff" on an approval or an edit row covers the workbench
   with the kit's `DiffView` and a Close button. The kit's workspace panes are not
   used.
@@ -115,6 +120,7 @@ dark setting, and the form factor is always desktop.
 |---|---|
 | `test/app_test.dart` | Widget tests on the scripted backend: open a chat, send, approve, deny, diff, first-run settings, failure notices, Restart |
 | `test/v01_test.dart` | Extra arguments (split, config, settings round-trip), idle exit, avatar initials, plan, question, context pane present and absent, branch |
+| `test/rewind_test.dart` | The kit's rewind action reaches the backend and the announced chat opens; no action without the capability |
 | `test/scenes.dart` | Scripted hosts the tests and goldens share |
 | `test/guarded_backend_test.dart` | The host-exit detector |
 | `test/config_test.dart` | Config file and app-support paths |
@@ -130,11 +136,6 @@ pins; renders from another platform will not match.
   there is no older-history paging.
 - Worktrees, crew and the Context pane show only what the stdio backend reports;
   it reports no context details, children or jobs.
-- Rewind has a backend command and the app opens the chat it creates, but the kit
-  has no control that asks for one; adding it needs a kit change (a per-message
-  action).
-- The ledger beside the chat shows its "Still running" heading even when the
-  backend has no crew or jobs (kit).
 - The header shows a branch only when the backend reports one; the
   stdio host reports none, so none is shown.
 - Windows is not built or tested yet.
