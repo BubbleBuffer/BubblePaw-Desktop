@@ -182,6 +182,13 @@ class GuardedBackend implements AgentBackend, BackendConstraintsProvider {
   Future<List<KitChoice>> listModels() => _guard(_inner.listModels());
 
   @override
+  Future<ProviderSetup> listProviders() => _guard(_inner.listProviders());
+
+  @override
+  Future<ProviderSetup> setDefaultModel(String modelId) =>
+      _guard(_inner.setDefaultModel(modelId));
+
+  @override
   Future<List<KitChoice>> listProfiles() => _guard(_inner.listProfiles());
 
   @override

@@ -3,6 +3,7 @@
 // Shown on first run, when the binary is missing, and from the rail.
 
 import 'package:agent_kit/agent_kit.dart';
+import 'package:agent_kit_core/agent_kit_core.dart' show AgentBackend;
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
@@ -16,6 +17,7 @@ class SettingsScreen extends StatefulWidget {
     this.onCancel,
     this.scripted = false,
     this.firstRun = false,
+    this.backend,
   });
 
   /// The values the fields start with.
@@ -32,6 +34,10 @@ class SettingsScreen extends StatefulWidget {
 
   /// No config has been saved yet.
   final bool firstRun;
+
+  /// The running backend. With it, the providers section shows what the host
+  /// reports; without one (first run, a failed host) there is nothing to ask.
+  final AgentBackend? backend;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -187,6 +193,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ],
                 ),
+                if (widget.backend != null) ...[
+                  const SizedBox(height: 24),
+                  ProviderSettings(backend: widget.backend!),
+                ],
               ],
             ),
           ),

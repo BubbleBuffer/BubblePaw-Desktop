@@ -76,8 +76,16 @@ void main() {
         backend.capabilities.has(KitCapability.context),
         isTrue,
         reason:
-            "v0.3.0 advertises the context feature, so the Context pane shows",
+            "v0.3.1 advertises the context feature, so the Context pane shows",
       );
+      expect(backend.capabilities.has(KitCapability.providers), isTrue);
+      final setup = await backend.listProviders();
+      expect(
+        setup.providers.map((p) => p.name),
+        contains('demo'),
+        reason: 'providers.list lists the demo provider',
+      );
+
       printOnFailure(
         'features: capabilities=${backend.capabilities.values.map((c) => c.name).toList()}',
       );

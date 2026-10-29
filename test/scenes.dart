@@ -89,10 +89,16 @@ class Played {
     this.capabilities,
     this.connectionLost,
     this.createdChats,
+    this.providers,
+    this.models = const [],
+    this.chatPageSize,
   });
 
   final List<ChatScript>? scripts;
   final KitCapabilities? capabilities;
+  final ProviderSetup? providers;
+  final List<KitChoice> models;
+  final int? chatPageSize;
   Future<Object>? connectionLost;
 
   /// Chats the host creates by itself, as BubblePawBackend does for a rewind.
@@ -102,7 +108,13 @@ class Played {
 
   Future<StartedBackend> start(AppConfig config) async {
     configs.add(config);
-    backend = await playedScript(scripts: scripts, capabilities: capabilities);
+    backend = await playedScript(
+      scripts: scripts,
+      capabilities: capabilities,
+      providers: providers,
+      models: models,
+      chatPageSize: chatPageSize,
+    );
     return StartedBackend(
       backend,
       () async {},
@@ -121,12 +133,58 @@ class Played {
 }
 
 /// What the stdio host offers for child agents: their questions can be
-/// answered from the parent. The host reports no jobs.
+/// answered from the parent, and a running child can be cancelled (Core
+/// v0.3.1). The host reports no jobs.
 final crewCapabilities = KitCapabilities([
   ...KitCapability.values.where(
-    (c) => stdioCapabilities.has(c) || c == KitCapability.answerChildQuestion,
+    (c) =>
+        stdioCapabilities.has(c) ||
+        c == KitCapability.answerChildQuestion ||
+        c == KitCapability.children,
   ),
 ]);
+
+/// Core v0.3.1 host controls: the providers list, the default model and the
+/// composer's pick.
+final hostControlCapabilities = KitCapabilities([
+  ...stdioCapabilities.values,
+  KitCapability.providers,
+  KitCapability.defaultModel,
+  KitCapability.models,
+]);
+
+/// Two providers, one with a key the host did not find.
+final sampleProviders = ProviderSetup(
+  main: 'demo/scripted',
+  activeMain: 'demo/scripted',
+  providers: [
+    ProviderInfo(
+      name: 'demo',
+      kind: 'scripted',
+      models: const [
+        ProviderModel(id: 'scripted'),
+        ProviderModel(id: 'scripted-fast'),
+      ],
+    ),
+    ProviderInfo(
+      name: 'openrouter',
+      kind: 'openai-compatible',
+      baseUrl: 'https://openrouter.ai/api/v1',
+      keyEnv: 'OPENROUTER_API_KEY',
+      models: const [ProviderModel(id: 'deepseek-v4.1-flash')],
+    ),
+  ],
+);
+
+/// The composer's choices for [sampleProviders].
+const sampleModels = [
+  KitChoice(id: 'demo/scripted', label: 'demo/scripted', detail: 'scripted'),
+  KitChoice(
+    id: 'demo/scripted-fast',
+    label: 'demo/scripted-fast',
+    detail: 'scripted',
+  ),
+];
 
 /// A parent run with two child agents: one still running that has asked a
 /// question, and one that has finished.
