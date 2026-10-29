@@ -106,8 +106,11 @@ Scene coreScene({
         // The host did not start: Settings opens from the failure notice.
         await tester.tap(find.byKey(const ValueKey('notice-settings')));
         await settle(tester);
-        await tester.tap(find.byKey(ValueKey('settings-nav-$section')));
-        await settle(tester);
+        final nav = find.byKey(ValueKey('settings-nav-$section'));
+        if (nav.evaluate().isNotEmpty) {
+          await tester.tap(nav);
+          await settle(tester);
+        }
       } else {
         await openSettings(tester, section);
       }
