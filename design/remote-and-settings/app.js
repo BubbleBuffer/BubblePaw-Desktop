@@ -467,10 +467,10 @@
     const stat = sel === 'local' ? `${dotOn} Running` : sh && sh.online ? `${dotOn} Online` : '<span class="dot off"></span> Offline';
     return `<div class="app"><aside class="rail"><div class="rail-head"><button class="hostbtn" aria-expanded="${M.pop}" aria-haspopup="menu" ${A('pop')}><span class="two"><div class="h">${stat}</div><div class="w">${selName}</div></span>${ic('chevron-down', 15)}</button>${iconBtn('panel-left', 'Hide the rail')}</div>
       ${newRow(!!offline, false)}
-      <div class="rail-search">${ic('search', 16)}Search all projects<kbd>Ctrl K</kbd></div>
+      <div class="rail-search">${ic('search', 16)}Search all projects</div>
       ${offline ? `<div class="notice" style="margin:2px 0">${ic('wifi-off', 16)}<div>${sh.name} is offline.${sh.seen ? ' ' + sh.seen.charAt(0).toUpperCase() + sh.seen.slice(1) + '.' : ''}</div></div>` : ''}
       <div class="rail-scroll">${chatList(false)}</div>
-      <div class="rail-foot"><button class="btn" ${A('toSettings')}>${ic('settings', 16)}Settings</button><span class="avatar">BP</span></div>${pop}</aside>
+      <div class="rail-foot"><button class="btn" ${A('toSettings')}>${ic('settings', 16)}Settings</button></div>${pop}</aside>
       <div class="main"><div class="topbar"><span class="ct">${SEL}</span>${pill('Needs approval', 'attn')}<span class="tag" style="margin-left:4px">bubblepaw-base</span><span class="muted mono" style="font-size:12px;margin-left:4px">${ic('git-branch', 13)} bp/quota-reconnect</span></div>
       <div class="stream">${transcript(false)}</div>${composer(false)}</div></div>`;
   }
