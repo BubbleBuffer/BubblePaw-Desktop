@@ -8,7 +8,7 @@ running.
 main.dart            flags (--scripted, --config-dir), builds the controller
 BubblePawApp         WidgetsApp + BbThemeScope (above the navigator)
  AppShell            draws HostController's state
-  SettingsScreen     binary, workspace, data directory
+  SettingsScreen     binary, workspace, data directory, extra host arguments
   Notice             failure and starting states (Restart, Settings)
   Workbench          AgentWorkbench + DiffReview overlay
 HostController       config, start/restart, phase, failure
@@ -18,9 +18,12 @@ GuardedBackend       AgentBackend wrapper that spots a dead host
 ## Dependencies
 
 `agent_kit`, `agent_kit_core` and `agent_kit_bubblepaw` come from
-`BubbleBuffer/agent-kit` at the commit of tag `v0.15.1`. The ref is the commit hash
+`BubbleBuffer/agent-kit` at a commit on top of tag `v0.15.1`. The ref is the commit hash
 because the kit's packages depend on each other by path inside that repository,
 and pub resolves those to the hash; a tag in the app would conflict with it.
+Until agent-kit#42 is merged, all three are at that PR's commit, which is
+v0.15.1 plus `BubblePawBackend.connectionLost`; the app needs it for idle exit
+detection.
 `bb_ui` is pinned to `v0.6.0`, the kit's own pin. The kit's fonts are bundled in
 `assets/fonts` (the kit says hosts do that), with their OFL licences.
 
@@ -41,8 +44,9 @@ with the new values.
 
 ## The backend
 
-Real mode: `BubblePawBackend.start(binaryPath, workspaceDirectory, dataDirectory)`
-spawns `bubblepaw --workspace <dir> --data-dir <dir> stdio`. The kit's adapter
+Real mode: `BubblePawBackend.start(binaryPath, workspaceDirectory, dataDirectory,
+arguments)` spawns `bubblepaw --workspace <dir> --data-dir <dir> stdio` plus the
+settings' extra arguments (`AppConfig.hostArguments`, split by `splitArguments`). The kit's adapter
 owns that child: disposing it requests `shutdown`, closes stdin and kills the
 child by handle if it does not leave. The app disposes it when the window asks to
 exit (`AppLifecycleListener.onExitRequested`) and before every restart.
@@ -57,6 +61,16 @@ call. It only watches: a `BubblePawHostExited` thrown by a command or an event
 stream, or an event stream that ends while the app is not closing it, becomes one
 `HostFailure`. The kit's workbench would only show generic error text for these,
 and `BubblePawException` is not a `KitError`, so the app has to look for it.
+
+### Idle exit
+
+The stream and command paths only fire while something is open or sent. The kit's
+adapter also exposes `BubblePawBackend.connectionLost`, which completes when the
+child's connection ends whether or not any chat is open. `startBubblePaw` passes
+it as `StartedBackend.connectionLost`; `HostController` waits on it for each
+started host and shows the same "BubblePaw stopped" notice at once. A host that
+was restarted or closed on purpose is ignored (the future never completes on a
+deliberate dispose, and a stale one is dropped by generation).
 
 ## Failure notices
 
@@ -76,8 +90,18 @@ message.
 
 ## Screens the app adds
 
-- **Settings**: three fields with bb_ui's `SettingsField`; no validation beyond
-  "not empty". The binary's existence is checked on start, not on save.
+- **Settings**: four fields with bb_ui's `SettingsField`; no validation beyond
+  "not empty" (the arguments may be empty). The binary's existence is checked on
+  start, not on save.
+- **Rail avatar**: two letters from the workspace folder name (`my-cool_app` is
+  MC, `BubblePaw` is BP). The kit draws the circle; it cannot be left out.
+- **Plan, question, usage, context meter, branch**: the kit's chat pane already
+  draws these from the snapshot, each only when the backend reports data and has
+  the capability. The stdio host reports plan, questions and usage (not the branch);
+  they appear as it sends them. The **Context pane** needs the `context`
+  capability, which the stdio host lacks, so `Workbench` creates the workspace
+  (and the header's context button) only for a backend that has it. The scripted
+  backend has it.
 - **DiffReview**: "Review diff" on an approval or an edit row covers the workbench
   with the kit's `DiffView` and a Close button. The kit's workspace panes are not
   used.
@@ -91,9 +115,11 @@ dark setting, and the form factor is always desktop.
 | Test | What it covers |
 |---|---|
 | `test/app_test.dart` | Widget tests on the scripted backend: open a chat, send, approve, deny, diff, first-run settings, failure notices, Restart |
+| `test/v01_test.dart` | Extra arguments (split, config, settings round-trip), idle exit, avatar initials, plan, question, context pane present and absent, branch |
+| `test/scenes.dart` | Scripted hosts the tests and goldens share |
 | `test/guarded_backend_test.dart` | The host-exit detector |
 | `test/config_test.dart` | Config file and app-support paths |
-| `test/golden_test.dart` | Main screen, settings and a failure notice, light and dark, 1440 and 480 px wide (`test/goldens`) |
+| `test/golden_test.dart` | Main screen, settings, a failure notice, plan, question and context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
 | `test/live_test.dart` | Opt-in (`BP_TEST_BIN`): the real host with the offline demo provider |
 
 Goldens are rendered on Linux with the bundled fonts and the Flutter version CI
@@ -101,11 +127,15 @@ pins; renders from another platform will not match.
 
 ## Known gaps
 
-- No field for extra host arguments (for example `--provider`); the host takes its
-  provider from BubblePaw's own configuration.
 - Chats the kit lists are the newest 64 (the stdio backend has no cursor), and
   there is no older-history paging.
-- Worktrees, crew, plan, questions and context show only what the stdio backend
-  reports; nothing is added for what it lacks.
-- A host that dies while no chat is open is noticed on the next command.
+- Worktrees, crew and the Context pane show only what the stdio backend reports;
+  it reports no context details, children or jobs.
+- Rewind has a backend command and the app opens the chat it creates, but the kit
+  has no control that asks for one; adding it needs a kit change (a per-message
+  action).
+- The ledger beside the chat shows its "Still running" heading even when the
+  backend has no crew or jobs (kit).
+- The header shows a branch only when the backend reports one; the
+  stdio host reports none, so none is shown.
 - Windows is not built or tested yet.

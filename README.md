@@ -5,7 +5,7 @@ it composes the [BubbleBuffer agent kit](https://github.com/BubbleBuffer/agent-k
 (`AgentWorkbench`: session rail, header, transcript, composer, approvals, diffs)
 over a BubblePaw host that runs as a child process. Licensed under AGPL-3.0.
 
-Version 0.1 (the app shell). The wiki is in [`docs/`](docs/README.md).
+Version 0.1. The wiki is in [`docs/`](docs/README.md).
 
 ## Run it
 
@@ -32,10 +32,13 @@ flutter run -d linux
 ```
 
 On first run, or when the binary is missing, the app opens the settings screen
-with three fields: the **binary**, the **workspace** directory and the **data
-directory**. The data directory defaults to a folder of the app's own, because a
+with four fields: the **binary**, the **workspace** directory, the **data
+directory** and **extra host arguments**. The data directory defaults to a folder of the app's own, because a
 data directory must never be shared with another BubblePaw host. The host reads
-its provider and model from BubblePaw's own configuration, not from this app.
+The extra arguments are added to the host's command line as typed, with quotes
+grouping a value that has spaces: `--provider demo`, or
+`--set 'agent.execution_mode="native"'`. Leave them empty to use the provider
+from BubblePaw's own configuration.
 
 The app needs a BubblePaw build that speaks stdio protocol `0.1`
 ([BubblePaw-Core](https://github.com/BubbleBuffer/BubblePaw-Core) v0.2.2 or v0.3.0).
@@ -50,7 +53,8 @@ The app needs a BubblePaw build that speaks stdio protocol `0.1`
 | Linux | `$XDG_DATA_HOME/bubblepaw-desktop`, else `~/.local/share/bubblepaw-desktop` |
 
 `--config-dir <dir>` replaces that directory for one launch. The file holds
-`binaryPath`, `workspaceDirectory` and `dataDirectory`, and nothing secret.
+`binaryPath`, `workspaceDirectory`, `dataDirectory` and, when set,
+`extraArguments`, and nothing secret.
 
 ## Tests
 
@@ -65,5 +69,6 @@ BP_TEST_BIN=/path/to/bubblepaw flutter test --tags live test/live_test.dart
 ```
 
 The live test starts a real host with BubblePaw's built-in `demo` provider (no
-model, no network), opens a chat, sends a message and approves the one `exec`
+model, no network), passed through the extra-arguments field's config value,
+opens a chat, sends a message and approves the one `exec`
 approval the demo triggers.

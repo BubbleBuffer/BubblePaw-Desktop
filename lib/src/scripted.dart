@@ -1,6 +1,7 @@
 // The scripted backend for `--scripted`: the kit's fake, so the app runs and
 // tests without a BubblePaw binary.
 
+import 'package:agent_kit_core/agent_kit_core.dart' show KitCapabilities;
 import 'package:agent_kit_core/fake.dart';
 
 import 'config.dart';
@@ -16,10 +17,16 @@ Future<StartedBackend> startScripted(AppConfig _) async {
 }
 
 /// The scripted backend after its script has played to the end.
-Future<ScriptedBackend> playedScript() async {
+/// [scripts] default to the quota chat. [capabilities] default to everything the
+/// kit knows; pass a smaller set to see what a host with fewer features shows.
+Future<ScriptedBackend> playedScript({
+  List<ChatScript>? scripts,
+  KitCapabilities? capabilities,
+}) async {
   final clock = ManualClock(DateTime.utc(2026, 10, 29, 10));
   final backend = ScriptedBackend(
-    scripts: [quotaReconnectScript()],
+    scripts: scripts ?? [quotaReconnectScript()],
+    capabilities: capabilities,
     clock: clock,
     onSend: _reply,
   );

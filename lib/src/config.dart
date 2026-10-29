@@ -4,12 +4,14 @@
 import 'dart:convert';
 import 'dart:io';
 
-/// The three values a BubblePaw host needs.
+/// What a BubblePaw host needs: the binary, two directories and any extra
+/// arguments.
 class AppConfig {
   const AppConfig({
     required this.binaryPath,
     required this.workspaceDirectory,
     required this.dataDirectory,
+    this.extraArguments = '',
   });
 
   /// The `bubblepaw` executable.
@@ -21,6 +23,13 @@ class AppConfig {
   /// The host's own store. Never shared with another host.
   final String dataDirectory;
 
+  /// Extra command-line arguments for the host, as typed: `--provider demo`.
+  /// Quotes group words that contain spaces. See [splitArguments].
+  final String extraArguments;
+
+  /// [extraArguments] as a list, ready for the host's command line.
+  List<String> get hostArguments => splitArguments(extraArguments);
+
   /// Whether every field has a value.
   bool get isComplete =>
       binaryPath.trim().isNotEmpty &&
@@ -31,16 +40,19 @@ class AppConfig {
     String? binaryPath,
     String? workspaceDirectory,
     String? dataDirectory,
+    String? extraArguments,
   }) => AppConfig(
     binaryPath: binaryPath ?? this.binaryPath,
     workspaceDirectory: workspaceDirectory ?? this.workspaceDirectory,
     dataDirectory: dataDirectory ?? this.dataDirectory,
+    extraArguments: extraArguments ?? this.extraArguments,
   );
 
   Map<String, Object?> toJson() => {
     'binaryPath': binaryPath,
     'workspaceDirectory': workspaceDirectory,
     'dataDirectory': dataDirectory,
+    if (extraArguments.isNotEmpty) 'extraArguments': extraArguments,
   };
 
   /// Null when [json] is not an object of strings.
@@ -49,13 +61,18 @@ class AppConfig {
     final binary = json['binaryPath'];
     final workspace = json['workspaceDirectory'];
     final data = json['dataDirectory'];
-    if (binary is! String || workspace is! String || data is! String) {
+    final extra = json['extraArguments'] ?? '';
+    if (binary is! String ||
+        workspace is! String ||
+        data is! String ||
+        extra is! String) {
       return null;
     }
     return AppConfig(
       binaryPath: binary,
       workspaceDirectory: workspace,
       dataDirectory: data,
+      extraArguments: extra,
     );
   }
 
@@ -64,11 +81,16 @@ class AppConfig {
       other is AppConfig &&
       other.binaryPath == binaryPath &&
       other.workspaceDirectory == workspaceDirectory &&
-      other.dataDirectory == dataDirectory;
+      other.dataDirectory == dataDirectory &&
+      other.extraArguments == extraArguments;
 
   @override
-  int get hashCode =>
-      Object.hash(binaryPath, workspaceDirectory, dataDirectory);
+  int get hashCode => Object.hash(
+    binaryPath,
+    workspaceDirectory,
+    dataDirectory,
+    extraArguments,
+  );
 }
 
 /// The directory that holds `config.json` and, by default, the host's data.
@@ -130,4 +152,35 @@ class ConfigStore {
       '${const JsonEncoder.withIndent('  ').convert(config.toJson())}\n',
     );
   }
+}
+
+/// Splits [text] into command-line arguments on whitespace. Single or double
+/// quotes group a value that contains spaces; the quotes are dropped. An
+/// unclosed quote runs to the end of the text.
+List<String> splitArguments(String text) {
+  final arguments = <String>[];
+  final current = StringBuffer();
+  var started = false;
+  String? quote;
+  for (final unit in text.runes.map(String.fromCharCode)) {
+    if (quote != null) {
+      if (unit == quote) {
+        quote = null;
+      } else {
+        current.write(unit);
+      }
+    } else if (unit == '"' || unit == "'") {
+      quote = unit;
+      started = true;
+    } else if (unit.trim().isEmpty) {
+      if (started) arguments.add(current.toString());
+      current.clear();
+      started = false;
+    } else {
+      current.write(unit);
+      started = true;
+    }
+  }
+  if (started) arguments.add(current.toString());
+  return arguments;
 }

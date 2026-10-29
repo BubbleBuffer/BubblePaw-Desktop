@@ -5,7 +5,8 @@ import 'dart:async';
 import 'dart:ui' show AppExitResponse;
 
 import 'package:agent_kit/agent_kit.dart';
-import 'package:agent_kit_core/agent_kit_core.dart' show ChatSummary, FileDiff;
+import 'package:agent_kit_core/agent_kit_core.dart'
+    show ChatSummary, FileDiff, KitCapability;
 import 'package:bb_ui/bb_ui.dart'
     show AppColors, Ico, PrimaryButton, SecondaryButton;
 import 'package:flutter/widgets.dart';
@@ -122,6 +123,7 @@ class AppShell extends StatelessWidget {
           createdChats: controller.createdChats,
           now: controller.now,
           workspaceName: controller.workspaceLabel,
+          initials: controller.workspaceInitials,
           onSettings: controller.openSettings,
         ),
       };
@@ -135,6 +137,7 @@ class Workbench extends StatefulWidget {
     super.key,
     required this.backend,
     required this.workspaceName,
+    required this.initials,
     required this.onSettings,
     this.createdChats,
     this.now,
@@ -144,6 +147,7 @@ class Workbench extends StatefulWidget {
   final Stream<ChatSummary>? createdChats;
   final DateTime? now;
   final String workspaceName;
+  final String initials;
   final VoidCallback onSettings;
 
   @override
@@ -154,6 +158,13 @@ class _WorkbenchState extends State<Workbench> {
   StreamSubscription<ChatSummary>? _created;
   String? _openChatId;
   FileDiff? _review;
+
+  // The workspace holds the Context pane. Without the capability the pane
+  // has nothing to show, so the workbench gets no workspace at all.
+  late final WorkspaceController? _workspace =
+      widget.backend.capabilities.has(KitCapability.context)
+      ? (WorkspaceController()..addPane(WorkspaceKind.context.id))
+      : null;
 
   @override
   void initState() {
@@ -167,6 +178,7 @@ class _WorkbenchState extends State<Workbench> {
   @override
   void dispose() {
     unawaited(_created?.cancel());
+    _workspace?.dispose();
     super.dispose();
   }
 
@@ -181,6 +193,11 @@ class _WorkbenchState extends State<Workbench> {
           backend: widget.backend,
           initialChatId: _openChatId,
           workspaceName: widget.workspaceName,
+          initials: widget.initials,
+          workspaceController: _workspace,
+          workspacePaneBuilder: _workspace == null
+              ? null
+              : (context, tab) => const SizedBox.shrink(),
           now: widget.now,
           onSettings: widget.onSettings,
           onReviewApproval: (approval) {
