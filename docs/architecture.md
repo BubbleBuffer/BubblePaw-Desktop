@@ -18,12 +18,11 @@ GuardedBackend       AgentBackend wrapper that spots a dead host
 ## Dependencies
 
 `agent_kit`, `agent_kit_core` and `agent_kit_bubblepaw` come from
-`BubbleBuffer/agent-kit` at a commit on top of tag `v0.15.1`. The ref is the commit hash
+`BubbleBuffer/agent-kit` at the commit of tag `v0.15.2`. The ref is the commit hash
 because the kit's packages depend on each other by path inside that repository,
 and pub resolves those to the hash; a tag in the app would conflict with it.
-Until agent-kit#42 is merged, all three are at that PR's commit, which is
-v0.15.1 plus `BubblePawBackend.connectionLost`; the app needs it for idle exit
-detection.
+The pin is v0.15.2, the first tag with `BubblePawBackend.connectionLost`, which
+idle exit detection needs.
 `bb_ui` is pinned to `v0.6.0`, the kit's own pin. The kit's fonts are bundled in
 `assets/fonts` (the kit says hosts do that), with their OFL licences.
 
