@@ -12,17 +12,17 @@ dependencies:
   agent_kit:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: 085c0a1cd2a8ddb27271cc2af280df973fff00ca # kit PR 47 (rail shows every chat)
+      ref: ff678385ea211a6fe655c8e4508ccf59abb667de # v0.15.7
       path: packages/agent_kit
   agent_kit_core:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: 085c0a1cd2a8ddb27271cc2af280df973fff00ca # kit PR 47 (rail shows every chat)
+      ref: ff678385ea211a6fe655c8e4508ccf59abb667de # v0.15.7
       path: packages/agent_kit_core
   agent_kit_bubblepaw:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: 085c0a1cd2a8ddb27271cc2af280df973fff00ca # kit PR 47 (rail shows every chat)
+      ref: ff678385ea211a6fe655c8e4508ccf59abb667de # v0.15.7
       path: packages/agent_kit_bubblepaw
   # Same pin as the kit's own, so the primitives come from one place.
   bb_ui:
