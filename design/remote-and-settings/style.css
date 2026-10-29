@@ -346,3 +346,34 @@ body.still * { animation: none !important; }
 .phone .dialog footer .grow { justify-content: center; }
 .phone .dialog .dbody { max-height: 62vh; overflow: auto; }
 .phone .dialog > header { padding-right: 8px; }
+
+/* Settings: Models cards */
+.pcard { border: 1px solid var(--seam); border-radius: var(--r-ctl); background: var(--surface2); margin-bottom: 12px; overflow: hidden; }
+.pcard-h { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--seam); background: var(--raised); flex-wrap: wrap; }
+.pcard-h .grow { flex: 1 1 200px; min-width: 0; }
+.pcard-h .t { font-weight: 600; font-size: 14px; }
+.mrow { display: flex; align-items: center; gap: 12px; padding: 4px 12px; min-height: 44px; border-bottom: 1px solid var(--seam-subtle); }
+.mrow:last-child { border-bottom: 0; }
+.mrow:hover { background: var(--hover); }
+.mcol { width: 124px; flex: none; display: flex; justify-content: flex-end; }
+.desktop .mrow .mk { opacity: 0; }
+.desktop .mrow:hover .mk, .desktop .mrow:focus-within .mk, .desktop .mrow .mk:focus-visible { opacity: 1; }
+.phone .mk { opacity: 1; }
+.notice.info { background: var(--info); border-left-color: var(--info-ink); }
+.suffixbtn { border-radius: 0 var(--r-md) var(--r-md) 0; min-height: 32px; }
+.lic { border-bottom: 1px solid var(--seam-subtle); }
+.lic-h { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 4px; border: 0; background: transparent; text-align: left; }
+.lic-h:hover { background: var(--hover); }
+.lic-h .grow { flex: 1; min-width: 0; }
+.lictext { margin: 0 0 10px; padding: 10px 12px; white-space: pre-wrap; font: 400 12px/18px var(--mono); background: var(--code); border: 1px solid var(--seam); border-radius: var(--r-field); max-height: 240px; overflow: auto; }
+
+/* Phone: chats home, host bottom sheet */
+.newbar { position: relative; padding: 10px 16px 40px; border-top: 1px solid var(--seam-subtle); flex: none; background: var(--surface); }
+.newbar .homebar { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; }
+.topbar .sub .off { color: var(--muted); font-weight: 600; display: inline-flex; gap: 6px; align-items: center; }
+.bsheet { position: absolute; z-index: 11; left: 0; right: 0; bottom: 0; background: var(--raised); border-top: 1px solid var(--thread); border-radius: 18px 18px 0 0; transform: translateY(102%); transition: transform var(--sheet) var(--ease); padding-top: 4px; box-shadow: var(--seam-shadow-hover); }
+.show-sheet .bsheet { transform: none; }
+.bsheet-h { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 6px 16px; }
+.bsheet-h .t { font-weight: 600; font-size: 16px; }
+.host-line .ck { margin-left: auto; color: var(--ok-ink); }
+.mrow .grow { flex: 1; min-width: 0; }

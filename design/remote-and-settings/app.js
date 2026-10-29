@@ -10,8 +10,8 @@
     const [k, v] = kv.split('=');
     if (k && v !== undefined) H[k] = decodeURIComponent(v);
   });
-  const S = Object.assign({ screen: 'settings', size: 'desktop', page: 'general', ppage: 'list', tab: 'share', still: '0', tall: '0', chrome: '1' },
-    ...['screen', 'size', 'page', 'ppage', 'tab', 'still', 'tall', 'chrome'].map((k) => (k in H ? { [k]: H[k] } : {})));
+  const S = Object.assign({ screen: 'settings', size: 'desktop', page: 'general', ppage: 'list', tab: 'share', sub: '', still: '0', tall: '0', chrome: '1' },
+    ...['screen', 'size', 'page', 'ppage', 'tab', 'sub', 'still', 'tall', 'chrome'].map((k) => (k in H ? { [k]: H[k] } : {})));
   const SCREENS = [
     ['settings', '1', 'Settings'], ['share', '2', 'Share this host'], ['pair', '3', 'Pairing, host'],
     ['add', '4', 'Pairing, phone'], ['phone', '5', 'Phone chat'], ['switcher', '6', 'Host switcher'],
@@ -29,8 +29,9 @@
 
   const M = {
     pref: H.theme || 'light', turn: 'closed', login: false,
-    f: { binary: '/opt/bubblepaw/bubblepaw', workspace: '/home/maya/projects/bubblepaw-base', data: '/home/maya/.local/share/bubblepaw-desktop/data', args: '', relay: 'wss://relay.example.com', hostname: 'bubblepaw-desk', zone: 'example.com', token: '', devname: 'Studio desktop', pairName: 'Pixel 8', addCode: '', pass1: '', pass2: '', keyFile: '', keySecret: '', apiKey: '' },
-    hostState: 'running', hostSaved: null,
+    f: { binary: '/opt/bubblepaw/bubblepaw', workspace: '/home/maya/projects/bubblepaw-base', data: '/home/maya/.local/share/bubblepaw-desktop/data', args: '', relay: 'wss://relay.example.com', hostname: 'bubblepaw-desk', zone: 'example.com', token: '', devname: 'Studio desktop', licq: '', pairName: 'Pixel 8', addCode: '', pass1: '', pass2: '', keyFile: '', keySecret: '', apiKey: '' },
+    hostState: 'running', hostSaved: null, coreMode: 'bundled', other: false, autoUpd: true, licOpen: new Set(),
+    u: { app: { cur: '0.1.0', latest: null, st: 'idle' }, core: { cur: '0.3.0', latest: null, st: 'idle' } },
     on: H.on !== '0', reach: H.reach || 'temp', cf: { signed: H.cf !== 'signedout' && H.cf !== 'token', tokenOpen: H.cf === 'token', busy: false, account: 'maya@example.com' },
     cfd: H.cfd !== 'missing', cfdBusy: false, upd: 'idle', ver: '2026.10.1',
     tunnel: H.tunnel === 'starting' ? 'starting' : 'connected', fail: H.tunnel === 'stopped', addr: { temp: 'tidy-violet-harbor-7f3a.trycloudflare.com' },
@@ -51,7 +52,7 @@
     ],
     def: 'deepseek-v4.1-flash',
     dlg: null, add: { step: 1 }, addDone: false, back: 'phone',
-    sheet: H.sheet !== '0', sw: H.sw !== '0', pop: H.pop !== '0', dsel: { h: 'local', w: 'bubblepaw-base' }, active: 'h1', ws: 'bubblepaw-base',
+    pview: H.pview === 'chat' ? 'chat' : 'list', sheet: H.sheet === '1', sw: H.sw !== '0', pop: H.pop !== '0', dsel: { h: 'local', w: 'bubblepaw-base' }, active: H.active || 'h1', ws: 'bubblepaw-base',
     fail2: false,
   };
   if (S.screen === 'pair') M.dlg = { type: 'pair', step: +(H.step || 1), left: 292, code: 'K7M2Q-9XFD4', prof: 'edit' };
@@ -94,14 +95,14 @@
 
   /* ---------- settings pages ---------- */
   const NAV = [
-    ['general', 'General', 'sliders-horizontal', ''], ['host', "This computer's host", 'cpu', 'desktop'], ['models', 'Models', 'layers', ''],
-    ['remote', 'Remote access', 'globe', ''], ['key', 'Device key', 'key-round', ''], ['about', 'About', 'info', ''],
+    ['general', 'General', 'sliders-horizontal', ''], ['host', 'Core', 'cpu', 'desktop'], ['models', 'Models', 'layers', ''],
+    ['remote', 'Remote access', 'globe', ''], ['about', 'About', 'info', ''],
   ];
   const phoneSub = {
     general: () => ({ system: 'System theme', light: 'Light theme', dark: 'Dark theme' }[M.pref]),
     models: () => `Default ${M.def}`,
     remote: () => `${M.hosts.length} host${M.hosts.length === 1 ? '' : 's'}, ${M.hosts.filter((h) => h.online).length} online`,
-    key: () => `ID ${M.key.id}`, about: () => 'Version 0.1.0',
+    about: () => `BubblePaw ${M.u.app.cur}`,
   };
 
   function pageGeneral(p) {
@@ -111,26 +112,30 @@
       (p ? '' : sec('Startup', `<div class="rowline"><div class="grow"><div class="t">Open at login</div><div class="s">BubblePaw starts with this computer. Remote access only works while it is running.</div></div>${sw(M.login, 'Open at login', 'login')}</div>`));
   }
   function pageHost() {
-    const run = M.hostState === 'running';
-    return sec('BubblePaw host',
-      `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Status</div><div class="s mono">bubblepaw 0.3.0 · protocol 0.1</div></div>${run ? pill('Running', 'ok') : pill('Restarting', 'attn')}${btn('Restart', { icon: 'refresh-cw', act: 'hostRestart', disabled: !run })}</div>` +
-      field('Binary', 'Path to the bubblepaw executable.', 'binary') + field('Workspace', 'The directory the agent works in.', 'workspace') +
-      field('Data directory', "Where this app's chats are stored. Do not share it with another BubblePaw host.", 'data') +
-      field('Extra host arguments', "Added to the host's command line, for example --provider demo. Optional.", 'args', { ph: 'None' }) +
-      `<div class="actions">${btn('Save and restart', { kind: 'primary', act: 'hostRestart', disabled: !run })}${btn('Cancel', { act: 'hostCancel' })}${M.hostSaved ? `<span class="hint">${M.hostSaved}</span>` : ''}</div>`);
+    const run = M.hostState === 'running', custom = M.coreMode === 'custom';
+    return sec('Core',
+      `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Status</div><div class="s mono">bubblepaw ${M.u.core.cur} · protocol 0.1</div></div>${run ? pill('Running', 'ok') : pill('Restarting', 'attn')}${btn('Restart', { icon: 'refresh-cw', act: 'hostRestart', disabled: !run })}</div>`) +
+      sec('Binary',
+        `<div role="radiogroup" aria-label="Binary">
+          <button class="opt" role="radio" aria-checked="${!custom}" ${A('coreMode', 'bundled')}><span class="rd"></span><span><div class="t">Bundled with BubblePaw</div><div class="s">Version <span class="mono">${M.u.core.cur}</span>. It updates with the app.</div></span></button>
+          <button class="opt" role="radio" aria-checked="${custom}" ${A('coreMode', 'custom')}><span class="rd"></span><span><div class="t">Custom binary</div><div class="s">Run a bubblepaw executable you installed yourself.</div></span></button>
+          ${custom ? `<div class="subpanel"><div class="field"><label for="f-binary">Path to the bubblepaw executable</label><div class="affix"><input id="f-binary" class="input" data-k="binary" value="${M.f.binary}"><button class="btn suffixbtn" ${A('browse')}>${ic('folder-open', 15)}Browse…</button></div></div></div>` : ''}</div>`) +
+      sec('Settings',
+        field('Data directory', "Where this app's chats are stored. Do not share it with another BubblePaw host.", 'data') +
+        field('Extra arguments', "Added to the host's command line, for example --provider demo. Optional.", 'args', { ph: 'None' }) +
+        `<div class="actions">${btn('Save and restart', { kind: 'primary', act: 'hostRestart', disabled: !run })}${btn('Cancel', { act: 'hostCancel' })}${M.hostSaved ? `<span class="hint">${M.hostSaved}</span>` : ''}</div>`);
   }
   function pageModels() {
-    const prov = M.providers.map((p) => {
-      const rows = p.models.map((m) => `<div class="rowline"><div class="grow mono" style="font-size:13.6px">${m}</div>${M.def === m ? `<span class="pill ok">Default</span>` : btn('Make default', { act: 'def', arg: m, disabled: !p.key })}</div>`).join('');
-      return `<div style="margin-bottom:16px"><div class="rowline" style="border:0;padding-bottom:2px"><div class="grow"><span class="t">${p.name}</span> <span class="mono muted" style="font-size:12px">${p.kind}</span> ${p.key ? '' : pill('Key missing', 'attn')}</div>${btn(p.key ? 'Edit key' : 'Add key', { act: 'keyDlg', arg: p.name })}</div>
-        <div class="hint mono" style="margin-bottom:4px">${p.url}</div>${p.key ? '' : '<div class="hint">The host did not find a key for this provider. Add a key to use its models.</div>'}${rows}</div>`;
+    const cards = M.providers.map((p) => {
+      const rows = p.models.map((m) => `<div class="mrow"><div class="grow mono" style="font-size:13.6px">${m}</div><div class="mcol">${M.def === m ? pill('Default', 'ok') : `<button class="btn quiet mk" ${A('def', m)} ${p.key ? '' : 'disabled'}>Make default</button>`}</div></div>`).join('');
+      return `<div class="pcard"><div class="pcard-h"><div class="grow"><div><span class="t">${p.name}</span> <span class="mono muted" style="font-size:12px">${p.kind}</span></div><div class="hint mono">${p.url}</div>${p.key ? '' : '<div class="hint">Add a key to use these models.</div>'}</div>${p.key ? pill('Key set', 'ok') : pill('No key', 'attn')}${btn(p.key ? 'Edit key' : 'Add key', { act: 'keyDlg', arg: p.name })}</div>${rows}</div>`;
     }).join('');
-    return sec('Default model', `<div class="field"><div class="hint">New runs in every chat use this model. A run in progress keeps its own.</div><div class="mono" style="font-size:15px">${M.def}</div></div>`) + sec('Providers', prov);
+    return sec('Default model', `<div class="field"><div class="hint">New runs in every chat use this model. A run in progress keeps its own.</div><div class="mono" style="font-size:15px">${M.def}</div></div>`) + sec('Providers', cards);
   }
   function pageKey() {
     const n = M.devices.length, hn = M.hosts.length;
     const cons = n + hn ? `All ${n} paired device${n === 1 ? '' : 's'} and ${hn} host${hn === 1 ? '' : 's'} you can open stop recognising this device, and each pairing has to be done again.` : 'This device has no pairings yet, so nothing else breaks.';
-    return sec('This device',
+    return sec('Current key',
       `<div class="card"><div class="kv"><span class="k">Device ID</span><span class="v mono">${M.key.id}</span>${btn('Copy', { icon: 'copy', cls: 'quiet', act: 'copy' })}</div>
         <div class="kv"><span class="k">Fingerprint</span><span class="v mono" style="font-size:12.5px">${M.key.fp}</span><span></span></div></div>`) +
       sec('Key file',
@@ -138,9 +143,61 @@
          <div class="rowline"><div class="grow"><div class="t">Import key file</div><div class="s">Replaces this device's key. Existing pairings stop working.</div></div>${btn('Import…', { icon: 'folder-open', act: 'dlg', arg: 'import' })}</div>`) +
       sec('Regenerate', `<div class="notice danger">${ic('circle-alert', 16)}<div>Regenerating creates a new device ID. ${cons}</div></div>${btn('Regenerate device key…', { kind: 'danger', icon: 'trash-2', act: 'dlg', arg: 'regen' })}`);
   }
+  function deviceCard() {
+    return sec('This device', `<div class="card" style="padding-top:12px">${field('Name', 'Shown to devices you pair.', 'devname', { sans: true })}
+      <div class="kv" style="padding-top:0"><span class="k">Device ID</span><span class="v mono">${M.key.id}</span>${btn('Copy', { icon: 'copy', cls: 'quiet', act: 'copy' })}</div>
+      <div class="kv"><span class="k">Fingerprint</span><span class="v mono" style="font-size:12.5px">${M.key.fp}</span><span></span></div></div>`, btn('Manage key…', { icon: 'key-round', act: 'sub', arg: 'key' }));
+  }
+  const backRow = (label) => (ph() ? '' : `<div style="margin-bottom:16px">${btn(label, { icon: 'chevron-left', cls: 'quiet', act: 'subBack' })}</div>`);
+
+  /* About: updates */
+  function updRow(k) {
+    const u = M.u[k], label = k === 'app' ? 'BubblePaw' : 'Core';
+    if (k === 'core' && M.coreMode === 'bundled') {
+      return `<div class="rowline"><div class="grow"><div class="t">${label} <span class="mono muted" style="font-weight:400">${u.cur}</span></div><div class="s">Bundled with BubblePaw. It updates with the app.</div></div></div>`;
+    }
+    let status;
+    if (u.st === 'idle') status = 'Latest version not checked.';
+    else if (u.st === 'checking') status = `${ic('loader', 13, 'spin')} Checking GitHub releases…`;
+    else if (u.st === 'updating') status = `${ic('loader', 13, 'spin')} Updating to ${u.latest}…`;
+    else if (u.st === 'updated') status = `Updated to ${u.cur}. ${k === 'app' ? 'Restart BubblePaw to finish.' : 'Restart Core to use it.'}`;
+    else status = u.latest === u.cur ? 'Up to date.' : `Latest version <span class="mono">${u.latest}</span>.`;
+    const newer = u.latest && u.latest !== u.cur && u.st === 'checked';
+    const busy = u.st === 'checking' || u.st === 'updating';
+    return `<div class="rowline"><div class="grow"><div class="t">${label} <span class="mono muted" style="font-weight:400">${u.cur}</span></div><div class="s">${status}</div></div>${btn('Check for updates', { act: 'chk', arg: k, disabled: busy })}${newer ? btn(`Update to ${u.latest}`, { kind: 'primary', act: 'upg', arg: k }) : ''}</div>`;
+  }
   function pageAbout() {
-    return sec('Versions', `<div class="card"><div class="kv"><span class="k">BubblePaw</span><span class="v mono">0.1.0+1</span><span></span></div><div class="kv"><span class="k">Agent kit</span><span class="v mono">v0.15.7</span><span></span></div><div class="kv"><span class="k">Host</span><span class="v mono">bubblepaw 0.3.0</span><span></span></div><div class="kv"><span class="k">Protocol</span><span class="v mono">0.1</span><span></span></div></div>`) +
-      sec('Licences', `<div class="rowline"><div class="grow"><div class="t">Open source licences</div><div class="s">Fonts, icons and packages bundled with this app.</div></div>${btn('View', { icon: 'chevron-right', act: 'dlg', arg: 'licences' })}</div>`);
+    if (S.sub === 'licences') return backRow('About') + pageLicences();
+    return sec('Updates',
+      `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Check for updates automatically</div><div class="s">Looks at GitHub releases when BubblePaw starts.</div></div>${sw(M.autoUpd, 'Check for updates automatically', 'autoUpd')}</div>${updRow('app')}${updRow('core')}`) +
+      sec('Versions', `<div class="card"><div class="kv"><span class="k">Agent kit</span><span class="v mono">v0.15.7</span><span></span></div><div class="kv"><span class="k">Protocol</span><span class="v mono">0.1</span><span></span></div></div>`) +
+      sec('Licences', `<div class="rowline"><div class="grow"><div class="t">Open source licences</div><div class="s">Packages, crates, fonts and icons bundled with this app.</div></div>${btn('View', { icon: 'chevron-right', act: 'sub', arg: 'licences' })}</div>`);
+  }
+
+  /* Licences. Sample entries only: the real list is generated at build time
+     (Flutter's LicenseRegistry for the app packages and fonts, cargo-about for the Core crates). */
+  const T_BSD3 = (c) => `${c}\n\nRedistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:\n\n1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.\n2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.\n3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.\n\nTHIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED. See the full text in the package.`;
+  const T_MIT = (c) => `${c}\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.`;
+  const T_OFL = (c) => `${c}\n\nThis Font Software is licensed under the SIL Open Font License, Version 1.1. This license is copied below, and is also available with a FAQ at https://openfontlicense.org\n\nPREAMBLE: The goals of the Open Font License (OFL) are to stimulate worldwide development of collaborative font projects, to support the font creation efforts of academic and linguistic communities, and to provide a free and open framework in which fonts may be shared and improved in partnership with others. See the full text in fonts/licenses.`;
+  const T_ISC = 'ISC License\n\nCopyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022.\n\nPermission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.\n\nTHE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE.';
+  const T_DUAL = (c) => `${c}\n\nLicensed under either of\n  Apache License, Version 2.0 (LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0)\n  MIT license (LICENSE-MIT or http://opensource.org/licenses/MIT)\nat your option.`;
+  const LICS = [
+    ['App packages', [['flutter', '3.41.0', 'BSD-3-Clause', T_BSD3('Copyright 2014 The Flutter Authors. All rights reserved.')], ['file_selector', '1.1.0', 'BSD-3-Clause', T_BSD3('Copyright 2013 The Flutter Authors. All rights reserved.')]]],
+    ['Core crates', [['snow', '0.9.6', 'Apache-2.0 OR MIT', T_DUAL('Copyright the snow contributors.')], ['serde', '1.0.219', 'Apache-2.0 OR MIT', T_DUAL('Copyright the serde contributors.')], ['rusqlite', '0.32.1', 'MIT', T_MIT('Copyright (c) the rusqlite contributors.')], ['tokio', '1.44.0', 'MIT', T_MIT('Copyright (c) Tokio Contributors.')]]],
+    ['Fonts', [['Atkinson Hyperlegible Next', '1.0', 'OFL-1.1', T_OFL('Copyright 2020 Braille Institute of America, Inc.')], ['Fragment Mono', '1.0', 'OFL-1.1', T_OFL('Copyright 2023 The Fragment Mono Project Authors.')], ['Bricolage Grotesque', '1.0', 'OFL-1.1', T_OFL('Copyright 2022 The Bricolage Grotesque Project Authors.')]]],
+    ['Icons', [['Lucide', '0.468.0', 'ISC', T_ISC]]],
+  ];
+  function pageLicences() {
+    const q = M.f.licq.trim().toLowerCase();
+    const groups = LICS.map(([g, items]) => {
+      const rows = items.filter(([n, v, l]) => !q || (n + ' ' + l + ' ' + g).toLowerCase().includes(q));
+      if (!rows.length) return '';
+      return `<section class="sec"><h2><span>${g}</span><span class="muted mono" style="font-size:12px;font-weight:400">${rows.length}</span></h2>${rows.map(([n, v, l, t]) => {
+        const id = g + '/' + n, open = M.licOpen.has(id);
+        return `<div class="lic"><button class="lic-h" aria-expanded="${open}" ${A('licToggle', id)}><span class="grow"><span class="t">${n}</span> <span class="mono muted" style="font-size:12px">${v}</span></span><span class="tag">${l}</span>${ic(open ? 'chevron-up' : 'chevron-down', 16)}</button>${open ? `<pre class="lictext">${t.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</pre>` : ''}</div>`;
+      }).join('')}</section>`;
+    }).join('');
+    return `<div class="field"><label for="f-licq">Search</label><input id="f-licq" class="input sans" data-k="licq" value="${M.f.licq.replace(/"/g, '&quot;')}" placeholder="Package or licence"></div>${groups || '<div class="empty">No package or licence matches the search.</div>'}`;
   }
 
   function hostsList(p) {
@@ -198,31 +255,32 @@
     const opts = REACH.map(([v, ti, s]) => `<button class="opt" role="radio" aria-checked="${M.reach === v}" ${A('reach', v)}><span class="rd"></span><span><div class="t">${ti}</div><div class="s">${s}</div></span></button>` +
       (M.reach === v && v === 'domain' ? domainPanel() : '') +
       (M.reach === v && v === 'relay' ? `<div class="subpanel">${field('Relay address', '', 'relay')}</div>` : '')).join('');
-    return sec('Sharing', `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Share this host</div><div class="s">${M.on ? 'Paired devices can open chats on this computer while BubblePaw is running.' : 'Nobody can reach this computer. Paired devices stay paired.'}</div></div>${sw(M.on, 'Share this host', 'on')}</div>`) +
+    return sec('Sharing', `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Share this host</div><div class="s">${M.on ? 'Paired devices can open chats on this computer while BubblePaw is running.' : 'Nobody can reach this computer. Paired devices stay paired.'}</div></div>${sw(M.on, 'Share this host', 'on')}</div>${M.on && M.other ? `<div class="notice info">${ic('info', 16)}<div>Another BubblePaw host on this computer is already shared: device ID <span class="mono">T4WK-9HDB-2QXN-6MRE</span>, data directory <span class="mono">/var/lib/bubblepaw/data</span>. Devices paired with it can't open this app's chats.</div></div>` : ''}`) +
       sec('How devices reach this computer', `<div role="radiogroup" aria-label="How devices reach this computer">${opts}</div>
         <div class="consequence">${ic('shield-check', 16)}<span>${M.reach === 'relay' ? 'Traffic is end-to-end encrypted between paired devices. The relay sees only encrypted data.' : 'Traffic is end-to-end encrypted between paired devices. Cloudflare sees only encrypted data.'}</span></div>${statusBlock()}`) +
-      sec('This device', field('Name', 'Shown to devices you pair.', 'devname', { sans: true }) + `<div class="field"><label>Device ID</label><div class="actions"><span class="mono" style="font-size:14px">${M.key.id}</span>${btn('Copy', { icon: 'copy', cls: 'quiet', act: 'copy' })}</div></div>`) +
       sec('Paired devices', devRows(), btn('Pair a device', { kind: t.s !== 'stopped' ? 'primary' : '', icon: 'plus', act: 'startPair', disabled: !M.on }));
   }
   function pageRemote(p) {
-    if (p) return hostsList(true);
-    return `<div style="margin-bottom:20px">${seg([['share', 'Share this host'], ['hosts', 'Hosts you can open']], S.tab, 'tab')}</div>` + (S.tab === 'hosts' ? hostsList(false) : pageShare());
+    if (S.sub === 'key') return backRow('Remote access') + pageKey();
+    if (p) return deviceCard() + hostsList(true);
+    return deviceCard() + `<div style="margin-bottom:20px">${seg([['share', 'Share this host'], ['hosts', 'Hosts you can open']], S.tab, 'tab')}</div>` + (S.tab === 'hosts' ? hostsList(false) : pageShare());
   }
-  const pageBody = (p, phn) => ({ general: pageGeneral, host: pageHost, models: pageModels, remote: pageRemote, key: pageKey, about: pageAbout }[p])(phn);
+  const pageBody = (p, phn) => ({ general: pageGeneral, host: pageHost, models: pageModels, remote: pageRemote, about: pageAbout }[p])(phn);
 
+  const subTitle = () => (S.sub === 'key' ? 'Device key' : S.sub === 'licences' ? 'Licences' : '');
   function settingsDesktop() {
     const nav = NAV.map(([id, label, icon]) => `<button class="nav-item" ${S.page === id ? 'aria-current="page"' : ''} ${A('page', id)}>${ic(icon, 16)}${label}</button>`).join('');
     return `<div class="set-desk"><nav class="set-nav" aria-label="Settings"><button class="nav-item back" ${A('toChat')}>${ic('chevron-left', 16)}Back to chat</button><h1>Settings</h1>${nav}</nav>
-      <div class="set-main"><div class="set-col"><h1 class="pt">${NAV.find((n) => n[0] === S.page)[1]}</h1>${pageBody(S.page, false)}</div></div></div>`;
+      <div class="set-main"><div class="set-col"><h1 class="pt">${subTitle() || NAV.find((n) => n[0] === S.page)[1]}</h1>${pageBody(S.page, false)}</div></div></div>`;
   }
   function settingsPhone() {
     const p = S.ppage;
-    const head = (title, back) => `<div class="statusgap"></div><div class="phone-head"><button class="iconbtn" aria-label="${back ? 'Back to settings' : 'Back to chat'}" ${back ? A('ppage', 'list') : A('toChat')}>${ic('chevron-left', 22)}</button><h1>${title}</h1></div>`;
+    const head = (title, back) => `<div class="statusgap"></div><div class="phone-head"><button class="iconbtn" aria-label="${back ? (S.sub ? 'Back' : 'Back to settings') : 'Back to chat'}" ${back ? (S.sub ? A('subBack') : A('ppage', 'list')) : A('toChat')}>${ic('chevron-left', 22)}</button><h1>${title}</h1></div>`;
     if (p === 'list') {
       const rows = NAV.filter((n) => n[3] !== 'desktop').map(([id, label, icon]) => `<button class="nav-row" ${A('ppage', id)}>${ic(icon, 20)}<span class="grow"><div class="t">${label}</div><div class="s">${phoneSub[id]()}</div></span>${ic('chevron-right', 18)}</button>`).join('');
       return `<div class="phone-col">${head('Settings', false)}<div class="phone-body" style="padding-top:8px">${rows}</div><div class="homebar"></div></div>`;
     }
-    return `<div class="phone-col">${head(NAV.find((n) => n[0] === p)[1], true)}<div class="phone-body">${pageBody(p, true)}</div><div class="homebar"></div></div>`;
+    return `<div class="phone-col">${head(subTitle() || NAV.find((n) => n[0] === p)[1], true)}<div class="phone-body">${pageBody(p, true)}</div><div class="homebar"></div></div>`;
   }
 
   /* ---------- dialogs ---------- */
@@ -310,7 +368,6 @@
       const p = M.providers.find((v) => v.name === d.name);
       return dlgShell(`${p.key ? 'Edit' : 'Add'} key for ${p.name}`, field('API key', 'Stored on the host that runs this provider.', 'apiKey', { type: 'password' }), `${btn('Cancel', { act: 'close' })}${btn('Save key', { kind: 'primary', act: 'doKey', disabled: !M.f.apiKey.trim() })}`);
     }
-    if (d.type === 'licences') return dlgShell('Open source licences', `<div class="card"><div class="kv"><span class="k">Atkinson Hyperlegible Next</span><span class="v">SIL OFL 1.1</span><span></span></div><div class="kv"><span class="k">Fragment Mono</span><span class="v">SIL OFL 1.1</span><span></span></div><div class="kv"><span class="k">Lucide icons</span><span class="v">ISC</span><span></span></div></div>`, btn('Close', { act: 'close' }));
     return '';
   }
   function pageKeyCons() {
@@ -343,18 +400,25 @@
   const activeHost = () => M.hosts.find((h) => h.id === M.active);
   function phoneChat() {
     const ah = activeHost();
-    const chats = ah ? `<div class="rail-label">Today</div><button class="chatrow on"><div class="t">Quota bar flickers on reconnect</div><div class="s">Waiting for you</div></button><button class="chatrow"><div class="t">Plan the settings page</div><div class="s plain">Finished 2h ago</div></button>` : '';
+    const offline = ah && !ah.online;
+    const status = ah ? (ah.online ? `<span class="on">${dotOn} Online</span>` : '<span class="off"><span class="dot off"></span> Offline</span>') : '';
+    const frameOpen = (inner) => `<div class="phone-col ${M.sheet ? 'show-sheet' : ''}" style="position:relative"><div class="statusgap"></div>${inner}</div>`;
+    if (M.pview === 'chat') {
+      return frameOpen(`<div class="main"><div class="topbar">${iconBtn('chevron-left', 'Back to chats', 'pview', 'list')}<div class="two"><div class="ct">Quota bar flickers on reconnect</div><div class="sub"><span>${ah ? ah.name : 'No host'}</span>${status}</div></div></div>
+        <div class="stream">${transcript(true)}</div>${composer(true, ah && ah.name)}</div>`);
+    }
+    const row = (t, s, plain) => `<button class="chatrow" ${A('pview', 'chat')}><div class="t">${t}</div><div class="s ${plain ? 'plain' : ''}">${s}</div></button>`;
+    const chats = ah ? `<div class="rail-label">Today</div>${row('Quota bar flickers on reconnect', 'Waiting for you', false)}${row('Plan the settings page', 'Finished 2h ago', true)}<div class="rail-label">Yesterday</div>${row('Trace the socket reconnect', 'Finished yesterday', true)}` : '<div class="empty">No host selected. Open the host menu and add a host to see its chats.</div>';
     const wsRow = (n) => `<button class="ws ${M.ws === n ? 'on' : ''}" ${A('setWs', n)}>${n}${M.ws === n ? `<span class="ck">${ic('check', 16)}</span>` : ''}</button>`;
-    const items = M.hosts.map((h) => `<div class="host-item"><button class="host-line" ${h.online ? A('setHost', h.id) : 'disabled'}>${ic('monitor', 18)}<span class="two"><div class="t">${h.name}</div><div class="s">${h.online ? `${dotOn}Online · ${h.type}` : `<span class="dot off"></span>Offline${h.seen ? ' · ' + h.seen.replace('last seen', 'last seen') : ''}`}</div></span></button>${h.online && M.active === h.id ? wsRow('bubblepaw-base') + wsRow('scratch') : ''}</div>`).join('');
-    const hostlist = M.sw ? `<div class="hostlist" role="menu">${items}<div class="host-item"><button class="host-line" ${A('startAdd')} style="min-height:48px">${ic('plus', 18)}<span class="two"><div class="t">Add a host</div></span></button></div></div>` : '';
-    return `<div class="phone-col ${M.sheet ? 'show-sheet' : ''}" style="position:relative"><div class="statusgap"></div>
-      <div class="main"><div class="topbar">${iconBtn('menu', 'Open the chat list', 'sheet', 1)}<div class="two"><div class="ct">${ah ? 'Quota bar flickers on reconnect' : 'No host selected'}</div><div class="sub"><span>${ah ? ah.name : 'No host'}</span>${ah ? `<span class="on">${dotOn} Online</span>` : ''}</div></div>${iconBtn('panel-left', 'More')}</div>
-        <div class="stream">${transcript(true)}</div>${composer(true, ah && ah.name)}</div>
+    const items = M.hosts.map((h) => `<div class="host-item"><button class="host-line" ${A('setHost', h.id)}>${ic('monitor', 18)}<span class="two"><div class="t">${h.name}</div><div class="s">${h.online ? `${dotOn}Online · ${h.type}` : `<span class="dot off"></span>Offline${h.seen ? ' · ' + h.seen : ''}`}</div></span>${M.active === h.id ? `<span class="ck">${ic('check', 16)}</span>` : ''}</button>${M.active === h.id ? (h.online ? wsRow('bubblepaw-base') + wsRow('scratch') : '<div class="s" style="padding:0 12px 10px 40px;color:var(--muted);font-size:13px">Offline. Workspaces are unavailable.</div>') : ''}</div>`).join('');
+    const hb = `<button class="hostbtn" aria-haspopup="dialog" ${A('sheet', 1)} style="min-height:48px"><span class="two"><div class="h">${ah ? (ah.online ? `${dotOn} ${ah.name} · Online` : `<span class="dot off"></span> ${ah.name} · Offline`) : 'No host'}</div><div class="w">${ah ? M.ws : 'Add a host'}</div></span>${ic('chevron-down', 16)}</button>`;
+    return frameOpen(`<div class="main"><div class="topbar" style="gap:4px">${hb}${iconBtn('settings', 'Settings', 'toSettings')}</div>
+      <div class="phone-body" style="padding:8px 8px 12px">
+        ${offline ? `<div class="notice" style="margin:4px 8px 12px">${ic('wifi-off', 16)}<div>${ah.name} is offline. ${ah.seen ? ah.seen.charAt(0).toUpperCase() + ah.seen.slice(1) + '. ' : ''}You can start a new chat when it is back online.</div></div>` : ''}
+        <div class="rail-search" style="min-height:44px">${ic('search', 16)}Search</div>${chats}</div>
+      <div class="newbar">${btn('New chat', { kind: 'primary', icon: 'square-pen', cls: 'block', act: 'pview', arg: 'chat', disabled: !ah || offline })}<div class="homebar"></div></div></div>
       <div class="scrim" ${A('sheet', 0)}></div>
-      <aside class="sheet" aria-label="Chats and hosts"><div class="statusgap"></div>
-        <div class="rail-head"><button class="hostbtn" aria-expanded="${M.sw}" ${A('sw')} style="min-height:52px"><span class="two"><div class="h">${ah ? `${dotOn} ${ah.name} · Online` : 'No host'}</div><div class="w">${ah ? M.ws : 'Add a host'}</div></span>${ic(M.sw ? 'chevron-up' : 'chevron-down', 16)}</button>${iconBtn('x', 'Close the chat list', 'sheet', 0)}</div>
-        ${hostlist}<div class="rail-search" style="min-height:44px">${ic('search', 16)}Search</div>${chats}
-        <div class="rail-foot" style="padding-bottom:34px"><button class="btn" ${A('toSettings')}>${ic('settings', 16)}Settings</button></div></aside></div>`;
+      <aside class="bsheet" role="dialog" aria-label="Hosts and workspaces"><div class="bsheet-h"><span class="t">Hosts and workspaces</span>${iconBtn('x', 'Close', 'sheet', 0)}</div><div class="hostlist" style="margin:0 12px 8px">${items}<div class="host-item"><button class="host-line" ${A('startAdd')} style="min-height:48px">${ic('plus', 18)}<span class="two"><div class="t">Add a host</div></span></button></div></div><div style="height:34px"></div></aside>`);
   }
   function desktopChat() {
     const sel = M.dsel;
@@ -390,7 +454,7 @@
     const chip = (act, arg, label, on, dis) => `<button class="chip" aria-pressed="${on}" ${A(act, arg)} ${dis ? 'disabled' : ''}>${label}</button>`;
     const grp = (lbl, items) => `<span class="chips"><span class="lbl">${lbl}</span>${items.join('')}</span>`;
     const fixed = FIXED[S.screen];
-    const sim = (S.page === 'remote' && S.tab === 'share' && !ph() && (S.screen === 'settings' || S.screen === 'share' || S.screen === 'pair')) ? grp('Simulate', [chip('simfail', 1, 'Tunnel failure', M.fail)]) : '';
+    const sim = (S.page === 'remote' && S.tab === 'share' && !ph() && (S.screen === 'settings' || S.screen === 'share' || S.screen === 'pair')) ? grp('Simulate', [chip('simfail', 1, 'Tunnel failure', M.fail), chip('simother', 1, 'Other host shared', M.other)]) : '';
     return `<div class="bar-row"><div class="tabs" role="tablist" aria-label="Screens">${scr}</div><span class="grow"></span>
       ${grp('Theme', [['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => chip('pref', v, l, M.pref === v)))}
       ${grp('Frame', [['desktop', 'Desktop 1280×800'], ['phone', 'Phone 390×844']].map(([v, l]) => chip('size', v, l, (fixed || S.size) === v, !!fixed)))}</div>
@@ -470,25 +534,34 @@
     if (id === 'settings') { S.page = 'general'; S.ppage = 'list'; }
     if (id === 'share' || id === 'pair') { S.size = 'desktop'; S.page = 'remote'; S.tab = 'share'; S.screen = 'settings'; if (id === 'pair') M.dlg = { type: 'pair', step: 1, left: 300, code: rnd(5) + '-' + rnd(5), prof: 'edit' }; }
     if (id === 'add') { M.add = { step: 1 }; M.addDone = false; M.f.addCode = ''; S.size = 'phone'; }
-    if (id === 'phone') { M.sheet = true; S.size = 'phone'; }
+    if (id === 'phone') { M.sheet = false; M.pview = 'list'; S.size = 'phone'; }
     if (id === 'switcher') { M.pop = true; S.size = 'desktop'; }
   };
 
   const ACT = {
     tab: (v) => goTab(v),
-    page: (v) => { S.page = v; },
-    ppage: (v) => { S.ppage = v; },
+    page: (v) => { S.page = v; S.sub = ''; },
+    ppage: (v) => { S.ppage = v; S.sub = ''; },
+    sub: (v) => { S.sub = v; M.f.licq = ''; },
+    subBack: () => { S.sub = ''; },
+    coreMode: (v) => { M.coreMode = v; },
+    browse: () => { M.f.binary = '/usr/local/bin/bubblepaw'; },
+    autoUpd: () => { M.autoUpd = !M.autoUpd; },
+    chk: (k) => { M.u[k].st = 'checking'; later(() => { M.u[k].st = 'checked'; M.u[k].latest = k === 'app' ? '0.2.0' : '0.3.1'; }, 1200); },
+    upg: (k) => { M.u[k].st = 'updating'; later(() => { const u = M.u[k]; u.cur = u.latest; u.st = 'updated'; if (k === 'app' && M.coreMode === 'bundled') M.u.core.cur = '0.3.1'; }, 1400); },
+    licToggle: (v) => { if (M.licOpen.has(v)) M.licOpen.delete(v); else M.licOpen.add(v); },
+    simother: () => { M.other = !M.other; },
     tab2: (v) => { S.tab = v; },
     pref: (v) => { M.pref = v; },
     turn: (v) => { M.turn = v; },
     login: () => { M.login = !M.login; },
     size: (v) => { S.size = v; M.dlg = null; },
-    toChat: () => { if (ph()) { S.screen = 'phone'; M.sheet = false; } else { S.screen = 'switcher'; M.pop = false; } },
+    toChat: () => { if (ph()) { S.screen = 'phone'; M.sheet = false; M.pview = 'list'; } else { S.screen = 'switcher'; M.pop = false; } },
     toSettings: () => { S.size = ph() ? 'phone' : 'desktop'; S.screen = 'settings'; if (!ph()) S.page = 'general'; else S.ppage = 'list'; },
     close: () => { if (M.dlg && M.dlg.type === 'add') M.add = { step: 1 }; if (S.screen === 'add' && !M.dlg) { S.screen = M.back; M.add = { step: 1 }; M.addDone = false; if (M.back === 'settings') S.ppage = 'remote'; } M.dlg = null; },
     scrimClose: () => {},
     hostRestart: () => { M.hostState = 'restarting'; M.hostSaved = ''; later(() => { M.hostState = 'running'; M.hostSaved = 'Host restarted with the saved settings.'; }, 1200); },
-    hostCancel: () => { M.hostSaved = ''; M.f.binary = '/opt/bubblepaw/bubblepaw'; M.f.workspace = '/home/maya/projects/bubblepaw-base'; M.f.data = '/home/maya/.local/share/bubblepaw-desktop/data'; M.f.args = ''; },
+    hostCancel: () => { M.hostSaved = ''; M.coreMode = 'bundled'; M.f.binary = '/opt/bubblepaw/bubblepaw'; M.f.data = '/home/maya/.local/share/bubblepaw-desktop/data'; M.f.args = ''; },
     def: (v) => { M.def = v; },
     keyDlg: (v) => { M.f.apiKey = ''; openDlg({ type: 'key', name: v }); },
     doKey: () => { M.providers.find((x) => x.name === M.dlg.name).key = true; M.dlg = null; },
@@ -523,10 +596,11 @@
     scan: () => { M.f.addCode = 'K7M2Q9XFD4'; M.add.step = 2; },
     connect: () => { M.add.step = 2; },
     addBack: () => { M.add.step = 1; },
-    addOpen: () => { const h = M.hosts[M.hosts.length - 1]; M.active = h.id; S.screen = 'phone'; M.sheet = false; M.add = { step: 1 }; M.addDone = false; },
+    addOpen: () => { const h = M.hosts[M.hosts.length - 1]; M.active = h.id; S.screen = 'phone'; M.sheet = false; M.pview = 'list'; M.add = { step: 1 }; M.addDone = false; },
+    pview: (v) => { M.pview = v; },
     sheet: (v) => { M.sheet = v === undefined ? !M.sheet : !!+v; },
     sw: () => { M.sw = !M.sw; },
-    setHost: (v) => { M.active = v; },
+    setHost: (v) => { M.active = v; const h = M.hosts.find((x) => x.id === v); if (h && !h.online) M.sheet = false; },
     setWs: (v) => { M.ws = v; M.sheet = false; },
     pop: () => { M.pop = !M.pop; },
     dsel: (v) => { const [h, w] = v.split('|'); M.dsel = { h, w }; M.pop = false; },
@@ -553,13 +627,16 @@
     if (!k) return;
     M.f[k] = ev.target.value;
     // fields that gate a button or message re-render in place
-    if (['token', 'addCode', 'pass1', 'pass2', 'keySecret', 'apiKey', 'pairName', 'hostname'].includes(k)) render();
+    if (['token', 'addCode', 'pass1', 'pass2', 'keySecret', 'apiKey', 'pairName', 'hostname', 'licq'].includes(k)) render();
   });
   document.addEventListener('change', (ev) => {
     const k = ev.target.dataset && ev.target.dataset.k;
     if (k === 'zone') { M.f.zone = ev.target.value; render(); }
   });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && M.dlg) { ACT.close(); render(); } });
+  if (H.other === '1') M.other = true;
+  if (H.coreMode) M.coreMode = H.coreMode;
+  if (H.lic) M.licOpen.add(H.lic);
   writeHash();
   render();
 })();
