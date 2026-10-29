@@ -9,7 +9,6 @@ import 'package:bubblepaw_desktop/src/platform/desktop_integration.dart';
 import 'package:bubblepaw_desktop/src/platform/tray_icon.dart';
 import 'package:bubblepaw_desktop/src/platform/tray_menu.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'scenes.dart';
@@ -91,7 +90,6 @@ class _Rig {
     FakeTray? tray,
     FakeStartup? startup,
     bool windows = false,
-    Brightness Function()? taskbar,
   }) : store = MemoryConfigStore(sampleConfig, prefs),
        tray = tray ?? FakeTray(),
        startup = startup ?? FakeStartup() {
@@ -108,7 +106,6 @@ class _Rig {
       startup: this.startup,
       pollInterval: null,
       windowsIcons: windows,
-      taskbarBrightness: taskbar ?? () => Brightness.dark,
     );
   }
 
@@ -183,17 +180,9 @@ void main() {
   });
 
   group('tray icon files', () {
-    test('dark and light taskbars on Windows and Linux', () {
+    test('one colour icon for every taskbar, on Windows and Linux', () {
       expect(trayIconAsset(windows: true), 'assets/icon/tray/tray.ico');
-      expect(
-        trayIconAsset(windows: true, lightTaskbar: true),
-        'assets/icon/tray/tray-light.ico',
-      );
       expect(trayIconAsset(windows: false), 'assets/icon/tray/tray-24.png');
-      expect(
-        trayIconAsset(windows: false, lightTaskbar: true),
-        'assets/icon/tray/tray-light-24.png',
-      );
     });
   });
 
@@ -331,18 +320,6 @@ void main() {
       );
       await r.start();
       expect(r.host.startupFailed, isTrue);
-      await r.desktop.dispose();
-    });
-
-    test('the icon follows the taskbar brightness', () async {
-      var brightness = Brightness.dark;
-      final r = _Rig(windows: true, taskbar: () => brightness);
-      await r.start();
-      expect(r.tray.icon, 'assets/icon/tray/tray.ico');
-      brightness = Brightness.light;
-      r.desktop.didChangePlatformBrightness();
-      await _pump();
-      expect(r.tray.icon, 'assets/icon/tray/tray-light.ico');
       await r.desktop.dispose();
     });
   });

@@ -626,3 +626,14 @@ body.still .step.run .ic, body.still .spin .ic { animation: none; }
 .phone .fb-acts { flex-wrap: nowrap; gap: 0; }
 .phone .fb-acts .btn { padding-inline: 6px; gap: 5px; font-size: 14px; }
 .phone .fb-row { row-gap: 2px; }
+
+/* Attach chat messages: a checkbox row in the sheet */
+.fb-check { display: flex; align-items: flex-start; gap: 10px; width: 100%; min-height: 40px; padding: 6px 2px; text-align: left; background: transparent; border: 0; }
+.fb-check .bx { flex: none; width: 18px; height: 18px; margin-top: 1px; display: grid; place-items: center; border: 1px solid var(--thread-strong); border-radius: 3px; background: var(--raised); color: var(--on-moss); }
+.fb-check[aria-checked="true"] .bx { background: var(--moss); border-color: var(--moss); }
+.fb-check .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fb-check .t { font-weight: 600; }
+.fb-check .s { font-size: 12px; line-height: 16px; color: var(--muted); }
+.phone .fb-check { min-height: 48px; }
+.phone .fb-check .s { font-size: 13px; }
+.fb-check:focus-visible .bx { outline: 2px solid var(--focus, var(--ink)); outline-offset: 2px; }

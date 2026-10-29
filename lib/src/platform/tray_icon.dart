@@ -2,11 +2,7 @@
 
 /// The tray icon as a Flutter asset. Windows draws an `.ico`; Linux a PNG.
 ///
-/// [lightTaskbar] picks the charcoal glyph for a light taskbar; the milk
-/// glyph is for a dark one.
-String trayIconAsset({required bool windows, bool lightTaskbar = false}) {
-  final name = lightTaskbar ? 'tray-light' : 'tray';
-  return windows
-      ? 'assets/icon/tray/$name.ico'
-      : 'assets/icon/tray/$name-24.png';
-}
+/// The icon is the colour BubblePaw mark without its tile, so one set reads
+/// on a light and a dark taskbar.
+String trayIconAsset({required bool windows}) =>
+    windows ? 'assets/icon/tray/tray.ico' : 'assets/icon/tray/tray-24.png';

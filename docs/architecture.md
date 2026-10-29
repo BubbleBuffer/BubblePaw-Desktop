@@ -143,9 +143,10 @@ message.
   the window hides it and the first time `TrayNotice` is shown when the window comes back;
   otherwise closing quits. The login entry starts the app with `--hidden` when Start in
   the tray is on; the native runners then skip showing the first frame. The icon files
-  are named in `trayIconAsset` (`assets/icon/tray/`): dark-taskbar files by default, the
-  light-taskbar ones when the system theme is light (the plugin cannot ask the taskbar
-  itself). Linux needs libayatana-appindicator to build.
+  are named in `trayIconAsset` (`assets/icon/tray/`): the colour BubblePaw mark without
+  its tile (`tray.svg`, cropped from `assets/icon/bubblepaw-icon.svg`; `tray.ico` holds
+  16, 20, 24, 32 and 48 px, `tray-{16,20,24,32}.png` serve Linux). It reads on light and
+  dark taskbars, so there is one set and no theme choice. Linux needs libayatana-appindicator to build.
 - **Rail avatar**: two letters from the workspace folder name (`my-cool_app` is
   MC, `BubblePaw` is BP). The kit draws the circle; it cannot be left out.
 - **Plan, question, usage, context meter, branch**: the kit's chat pane already
