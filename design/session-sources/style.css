@@ -81,8 +81,6 @@ body.nochrome .frame { border-radius: 0; border: 0; box-shadow: none; }
 .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .btn.danger { color: var(--danger-ink); border-color: var(--danger-ink); background: transparent; }
 .btn.danger:hover { background: var(--danger); }
-.btn.quiet { border-color: transparent; background: transparent; }
-.btn.quiet:hover { background: var(--hover); }
 .btn:disabled { opacity: .5; cursor: default; transform: none; }
 .btn.block { width: 100%; }
 .iconbtn { width: 32px; height: 32px; padding: 0; display: inline-grid; place-items: center; border: 0; background: transparent; border-radius: var(--r-md); color: var(--muted); }
@@ -572,24 +570,15 @@ body.still .step.run .ic, body.still .spin .ic { animation: none; }
 .hhead .gname { font-size: 13.5px; }
 .hhead .ic { color: var(--muted); flex: none; }
 .hgrp > .pgrp, .hgrp > .ogrp { margin-left: 10px; }
-.tag.src { display: inline-flex; align-items: center; gap: 4px; font: 600 11.5px/16px var(--sans, inherit); }
-.tag.src .ic { flex: none; }
 .ogrp { margin-top: 2px; border-top: 1px solid var(--seam-subtle); padding-top: 2px; }
 .otog .gname { font-weight: 600; color: var(--muted); font-size: 13px; }
 .chatrow.orow .s::before { display: none; }
 .chatrow.orow .s.os { margin-top: 2px; }
 .chatrow.orow .s.os .pj { font-family: var(--mono); font-size: 11.5px; }
 .chatrow.orow .s.os2 { justify-content: space-between; font-size: 12px; }
-.chatrow.orow .tag.src { margin-left: 0; }
-.live-st { display: inline-flex; align-items: center; gap: 4px; color: var(--ok-ink); font-weight: 600; }
-.live-st .ic { animation: spin 1.2s linear infinite; }
-.prevnote { margin: 12px 12px 0; align-items: center; }
-.prevnote .btn { flex: none; }
-.btn.wide { width: 100%; min-height: 44px; justify-content: center; }
+.chatrow.orow .btn.wide { width: 100%; min-height: 44px; justify-content: center; }
 .composer.dis { background: var(--surface2); }
 .composer.dis .ph { color: var(--muted); }
-.chint { display: flex; gap: 6px; align-items: flex-start; font-size: 12.5px; color: var(--muted); padding: 0 0 8px; }
-.chint .ic { margin-top: 2px; flex: none; }
 .step.live { color: var(--ok-ink); }
 .step.live .spin { display: inline-flex; animation: spin 1.2s linear infinite; }
 .ph-title { margin: 0 0 0 4px; font-size: 18px; font-weight: 600; }
