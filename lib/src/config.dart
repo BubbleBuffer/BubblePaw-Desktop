@@ -4,6 +4,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show listEquals;
+
 /// What a BubblePaw host needs: the binary, two directories and any extra
 /// arguments.
 class AppConfig {
@@ -12,7 +14,11 @@ class AppConfig {
     required this.workspaceDirectory,
     required this.dataDirectory,
     this.extraArguments = '',
+    this.recentWorkspaces = const [],
   });
+
+  /// How many recent workspaces the rail's menu lists.
+  static const maxRecentWorkspaces = 8;
 
   /// The `bubblepaw` executable.
   final String binaryPath;
@@ -26,6 +32,9 @@ class AppConfig {
   /// Extra command-line arguments for the host, as typed: `--provider demo`.
   /// Quotes group words that contain spaces. See [splitArguments].
   final String extraArguments;
+
+  /// Workspaces opened before, newest first, at most [maxRecentWorkspaces].
+  final List<String> recentWorkspaces;
 
   /// [extraArguments] as a list, ready for the host's command line.
   List<String> get hostArguments => splitArguments(extraArguments);
@@ -41,18 +50,37 @@ class AppConfig {
     String? workspaceDirectory,
     String? dataDirectory,
     String? extraArguments,
+    List<String>? recentWorkspaces,
   }) => AppConfig(
     binaryPath: binaryPath ?? this.binaryPath,
     workspaceDirectory: workspaceDirectory ?? this.workspaceDirectory,
     dataDirectory: dataDirectory ?? this.dataDirectory,
     extraArguments: extraArguments ?? this.extraArguments,
+    recentWorkspaces: recentWorkspaces ?? this.recentWorkspaces,
   );
+
+  /// This config with [path] as the workspace. [path] and the workspace it
+  /// replaces head the recent list, without repeats, cut to [maxRecentWorkspaces].
+  AppConfig withWorkspace(String path) => copyWith(
+    workspaceDirectory: path,
+    recentWorkspaces: _remember([path, workspaceDirectory]),
+  );
+
+  /// The recent list with [first] at its head, without repeats or blanks.
+  List<String> _remember(List<String> first) {
+    final seen = <String>{};
+    return [
+      for (final p in [...first, ...recentWorkspaces])
+        if (p.trim().isNotEmpty && seen.add(p)) p,
+    ].take(maxRecentWorkspaces).toList();
+  }
 
   Map<String, Object?> toJson() => {
     'binaryPath': binaryPath,
     'workspaceDirectory': workspaceDirectory,
     'dataDirectory': dataDirectory,
     if (extraArguments.isNotEmpty) 'extraArguments': extraArguments,
+    if (recentWorkspaces.isNotEmpty) 'recentWorkspaces': recentWorkspaces,
   };
 
   /// Null when [json] is not an object of strings.
@@ -62,6 +90,7 @@ class AppConfig {
     final workspace = json['workspaceDirectory'];
     final data = json['dataDirectory'];
     final extra = json['extraArguments'] ?? '';
+    final recent = json['recentWorkspaces'];
     if (binary is! String ||
         workspace is! String ||
         data is! String ||
@@ -73,6 +102,9 @@ class AppConfig {
       workspaceDirectory: workspace,
       dataDirectory: data,
       extraArguments: extra,
+      recentWorkspaces: [
+        if (recent is List<Object?>) ...recent.whereType<String>(),
+      ].take(maxRecentWorkspaces).toList(),
     );
   }
 
@@ -82,7 +114,8 @@ class AppConfig {
       other.binaryPath == binaryPath &&
       other.workspaceDirectory == workspaceDirectory &&
       other.dataDirectory == dataDirectory &&
-      other.extraArguments == extraArguments;
+      other.extraArguments == extraArguments &&
+      listEquals(other.recentWorkspaces, recentWorkspaces);
 
   @override
   int get hashCode => Object.hash(
@@ -90,6 +123,7 @@ class AppConfig {
     workspaceDirectory,
     dataDirectory,
     extraArguments,
+    Object.hashAll(recentWorkspaces),
   );
 }
 
@@ -183,4 +217,10 @@ List<String> splitArguments(String text) {
   }
   if (started) arguments.add(current.toString());
   return arguments;
+}
+
+/// The folder name a workspace path ends in; the whole path when it has none.
+String workspaceFolderName(String path) {
+  final parts = path.split(RegExp(r'[\\/]')).where((p) => p.isNotEmpty);
+  return parts.isEmpty ? path : parts.last;
 }

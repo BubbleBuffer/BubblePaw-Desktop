@@ -58,12 +58,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _save() {
-    final config = AppConfig(
+    // The recent workspaces carry over; a changed workspace joins them.
+    final typed = widget.initial.copyWith(
       binaryPath: _binary.text.trim(),
-      workspaceDirectory: _workspace.text.trim(),
       dataDirectory: _data.text.trim(),
       extraArguments: _arguments.text.trim(),
     );
+    final workspace = _workspace.text.trim();
+    final config = workspace.isEmpty
+        ? typed.copyWith(workspaceDirectory: workspace)
+        : typed.withWorkspace(workspace);
     final missing = [
       if (config.binaryPath.isEmpty) 'binary',
       if (config.workspaceDirectory.isEmpty) 'workspace',

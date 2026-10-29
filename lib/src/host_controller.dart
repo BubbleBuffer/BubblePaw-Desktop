@@ -152,6 +152,34 @@ class HostController extends ChangeNotifier {
     await _start();
   }
 
+  /// The recent workspaces for the rail menu, newest first. The open one is
+  /// always listed.
+  List<String> get recentWorkspaces {
+    final config = _config;
+    if (config == null) return const [];
+    return config.withWorkspace(config.workspaceDirectory).recentWorkspaces;
+  }
+
+  /// Switches to [path]: the host is bound to one workspace, so the running
+  /// backend is disposed and a new one started with that workspace. The data
+  /// directory stays. Does nothing for the workspace already open.
+  Future<void> switchWorkspace(String path) async {
+    final config = _config;
+    final target = path.trim();
+    if (config == null || target.isEmpty) return;
+    if (target == config.workspaceDirectory && _phase == HostPhase.running) {
+      return;
+    }
+    final next = config.withWorkspace(target);
+    try {
+      await store.save(next);
+    } on Object {
+      // A config that cannot be written still switches this session.
+    }
+    _config = next;
+    await _start();
+  }
+
   /// Starts again with the saved config.
   Future<void> restart() => _start();
 
