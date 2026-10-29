@@ -590,3 +590,7 @@ body.still .step.run .ic, body.still .spin .ic { animation: none; }
 /* Scrollbars: thin thumb in the thread colour, shown while the pointer is over the scroll area; no track, no arrows, no horizontal scroll in lists. Matches Flutter desktop's Scrollbar (hover/scroll reveal). */
 .frame * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
 .frame *:hover { scrollbar-color: var(--thread) transparent; }
+
+.prevnote { margin: 12px 12px 0; align-items: center; gap: 8px; }
+.prevnote .grow { flex: 1; min-width: 0; }
+.prevnote .btn { flex: none; }

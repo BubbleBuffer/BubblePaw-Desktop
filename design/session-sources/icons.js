@@ -1,6 +1,7 @@
 // Lucide icons (ISC licence, https://lucide.dev), lucide-react 0.468.0, node arrays copied verbatim
 // and serialised to SVG children. Generated; do not edit by hand.
 window.LUCIDE = {
+  "info": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4\"/><path d=\"M12 8h.01\"/>",
   "menu": "<line x1=\"4\" x2=\"20\" y1=\"12\" y2=\"12\"/><line x1=\"4\" x2=\"20\" y1=\"6\" y2=\"6\"/><line x1=\"4\" x2=\"20\" y1=\"18\" y2=\"18\"/>",
   "chevron-right": "<path d=\"m9 18 6-6-6-6\"/>",
   "chevron-left": "<path d=\"m15 18-6-6 6-6\"/>",

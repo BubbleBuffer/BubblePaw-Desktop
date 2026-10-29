@@ -34,7 +34,7 @@
   /* ---------- model ---------- */
   const M = {
     pref: H.theme === 'dark' ? 'dark' : 'light', hostOpen: new Set(['h1']), projOpen: new Set(['garden-api']), otherOpen: false,
-    imp: new Set(), sel: { k: 'chat', id: '' }, lastProj: 'garden-api',
+    imp: new Set(), gone: new Set(), sel: { k: 'chat', id: '' }, lastProj: 'garden-api',
   };
   function seed(screen) {
     M.imp = new Set(); M.sel = { k: 'chat', id: '' }; M.otherOpen = false;
@@ -74,7 +74,7 @@
 
   /* ---------- composer ---------- */
   function composer(p, o) {
-    if (o && M.sel.k === 'term') return `<div class="composer dis"><div class="ph">Started in the terminal.</div><div class="bar2"><span class="grow"></span>${btn('Add to chats', { kind: 'primary', act: 'add', arg: o.id })}</div>${p ? '<div class="homebar"></div>' : ''}</div>`;
+    if (o && M.sel.k === 'term') return '';
     return `<div class="composer"><div class="ph">${p ? 'Message Studio PC' : 'Steer the agent…'}</div><div class="bar2"><span>deepseek-v4.1-flash ▾</span><span class="grow"></span>${btn('Stop')}${btn('Send', { kind: 'primary', icon: 'arrow-up' })}</div>${p ? '<div class="homebar"></div>' : ''}</div>`;
   }
 
@@ -103,7 +103,7 @@
       const meta = st.act ? [st.run && `${st.run} running`, st.wait && `${st.wait} waiting`].filter(Boolean).join(' · ') : p.last;
       return `<div class="pgrp"><div class="ghead"><button class="gtog" aria-expanded="${open}" ${A('togP', p.id)}><span class="chev">${ic(open ? 'chevron-down' : 'chevron-right', 14)}</span><span class="gname">${p.id}</span><span class="gmeta ${st.act ? 'act' : ''}">${meta}</span></button><button class="iconbtn sm" aria-label="New chat in ${p.id}" title="New chat in ${p.id}" ${A('noop')}>${ic('plus', 16)}</button></div>${open ? projChats(p).map((c) => row(c, p, false)).join('') : ''}</div>`;
     }).join('');
-    const hidden = OTHER.filter((o) => !M.imp.has(o.id));
+    const hidden = OTHER.filter((o) => !M.imp.has(o.id) && !M.gone.has(o.id));
     let other = '';
     if (hidden.length) {
       const open = M.otherOpen;
@@ -128,7 +128,7 @@
     if (!o) return `<div class="main"><div class="topbar"><span class="ct">${SEL}</span>${pill('Needs approval', 'attn')}<span class="tag" style="margin-left:4px">garden-api</span><span class="muted mono" style="font-size:12px;margin-left:4px">${ic('git-branch', 13)} bp/quota-reconnect</span></div>
       <div class="stream">${transcript(false)}</div>${composer(false)}</div>`;
     return `<div class="main"><div class="topbar"><span class="ct">${o.t}</span><span class="tag">${o.proj}</span></div>
-      <div class="stream">${otherTranscript(o)}</div>${composer(false, o)}</div>`;
+      ${M.sel.k === 'term' ? `<div class="notice info prevnote">${ic('info', 16)}<div class="grow">This chat was not started on desktop. Do you want to import it?</div>${btn('Hide', { act: 'hide', arg: o.id })}${btn('Import', { kind: 'primary', act: 'add', arg: o.id })}</div>` : ''}<div class="stream">${otherTranscript(o)}</div>${composer(false, o)}</div>`;
   }
 
   /* ---------- screens ---------- */
@@ -146,7 +146,7 @@
     if (!o) return `<div class="phone-col"><div class="statusgap"></div><div class="main"><div class="topbar">${iconBtn('chevron-left', 'Back to chats', 'pv', 'list')}<div class="two"><div class="ct">${SEL}</div><div class="sub"><span>Studio PC</span><span class="on">${dotOn} Online</span><span class="tag">garden-api</span></div></div></div>
       <div class="stream">${transcript(true)}</div>${composer(true)}</div></div>`;
     return `<div class="phone-col"><div class="statusgap"></div><div class="main"><div class="topbar">${iconBtn('chevron-left', 'Back to chats', 'pv', 'list')}<div class="two"><div class="ct">${o.t}</div><div class="sub"><span class="tag">${o.proj}</span></div></div></div>
-      <div class="stream">${otherTranscript(o)}</div>${composer(true, o)}</div></div>`;
+      ${M.sel.k === 'term' ? `<div class="notice info prevnote">${ic('info', 16)}<div class="grow">This chat was not started on desktop. Do you want to import it?</div>${btn('Hide', { act: 'hide', arg: o.id })}${btn('Import', { kind: 'primary', act: 'add', arg: o.id })}</div>` : ''}<div class="stream">${otherTranscript(o)}</div>${composer(true, o)}</div></div>`;
   }
 
   /* ---------- review bar ---------- */
@@ -203,6 +203,7 @@
       M.sel = { k, id };
       if (ph()) S.pv = 'chat';
     },
+    hide: (id) => { M.gone.add(id); M.sel = { k: 'chat', id: '' }; if (ph()) S.pv = 'list'; },
     add: (id) => { M.imp.add(id); M.sel = { k: 'imp', id }; M.projOpen.add(oById(id).proj); if (ph()) S.pv = 'chat'; },
     noop: () => {},
   };
