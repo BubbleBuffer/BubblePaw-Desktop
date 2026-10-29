@@ -60,13 +60,36 @@ void main() {
       ).controller(),
       after: null,
     ),
-    // Child agents: one running with an open question, one finished.
+    // Child agents: one running with an open question and Cancel, one
+    // finished.
     'crew': (
       controller: () => Played(
         scripts: [crewScript()],
         capabilities: crewCapabilities,
       ).controller(),
       after: null,
+    ),
+    // Core v0.3.1: Settings lists the host's providers and models.
+    'providers': (
+      controller: () => Played(
+        capabilities: hostControlCapabilities,
+        providers: sampleProviders,
+        models: sampleModels,
+      ).controller(),
+      after: (tester) async {
+        // At the compact size the rail is a screen opened from its button.
+        final show = find.byKey(const ValueKey('rail-show'));
+        if (show.evaluate().isNotEmpty) {
+          await tester.tap(show);
+          await settle(tester);
+        }
+        await tester.tap(find.byKey(const ValueKey('rail-settings')));
+        await settle(tester);
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('provider-openrouter')),
+        );
+        await settle(tester);
+      },
     ),
     // A backend with the context capability: the pane opens from the meter.
     'context': (

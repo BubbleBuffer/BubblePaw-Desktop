@@ -141,8 +141,9 @@ dark setting, and the form factor is always desktop.
 | `test/guarded_backend_test.dart` | The host-exit detector |
 | `test/config_test.dart` | Config file and app-support paths |
 | `test/crew_test.dart` | Crew: the ledger lists a running and a finished child, a child's open question shows in the parent and is answered (reaches `answerChildQuestion`), no answer action without the capability; rail: 2000 chats, rows build lazily and the last is reachable |
+| `test/host_controls_test.dart` | Core v0.3.1 on the scripted backend: providers section (list, missing key, Make default, no capability), the composer's default-model pick, rail paging, crew Cancel and its heading |
 | `test/workspace_switch_test.dart` | Recent workspaces (order, repeats, cap of 8, JSON), the rail menu, switching restarts the host with the same data directory, Open folder, a cancelled picker |
-| `test/golden_test.dart` | Main screen, settings, a failure notice, plan, question, crew and context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
+| `test/golden_test.dart` | Main screen, settings, a failure notice, plan, question, crew (with Cancel), the providers section and the context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
 | `test/live_test.dart` | Opt-in (`BP_TEST_BIN`): the real host with the offline demo provider |
 
 Goldens are rendered on Linux with the bundled fonts and the Flutter version CI
@@ -150,10 +151,11 @@ pins; renders from another platform will not match.
 
 ## Known gaps
 
-- Chats: the stdio host returns every chat from `session.list`, with no cursor or limit. The adapter passes them all (it used to keep 64) and the rail builds rows lazily, so thousands stay cheap. There is no paging; the host does the whole list on every refresh.
-- **No session-level model choice (Core gap).** `session.open` takes only a title (and ids for loading or a parent). The model is chosen per run with `options.model` on `run.start`, and agent profiles exist only in JS. So there is no new-chat sheet.
-- **No provider list (Core gap).** Stdio has no method to list providers or models or to set the default; those exist only on the HTTP host (`GET /api/providers`, `PUT /api/roles/main`). There is no provider settings section. The host reads `$BUBBLEPAW_CONFIG`, else `~/.bubblepaw/config.toml` and `<workspace>/.bubblepaw/config.toml`; provider keys come from environment variables the config names, and the app never handles keys.
-- Jobs: the stdio host reports none, and there is no cancel-child method.
+- **Core v0.3.1 host controls need a v0.3.1 host.** A host that advertises `session.list.pagination`, `providers.list`, `roles.set_main` and `child.cancel` gets rail paging ("Show older sessions"), the Models section in Settings, the composer's default-model pick and Cancel on a running child. A v0.3.0 host advertises none of them and shows none; the adapter turns each on by its own feature.
+- **The model pick is host-wide.** `roles.set_main` saves one default model for every chat; there is no per-chat model. The pick is titled "Default model", and a run in progress keeps its own. There is no new-chat sheet: `session.open` takes only a title, and agent profiles exist only in JS.
+- **Provider setup stays in the host config.** Settings lists providers, whether the host found each key (never the key) and Make default. Adding a provider or setting a key is done in the host configuration: the host reads `$BUBBLEPAW_CONFIG`, else `~/.bubblepaw/config.toml` and `<workspace>/.bubblepaw/config.toml`, and keys come from environment variables the config names. The app never handles keys.
+- Chat search filters the loaded pages only; the host's `session.list` has no query.
+- Jobs: the stdio host reports none. Cancel is offered in the crew ledger (expanded width), not in the crew strip.
 - Worktrees, crew and the Context pane show only what the stdio backend reports. With BubblePaw-Core v0.3.0 that includes the context (pane, summaries, history ranges) and child questions; it still reports no jobs. Compaction needs a real model, so the demo provider shows an empty structure.
 - The header shows a branch only when the backend reports one; the
   stdio host reports none, so none is shown.

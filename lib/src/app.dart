@@ -104,6 +104,9 @@ class AppShell extends StatelessWidget {
           initial: controller.config ?? controller.store.defaults,
           firstRun: first && controller.config == null,
           scripted: controller.usingScripted,
+          backend: controller.phase == HostPhase.running
+              ? controller.backend
+              : null,
           onSave: (config) => unawaited(controller.saveAndStart(config)),
           onCancel: first ? null : controller.closeSettings,
         );
