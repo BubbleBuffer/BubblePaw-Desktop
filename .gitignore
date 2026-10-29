@@ -11,3 +11,4 @@ pubspec.lock
 .codex/
 .cursor/
 .vscode/
+/test/failures/

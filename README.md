@@ -31,9 +31,10 @@ A built app takes the flag directly: `bubblepaw_desktop --scripted`.
 flutter run -d linux
 ```
 
-On first run, or when the binary is missing, the app opens the settings screen
-with four fields: the **binary**, the **workspace** directory, the **data
-directory** and **extra host arguments**. The data directory defaults to a folder of the app's own, because a
+When a `bubblepaw` sits next to the app, the app uses it and needs no setup. Otherwise,
+or when the binary is missing, it opens Settings on **Core**: the **binary** (bundled or
+custom), the **data directory** and **extra host arguments**. The workspace is chosen from
+the rail. The data directory defaults to a folder of the app's own, because a
 data directory must never be shared with another BubblePaw host. The host reads
 The extra arguments are added to the host's command line as typed, with quotes
 grouping a value that has spaces: `--provider demo`, or
@@ -53,8 +54,10 @@ The app needs a BubblePaw build that speaks stdio protocol `0.1`
 | Linux | `$XDG_DATA_HOME/bubblepaw-desktop`, else `~/.local/share/bubblepaw-desktop` |
 
 `--config-dir <dir>` replaces that directory for one launch. The file holds
-`binaryPath`, `workspaceDirectory`, `dataDirectory` and, when set,
-`extraArguments`, and nothing secret.
+`binarySource` (bundled or custom), `binaryPath`, `workspaceDirectory`,
+`dataDirectory` and, when set, `extraArguments`, and nothing secret. The app's own
+preferences (theme, login and tray switches, whether the host starts with the app) are in
+`preferences.json` beside it.
 
 ## Tests
 

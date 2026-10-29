@@ -20,6 +20,14 @@ class HostFailure {
         'corrected in settings.',
   );
 
+  factory HostFailure.bundledMissing() => const HostFailure._(
+    HostFailureKind.binaryMissing,
+    'BubblePaw binary not found',
+    'The bubblepaw binary that ships with the app is missing. Chats are '
+        'unavailable until a custom binary is chosen in settings or the app '
+        'is reinstalled.',
+  );
+
   factory HostFailure.protocolMismatch({
     required String expected,
     required String? actual,

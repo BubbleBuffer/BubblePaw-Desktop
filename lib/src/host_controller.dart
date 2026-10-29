@@ -11,7 +11,9 @@ import 'package:flutter/foundation.dart';
 import 'config.dart';
 import 'guarded_backend.dart';
 import 'host_failure.dart';
+import 'preferences.dart';
 import 'scripted.dart';
+import 'settings/settings_section.dart';
 
 /// A started backend and how to end it.
 class StartedBackend {
@@ -42,11 +44,14 @@ class StartedBackend {
 typedef BackendStarter = Future<StartedBackend> Function(AppConfig config);
 
 /// Starts the owned BubblePaw child.
-Future<StartedBackend> startBubblePaw(AppConfig config) async {
+Future<StartedBackend> startBubblePaw(
+  AppConfig config, {
+  String? binaryPath,
+}) async {
   await Directory(config.workspaceDirectory).create(recursive: true);
   await Directory(config.dataDirectory).create(recursive: true);
   final backend = await BubblePawBackend.start(
-    binaryPath: config.binaryPath,
+    binaryPath: binaryPath ?? config.binaryPath,
     workspaceDirectory: config.workspaceDirectory,
     dataDirectory: config.dataDirectory,
     arguments: config.hostArguments,
@@ -59,20 +64,34 @@ Future<StartedBackend> startBubblePaw(AppConfig config) async {
   );
 }
 
-enum HostPhase { setup, starting, running, failed }
+/// Where the host stands. `stopped` is a host the person chose not to start
+/// with the app ("Start the host when BubblePaw starts" is off).
+enum HostPhase { setup, starting, running, stopped, failed }
+
+/// Reads the version a `bubblepaw` binary reports; null when it cannot.
+typedef HostVersionReader = Future<String?> Function(String binaryPath);
 
 class HostController extends ChangeNotifier {
   HostController({
     required this.store,
-    BackendStarter? starter,
+    this.starter,
     this.scripted = false,
     bool Function(String path)? fileExists,
-  }) : _starter = starter ?? startBubblePaw,
-       _fileExists = fileExists ?? ((path) => File(path).existsSync());
+    this.bundledBinary,
+    this.versionReader,
+  }) : _fileExists = fileExists ?? ((path) => File(path).existsSync());
 
   final ConfigStore store;
   final bool scripted;
-  final BackendStarter _starter;
+
+  /// The `bubblepaw` that ships next to the app, when there is one.
+  final String? bundledBinary;
+
+  /// Asks a binary for its version, for Settings. Null: not shown.
+  final HostVersionReader? versionReader;
+
+  /// Starts a host from a config. Null starts the real one.
+  final BackendStarter? starter;
   final bool Function(String path) _fileExists;
 
   HostPhase _phase = HostPhase.starting;
@@ -83,6 +102,12 @@ class HostController extends ChangeNotifier {
   DateTime? _now;
   Future<void> Function()? _dispose;
   bool _settingsOpen = false;
+  SettingsSection? _settingsSection;
+  AppPrefs _prefs = const AppPrefs();
+  String? _hostVersion;
+  bool _trayNoticePending = false;
+  bool _trayAvailable = true;
+  bool _startupFailed = false;
   late bool _real = !scripted;
   int _generation = 0;
   bool _disposed = false;
@@ -116,6 +141,81 @@ class HostController extends ChangeNotifier {
   /// The saved config, or null before one is saved.
   AppConfig? get config => _config;
 
+  /// The app's preferences (theme, tray, login).
+  AppPrefs get prefs => _prefs;
+
+  /// The version the running host binary reports, when it could be read.
+  String? get hostVersion => _hostVersion;
+
+  /// Whether the bundled binary exists next to the app.
+  bool get bundledAvailable => bundledBinary != null;
+
+  /// The binary [config] starts: the bundled one or the custom path.
+  String binaryFor(AppConfig config) =>
+      config.binarySource == BinarySource.bundled
+      ? (bundledBinary ?? '')
+      : config.binaryPath;
+
+  /// The config the settings form starts from: the saved one, or the
+  /// defaults with the bundled binary chosen when there is one.
+  AppConfig get formConfig =>
+      _config ??
+      store.defaults.copyWith(
+        binarySource: bundledAvailable
+            ? BinarySource.bundled
+            : BinarySource.custom,
+      );
+
+  /// Whether a tray icon is showing. False on a system without one.
+  bool get trayAvailable => _trayAvailable;
+  set trayAvailable(bool value) {
+    if (_trayAvailable == value) return;
+    _trayAvailable = value;
+    _notify();
+  }
+
+  /// The login entry could not be changed.
+  bool get startupFailed => _startupFailed;
+  set startupFailed(bool value) {
+    if (_startupFailed == value) return;
+    _startupFailed = value;
+    _notify();
+  }
+
+  /// The "still running in the tray" notice is waiting to be dismissed.
+  bool get trayNoticePending => _trayNoticePending;
+
+  /// The window was just hidden to the tray: the first time, a notice waits
+  /// for the next time it is shown.
+  void windowHidden() {
+    if (_prefs.trayNoticeShown || _trayNoticePending) return;
+    _trayNoticePending = true;
+    _notify();
+  }
+
+  void dismissTrayNotice() {
+    if (!_trayNoticePending) return;
+    _trayNoticePending = false;
+    unawaited(updatePrefs(_prefs.copyWith(trayNoticeShown: true)));
+  }
+
+  /// Saves [next] and tells listeners. A preference that cannot be written
+  /// still holds for this session.
+  Future<void> updatePrefs(AppPrefs next) async {
+    if (next == _prefs) return;
+    _prefs = next;
+    _notify();
+    try {
+      await store.savePrefs(next);
+    } on Object {
+      // Kept in memory for this session.
+    }
+  }
+
+  /// The section Settings opens on; null for the default (General, or the
+  /// list of sections at compact width).
+  SettingsSection? get settingsSection => _settingsSection;
+
   HostFailure? get failure => _failure;
   GuardedBackend? get backend => _backend;
   Stream<ChatSummary>? get createdChats => _createdChats;
@@ -128,11 +228,26 @@ class HostController extends ChangeNotifier {
 
   /// Loads the config and starts the host, or asks for settings.
   Future<void> init() async {
+    _prefs = await store.loadPrefs();
     _config = await store.load();
     if (scripted) {
       await _start();
-    } else if (_config == null || !_config!.isComplete) {
+      return;
+    }
+    if (_config == null && bundledAvailable) {
+      // Nothing to ask: the bundled binary and the default directories.
+      _config = formConfig;
+      try {
+        await store.save(_config!);
+      } on Object {
+        // Starts this session anyway.
+      }
+    }
+    if (_config == null || !_config!.isComplete) {
       _phase = HostPhase.setup;
+      _notify();
+    } else if (!_prefs.startHost) {
+      _phase = HostPhase.stopped;
       _notify();
     } else {
       await _start();
@@ -180,11 +295,13 @@ class HostController extends ChangeNotifier {
     await _start();
   }
 
-  /// Starts again with the saved config.
+  /// Starts again with the saved config. A host the person turned off with
+  /// the app starts too.
   Future<void> restart() => _start();
 
-  void openSettings() {
+  void openSettings([SettingsSection? section]) {
     _settingsOpen = true;
+    _settingsSection = section;
     _notify();
   }
 
@@ -200,13 +317,22 @@ class HostController extends ChangeNotifier {
     _phase = HostPhase.starting;
     _notify();
     final useScripted = !_real;
-    final config = _config ?? store.defaults;
-    if (!useScripted && !_fileExists(config.binaryPath)) {
-      _fail(ticket, HostFailure.binaryMissing(config.binaryPath));
+    final config = formConfig;
+    final binary = binaryFor(config);
+    if (!useScripted && (binary.isEmpty || !_fileExists(binary))) {
+      _fail(
+        ticket,
+        config.binarySource == BinarySource.bundled
+            ? HostFailure.bundledMissing()
+            : HostFailure.binaryMissing(binary),
+      );
       return;
     }
     try {
-      final started = await (useScripted ? startScripted : _starter)(config);
+      final BackendStarter start = useScripted
+          ? startScripted
+          : (starter ?? (c) => startBubblePaw(c, binaryPath: binary));
+      final started = await start(config);
       if (ticket != _generation || _disposed) {
         await started.dispose();
         return;
@@ -219,11 +345,27 @@ class HostController extends ChangeNotifier {
       if (lost != null) unawaited(_watchConnection(lost, ticket));
       _phase = HostPhase.running;
       _notify();
+      unawaited(_readVersion(binary, ticket));
     } on Object catch (error) {
       // Startup errors can carry local paths or provider text: show a fixed
       // message for anything that is not a known host failure.
       _fail(ticket, HostFailure.from(error) ?? HostFailure.startFailed());
     }
+  }
+
+  Future<void> _readVersion(String binary, int ticket) async {
+    final reader = versionReader;
+    _hostVersion = null;
+    if (reader == null || !_real) return;
+    String? version;
+    try {
+      version = await reader(binary);
+    } on Object {
+      version = null;
+    }
+    if (ticket != _generation || _disposed) return;
+    _hostVersion = version;
+    _notify();
   }
 
   /// Shows the failure notice when the host goes away while no command or

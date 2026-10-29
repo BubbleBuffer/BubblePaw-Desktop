@@ -1,0 +1,457 @@
+// The settings pages: General, Core, Models and About with Licences.
+
+import 'dart:io';
+
+import 'package:bubblepaw_desktop/src/config.dart';
+import 'package:bubblepaw_desktop/src/host_controller.dart';
+import 'package:bubblepaw_desktop/src/platform/releases.dart';
+import 'package:bubblepaw_desktop/src/preferences.dart';
+import 'package:bubblepaw_desktop/src/settings/licences_page.dart';
+import 'package:bubblepaw_desktop/src/versions.dart';
+import 'package:flutter/foundation.dart'
+    show LicenseEntry, LicenseEntryWithLineBreaks;
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'scenes.dart';
+import 'support.dart';
+
+const _bundledPath = '/opt/app/bubblepaw';
+
+HostController _controller({
+  MemoryConfigStore? store,
+  String? bundled,
+  HostVersionReader? versionReader,
+  AppConfig? config = sampleConfig,
+}) {
+  return HostController(
+    store: store ?? MemoryConfigStore(config),
+    // A fresh scripted host for every start, as a restart gets.
+    starter: (c) => Played().start(c),
+    fileExists: (_) => true,
+    bundledBinary: bundled,
+    versionReader: versionReader,
+  );
+}
+
+Future<void> _open(WidgetTester tester, String section) async {
+  final show = find.byKey(const ValueKey('rail-show'));
+  if (show.evaluate().isNotEmpty) {
+    await tester.tap(show);
+    await settle(tester);
+  }
+  await tester.tap(find.byKey(const ValueKey('rail-settings')));
+  await settle(tester);
+  await tester.tap(find.byKey(ValueKey('settings-nav-$section')));
+  await settle(tester);
+}
+
+Stream<LicenseEntry> _licences() => Stream.fromIterable([
+  LicenseEntryWithLineBreaks([
+    'alpha_pkg',
+  ], 'Permission is hereby granted, free of charge, to any person'),
+  LicenseEntryWithLineBreaks([
+    'Bricolage Grotesque',
+  ], 'This Font Software is licensed under the SIL Open Font License'),
+  LicenseEntryWithLineBreaks([
+    'lucide_icons_flutter',
+  ], 'Permission to use, copy, modify, and/or distribute this software'),
+]);
+
+Finder _field(String key) => find.descendant(
+  of: find.byKey(ValueKey(key)),
+  matching: find.byType(EditableText),
+);
+
+void main() {
+  group('General', () {
+    testWidgets('the theme choice is saved', (tester) async {
+      final store = MemoryConfigStore(sampleConfig);
+      await pumpApp(tester, _controller(store: store));
+      await _open(tester, 'general');
+
+      await tester.tap(find.byKey(const ValueKey('theme-dark')));
+      await settle(tester);
+      expect(store.prefs.theme, ThemeSetting.dark);
+    });
+
+    testWidgets('Start in the tray needs Open at login', (tester) async {
+      final controller = _controller();
+      await pumpApp(tester, controller);
+      await _open(tester, 'general');
+
+      // Disabled until Open at login is on.
+      await tester.tap(find.byKey(const ValueKey('toggle-start-in-tray')));
+      await settle(tester);
+      expect(controller.prefs.startInTray, isFalse);
+
+      await tester.tap(find.byKey(const ValueKey('toggle-open-at-login')));
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('toggle-start-in-tray')));
+      await settle(tester);
+      expect(controller.prefs.openAtLogin, isTrue);
+      expect(controller.prefs.effectiveStartInTray, isTrue);
+
+      // Turning the login entry off turns the combination off with it.
+      await tester.tap(find.byKey(const ValueKey('toggle-open-at-login')));
+      await settle(tester);
+      expect(controller.prefs.effectiveStartInTray, isFalse);
+    });
+
+    testWidgets('Keep running in the tray is saved; no tray disables it', (
+      tester,
+    ) async {
+      final store = MemoryConfigStore(sampleConfig);
+      final controller = _controller(store: store);
+      await pumpApp(tester, controller);
+      await _open(tester, 'general');
+      await tester.tap(find.byKey(const ValueKey('toggle-keep-in-tray')));
+      await settle(tester);
+      expect(store.prefs.keepInTray, isTrue);
+
+      controller.trayAvailable = false;
+      await settle(tester);
+      expect(find.textContaining('shows no tray icon'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('toggle-keep-in-tray')));
+      await settle(tester);
+      expect(store.prefs.keepInTray, isTrue);
+    });
+
+    testWidgets('a login entry that cannot be written is reported', (
+      tester,
+    ) async {
+      final controller = _controller();
+      await pumpApp(tester, controller);
+      await _open(tester, 'general');
+      expect(find.byKey(const ValueKey('startup-error')), findsNothing);
+      controller.startupFailed = true;
+      await settle(tester);
+      expect(find.byKey(const ValueKey('startup-error')), findsOneWidget);
+    });
+
+    testWidgets('has no turn layout and no remote access', (tester) async {
+      await pumpApp(tester, _controller());
+      await _open(tester, 'general');
+      expect(find.textContaining('Turn layout'), findsNothing);
+      expect(find.textContaining('Remote'), findsNothing);
+    });
+  });
+
+  group('Core', () {
+    testWidgets('bundled is unavailable with a reason when absent', (
+      tester,
+    ) async {
+      await pumpApp(tester, _controller());
+      await _open(tester, 'core');
+      expect(find.text('Bundled with BubblePaw'), findsOneWidget);
+      expect(find.textContaining('no bubblepaw executable'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('binary-bundled')));
+      await settle(tester);
+      // Still the custom binary: its path field is showing.
+      expect(find.byKey(const ValueKey('settings-binary')), findsOneWidget);
+    });
+
+    testWidgets('a first run with a bundled binary needs no setup', (
+      tester,
+    ) async {
+      final store = MemoryConfigStore();
+      final controller = _controller(
+        store: store,
+        bundled: _bundledPath,
+        config: null,
+      );
+      await pumpApp(tester, controller);
+      expect(controller.phase, HostPhase.running);
+      expect(store.saved?.binarySource, BinarySource.bundled);
+      await _open(tester, 'core');
+      expect(find.byKey(const ValueKey('settings-binary')), findsNothing);
+    });
+
+    testWidgets('Custom binary shows the path and Browse fills it', (
+      tester,
+    ) async {
+      final store = MemoryConfigStore(
+        sampleConfig.copyWith(binarySource: BinarySource.bundled),
+      );
+      final controller = _controller(store: store, bundled: _bundledPath);
+      await pumpApp(
+        tester,
+        controller,
+        pickBinary: () async => '/home/user/bin/bubblepaw',
+      );
+      await _open(tester, 'core');
+      expect(find.byKey(const ValueKey('settings-binary')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('binary-custom')));
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('settings-browse')));
+      await settle(tester);
+      final field = tester.widget<EditableText>(_field('settings-binary'));
+      expect(field.controller.text, '/home/user/bin/bubblepaw');
+    });
+
+    testWidgets('Save and restart stores the choice and restarts the host', (
+      tester,
+    ) async {
+      final store = MemoryConfigStore(sampleConfig);
+      final controller = _controller(store: store, bundled: _bundledPath);
+      await pumpApp(tester, controller);
+      await _open(tester, 'core');
+
+      await tester.tap(find.byKey(const ValueKey('binary-bundled')));
+      await settle(tester);
+      await tester.ensureVisible(find.byKey(const ValueKey('settings-save')));
+      await tester.tap(find.byKey(const ValueKey('settings-save')));
+      await settle(tester);
+      expect(store.saved?.binarySource, BinarySource.bundled);
+      // The custom path stays for switching back.
+      expect(store.saved?.binaryPath, sampleConfig.binaryPath);
+      expect(controller.phase, HostPhase.running);
+    });
+
+    testWidgets('Restart restarts the host', (tester) async {
+      var starts = 0;
+      final controller = HostController(
+        store: MemoryConfigStore(sampleConfig),
+        starter: (c) {
+          starts++;
+          return Played().start(c);
+        },
+        fileExists: (_) => true,
+      );
+      await pumpApp(tester, controller);
+      expect(starts, 1);
+      await _open(tester, 'core');
+      expect(find.text('Running'), findsWidgets);
+      await tester.tap(find.byKey(const ValueKey('core-restart')));
+      await settle(tester);
+      expect(starts, 2);
+    });
+
+    testWidgets('Start the host when BubblePaw starts: off leaves it stopped', (
+      tester,
+    ) async {
+      final store = MemoryConfigStore(
+        sampleConfig,
+        const AppPrefs(startHost: false),
+      );
+      final controller = _controller(store: store);
+      await pumpApp(tester, controller);
+      expect(controller.phase, HostPhase.stopped);
+      expect(find.byKey(const ValueKey('notice-start')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('notice-start')));
+      await settle(tester);
+      expect(controller.phase, HostPhase.running);
+    });
+
+    testWidgets('no Workspace field and no keep-host-running switch', (
+      tester,
+    ) async {
+      await pumpApp(tester, _controller());
+      await _open(tester, 'core');
+      expect(find.text('Workspace'), findsNothing);
+      expect(find.textContaining('Keep the host running'), findsNothing);
+    });
+  });
+
+  group('Models', () {
+    testWidgets('says the host is not running when it is not', (tester) async {
+      final controller = _controller(
+        store: MemoryConfigStore(
+          sampleConfig,
+          const AppPrefs(startHost: false),
+        ),
+      );
+      await pumpApp(tester, controller);
+      await tester.tap(find.byKey(const ValueKey('notice-settings')));
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('settings-nav-models')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('models-no-host')), findsOneWidget);
+    });
+
+    testWidgets('lists providers with the Default badge', (tester) async {
+      final played = Played(
+        capabilities: hostControlCapabilities,
+        providers: sampleProviders,
+        models: sampleModels,
+      );
+      await pumpApp(tester, played.controller());
+      await _open(tester, 'models');
+      expect(find.byKey(const ValueKey('provider-demo')), findsOneWidget);
+      expect(find.text('Default'), findsOneWidget);
+    });
+  });
+
+  group('About', () {
+    testWidgets('lists the versions in use', (tester) async {
+      final controller = _controller(versionReader: (_) async => '0.3.1');
+      await pumpApp(tester, controller);
+      await _open(tester, 'about');
+      Text value(String name) =>
+          tester.widget<Text>(find.byKey(ValueKey('version-$name')));
+      expect(value('BubblePaw').data, appVersion);
+      expect(value('Agent kit').data, kitVersion);
+      expect(value('Core').data, '0.3.1');
+      expect(value('Protocol').data, isNotEmpty);
+      // The app repository is private: no self-update row.
+      expect(find.textContaining('Check for app'), findsNothing);
+    });
+
+    testWidgets('a newer Core release shows Update available with a link', (
+      tester,
+    ) async {
+      final opened = <Uri>[];
+      final page = Uri.parse('https://github.com/BubbleBuffer/x/releases/v9');
+      await pumpApp(
+        tester,
+        _controller(versionReader: (_) async => '0.3.1'),
+        services: PlatformServices(
+          latestCoreRelease: () async =>
+              ReleaseInfo(version: 'v0.4.0', page: page),
+          open: (url) async => opened.add(url),
+        ),
+      );
+      await _open(tester, 'about');
+      expect(find.byKey(const ValueKey('core-update')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('core-check')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('core-update')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('core-release-link')));
+      await settle(tester);
+      expect(opened, [page]);
+    });
+
+    testWidgets('an up-to-date Core says so', (tester) async {
+      await pumpApp(
+        tester,
+        _controller(versionReader: (_) async => '0.4.0'),
+        services: PlatformServices(
+          latestCoreRelease: () async => ReleaseInfo(
+            version: 'v0.4.0',
+            page: Uri.parse('https://example.com'),
+          ),
+          open: (_) async {},
+        ),
+      );
+      await _open(tester, 'about');
+      await tester.tap(find.byKey(const ValueKey('core-check')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('core-update')), findsNothing);
+      expect(find.textContaining('is the latest release'), findsOneWidget);
+    });
+
+    testWidgets('a failed check says what failed and can be repeated', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        _controller(versionReader: (_) async => '0.3.1'),
+        services: PlatformServices(
+          latestCoreRelease: () => Future<ReleaseInfo>.error(
+            const ReleaseCheckException('GitHub did not answer.'),
+          ),
+          open: (_) async {},
+        ),
+      );
+      await _open(tester, 'about');
+      await tester.tap(find.byKey(const ValueKey('core-check')));
+      await settle(tester);
+      expect(find.textContaining('GitHub did not answer.'), findsOneWidget);
+      expect(find.text('Check again'), findsOneWidget);
+    });
+
+    testWidgets('Licences are grouped, searchable and expandable', (
+      tester,
+    ) async {
+      await pumpApp(tester, _controller(), licenceSource: _licences);
+      await _open(tester, 'about');
+      await tester.tap(find.byKey(const ValueKey('about-licences')));
+      await settle(tester);
+
+      expect(find.text('App packages'), findsOneWidget);
+      expect(find.text('Fonts'), findsOneWidget);
+      expect(find.text('Icons'), findsOneWidget);
+      expect(find.text('MIT'), findsOneWidget);
+      expect(find.text('OFL-1.1'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('licence-alpha_pkg')));
+      await settle(tester);
+      expect(
+        find.byKey(const ValueKey('licence-text-alpha_pkg')),
+        findsOneWidget,
+      );
+
+      await tester.enterText(_field('licences-search'), 'bricolage');
+      await settle(tester);
+      expect(find.byKey(const ValueKey('licence-alpha_pkg')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('licence-Bricolage Grotesque')),
+        findsOneWidget,
+      );
+
+      await tester.enterText(_field('licences-search'), 'zzz');
+      await settle(tester);
+      expect(find.byKey(const ValueKey('licences-empty')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('licences-back')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('page-about')), findsOneWidget);
+    });
+  });
+
+  group('the tray notice', () {
+    testWidgets('shows once after the first hide and is then dismissed', (
+      tester,
+    ) async {
+      final store = MemoryConfigStore(sampleConfig);
+      final controller = _controller(store: store);
+      await pumpApp(tester, controller);
+      expect(find.byKey(const ValueKey('tray-notice')), findsNothing);
+
+      controller.windowHidden();
+      await settle(tester);
+      expect(find.byKey(const ValueKey('tray-notice')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('tray-notice-dismiss')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('tray-notice')), findsNothing);
+      expect(store.prefs.trayNoticeShown, isTrue);
+
+      controller.windowHidden();
+      await settle(tester);
+      expect(find.byKey(const ValueKey('tray-notice')), findsNothing);
+    });
+  });
+
+  group('versions', () {
+    test('match pubspec.yaml', () {
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      final version = RegExp(
+        r'^version: (\d+\.\d+\.\d+)',
+        multiLine: true,
+      ).firstMatch(pubspec)!.group(1);
+      expect(version, appVersion);
+      expect(pubspec, contains('# $kitVersion'));
+    });
+  });
+
+  group('licence helpers', () {
+    test('guess the licence from its wording', () {
+      expect(guessLicence('Apache License Version 2.0'), 'Apache-2.0');
+      expect(
+        guessLicence(
+          'Redistribution and use in source and binary forms. Neither the '
+          'name of',
+        ),
+        'BSD-3-Clause',
+      );
+      expect(guessLicence('all rights reserved'), isNull);
+      expect(licenceGroup('Fragment Mono'), 'Fonts');
+      expect(licenceGroup('lucide_icons_flutter'), 'Icons');
+      expect(licenceGroup('http'), 'App packages');
+    });
+  });
+}

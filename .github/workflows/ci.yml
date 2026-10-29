@@ -39,8 +39,9 @@ jobs:
         if: always()
         run: flutter test --exclude-tags golden
       # Goldens are rendered on Linux with the bundled fonts. To accept new
-      # renders, run `flutter test --tags golden --update-goldens` on Linux and
-      # commit test/goldens.
+      # renders, run this workflow by hand (workflow_dispatch): the last step
+      # formats the code, re-renders the goldens and uploads the result as
+      # fix.patch (`git apply fix.patch`).
       - name: goldens
         if: always()
         run: flutter test --tags golden
@@ -65,3 +66,37 @@ jobs:
           (cd "$dir" && grep " $archive\$" SHA256SUMS | sha256sum -c - && tar xzf "$archive")
           BP_TEST_BIN="$dir/bubblepaw-$BP_VERSION-x86_64-unknown-linux-gnu/bubblepaw" \
             flutter test --tags live test/live_test.dart
+      # Catches native breakage: the plugin registrants, the tray's
+      # libayatana-appindicator and the runner changes.
+      - name: linux build (debug)
+        if: always()
+        run: |
+          missing=""
+          for p in clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev; do
+            dpkg -s "$p" >/dev/null 2>&1 || missing="$missing $p"
+          done
+          if [ -n "$missing" ]; then
+            sudo -n apt-get update -qq
+            sudo -n apt-get install -y -qq $missing
+          fi
+          flutter build linux --debug
+      - name: Patch with formatting and new goldens (manual runs)
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: |
+          dart format lib test
+          flutter test --tags golden --update-goldens || true
+          rm -rf test/failures
+          git add -N .
+          git diff --binary > fix.patch
+          # The log carries the patch too, for when artifact storage is full:
+          # join the lines between the markers, then base64 -d | gunzip | git apply
+          echo "PATCH-BEGIN"
+          gzip -9 < fix.patch | base64 -w 2000
+          echo "PATCH-END"
+      - name: Save patch
+        if: always() && github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fix-patch
+          path: fix.patch
+          if-no-files-found: ignore

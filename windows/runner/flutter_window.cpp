@@ -1,6 +1,9 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <string>
+
+#include <windows.h>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -27,9 +30,15 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
-  });
+  // --hidden (a login start with "Start in the tray") keeps the window
+  // hidden; the tray menu or icon shows it.
+  const bool start_hidden =
+      std::wstring(::GetCommandLineW()).find(L"--hidden") != std::wstring::npos;
+  if (!start_hidden) {
+    flutter_controller_->engine()->SetNextFrameCallback([&]() {
+      this->Show();
+    });
+  }
 
   // Flutter can complete the first frame before the "show window" callback is
   // registered. The following call ensures a frame is pending to ensure the

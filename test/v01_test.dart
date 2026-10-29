@@ -79,7 +79,7 @@ void main() {
       );
       await pumpApp(tester, controller);
 
-      expect(find.text('Extra host arguments'), findsOneWidget);
+      expect(find.text('Extra arguments'), findsOneWidget);
       await tester.enterText(
         find.byKey(const ValueKey('settings-binary')),
         '/opt/bubblepaw/bubblepaw',
@@ -88,6 +88,7 @@ void main() {
         find.byKey(const ValueKey('settings-arguments')),
         '--provider demo --set "a=b c"',
       );
+      await tester.ensureVisible(find.byKey(const ValueKey('settings-save')));
       await tester.tap(find.byKey(const ValueKey('settings-save')));
       await settle(tester);
 
@@ -101,6 +102,8 @@ void main() {
       expect(controller.phase, HostPhase.running);
 
       await tester.tap(find.text('Settings'));
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('settings-nav-core')));
       await settle(tester);
       final field = tester.widget<EditableText>(
         find.descendant(
