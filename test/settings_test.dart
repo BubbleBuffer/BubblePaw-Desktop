@@ -24,10 +24,10 @@ HostController _controller({
   HostVersionReader? versionReader,
   AppConfig? config = sampleConfig,
 }) {
-  final played = Played();
   return HostController(
     store: store ?? MemoryConfigStore(config),
-    starter: played.start,
+    // A fresh scripted host for every start, as a restart gets.
+    starter: (c) => Played().start(c),
     fileExists: (_) => true,
     bundledBinary: bundled,
     versionReader: versionReader,
@@ -211,12 +211,11 @@ void main() {
 
     testWidgets('Restart restarts the host', (tester) async {
       var starts = 0;
-      final played = Played();
       final controller = HostController(
         store: MemoryConfigStore(sampleConfig),
         starter: (c) {
           starts++;
-          return played.start(c);
+          return Played().start(c);
         },
         fileExists: (_) => true,
       );

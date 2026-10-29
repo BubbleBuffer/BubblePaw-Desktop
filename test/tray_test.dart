@@ -214,13 +214,12 @@ void main() {
 
     test('Open BubblePaw shows the window; Restart restarts the host', () async {
       var starts = 0;
-      final played = Played();
       final store = MemoryConfigStore(sampleConfig);
       final host = HostController(
         store: store,
         starter: (c) {
           starts++;
-          return played.start(c);
+          return Played().start(c);
         },
         fileExists: (_) => true,
       );
