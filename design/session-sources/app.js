@@ -85,7 +85,7 @@
     const hint = (t) => `<div class="chint">${ic(SRC[o.src][0], 13)}<span>${t}</span></div>`;
     if (!o) return `<div class="composer"><div class="ph">${p ? 'Message Studio PC' : 'Steer the agent…'}</div><div class="bar2"><span>deepseek-v4.1-flash ▾</span><span class="grow"></span>${btn('Stop')}${btn('Send', { kind: 'primary', icon: 'arrow-up' })}</div>${p ? '<div class="homebar"></div>' : ''}</div>`;
     if (M.ro && o.src === 'cli') return `<div class="composer dis"><div class="ph">Sending is turned off</div>${hint('This host does not allow sending to sessions started in the CLI. You can watch it here.')}${p ? '<div class="homebar"></div>' : ''}</div>`;
-    const t = o.run ? `Sends to the ${SRC[o.src][1] === 'CLI' ? 'CLI' : SRC[o.src][2]} session as a follow-up. It runs after the current step.` : `Sends to the ${SRC[o.src][1] === 'CLI' ? 'CLI' : SRC[o.src][2]} session as a new turn.`;
+    const t = o.run ? 'Runs after the current step.' : 'Sends as a new turn.';
     return `<div class="composer"><div class="ph">Send a follow-up…</div>${hint(t)}<div class="bar2"><span>deepseek-v4.1-flash ▾</span><span class="grow"></span>${o.run ? btn('Stop') : ''}${btn('Send', { kind: 'primary', icon: 'arrow-up' })}</div>${p ? '<div class="homebar"></div>' : ''}</div>`;
   }
 

@@ -420,7 +420,7 @@ button.wi:hover:not(:disabled) { background: var(--w-hover); }
 .wsep { height: 1px; margin: 4px 8px; background: var(--w-line); }
 
 /* Chat list across projects */
-.rail-scroll { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+.rail-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; margin: 0 -4px; padding: 0 4px; }
 .rail-label .cnt { margin-left: 6px; font-weight: 600; color: var(--attn-ink); }
 .tag { display: inline-block; max-width: 100%; margin-left: auto; padding: 0 6px; font: 400 11px/16px var(--mono); color: var(--muted); border: 1px solid var(--seam); border-radius: var(--r-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
 .chatrow .s .st { flex: none; }
@@ -597,3 +597,7 @@ body.still .step.run .ic, body.still .spin .ic { animation: none; }
 .phone .topbar .two { min-width: 0; flex: 1; }
 .phone .topbar .sub { flex-wrap: wrap; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Scrollbars: thin thumb in the thread colour, shown while the pointer is over the scroll area; no track, no arrows, no horizontal scroll in lists. Matches Flutter desktop's Scrollbar (hover/scroll reveal). */
+.frame * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.frame *:hover { scrollbar-color: var(--thread) transparent; }
