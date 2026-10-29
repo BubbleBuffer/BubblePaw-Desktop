@@ -1,0 +1,13 @@
+.dart_tool/
+build/
+pubspec.lock
+*.iml
+.idea/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Personal agent, editor and tool folders
+.claude/
+.codex/
+.cursor/
+.vscode/
