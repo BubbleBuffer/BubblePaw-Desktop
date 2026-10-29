@@ -377,3 +377,14 @@ body.still * { animation: none !important; }
 .bsheet-h .t { font-weight: 600; font-size: 16px; }
 .host-line .ck { margin-left: auto; color: var(--ok-ink); }
 .mrow .grow { flex: 1; min-width: 0; }
+
+/* Switcher: collapsible host groups */
+.pop-h { width: 100%; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; min-height: 36px; }
+.pop-h:hover { background: var(--hover); }
+.pop-h .s { margin-left: auto; }
+.chev { display: inline-flex; color: var(--muted); flex: none; }
+.pop-h .s + .chev { margin-left: 4px; }
+.host-line .chev { margin-left: auto; }
+.is-off .ws, .is-off .pop-i { color: var(--muted); opacity: .55; cursor: default; }
+.is-off .ws:hover, .is-off .pop-i:hover { background: transparent; }
+.phone .host-line { min-height: 52px; }

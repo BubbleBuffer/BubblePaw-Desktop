@@ -52,7 +52,7 @@
     ],
     def: 'deepseek-v4.1-flash',
     dlg: null, add: { step: 1 }, addDone: false, back: 'phone',
-    pview: H.pview === 'chat' ? 'chat' : 'list', sheet: H.sheet === '1', sw: H.sw !== '0', pop: H.pop !== '0', dsel: { h: 'local', w: 'bubblepaw-base' }, active: H.active || 'h1', ws: 'bubblepaw-base',
+    pview: H.pview === 'chat' ? 'chat' : 'list', sheet: H.sheet === '1', sw: H.sw !== '0', pop: H.pop !== '0', dsel: { h: 'local', w: 'bubblepaw-base' }, expD: new Set(['local']), expP: new Set([H.active || 'h1']), active: H.active || 'h1', ws: 'bubblepaw-base',
     fail2: false,
   };
   if (S.screen === 'pair') M.dlg = { type: 'pair', step: +(H.step || 1), left: 292, code: 'K7M2Q-9XFD4', prof: 'edit' };
@@ -409,8 +409,8 @@
     }
     const row = (t, s, plain) => `<button class="chatrow" ${A('pview', 'chat')}><div class="t">${t}</div><div class="s ${plain ? 'plain' : ''}">${s}</div></button>`;
     const chats = ah ? `<div class="rail-label">Today</div>${row('Quota bar flickers on reconnect', 'Waiting for you', false)}${row('Plan the settings page', 'Finished 2h ago', true)}<div class="rail-label">Yesterday</div>${row('Trace the socket reconnect', 'Finished yesterday', true)}` : '<div class="empty">No host selected. Open the host menu and add a host to see its chats.</div>';
-    const wsRow = (n) => `<button class="ws ${M.ws === n ? 'on' : ''}" ${A('setWs', n)}>${n}${M.ws === n ? `<span class="ck">${ic('check', 16)}</span>` : ''}</button>`;
-    const items = M.hosts.map((h) => `<div class="host-item"><button class="host-line" ${A('setHost', h.id)}>${ic('monitor', 18)}<span class="two"><div class="t">${h.name}</div><div class="s">${h.online ? `${dotOn}Online · ${h.type}` : `<span class="dot off"></span>Offline${h.seen ? ' · ' + h.seen : ''}`}</div></span>${M.active === h.id ? `<span class="ck">${ic('check', 16)}</span>` : ''}</button>${M.active === h.id ? (h.online ? wsRow('bubblepaw-base') + wsRow('scratch') : '<div class="s" style="padding:0 12px 10px 40px;color:var(--muted);font-size:13px">Offline. Workspaces are unavailable.</div>') : ''}</div>`).join('');
+    const wsRow = (h, n) => `<button class="ws ${M.active === h.id && M.ws === n ? 'on' : ''}" ${h.online ? A('setWs', h.id + '|' + n) : 'disabled'}>${n}${M.active === h.id && M.ws === n ? `<span class="ck">${ic('check', 16)}</span>` : ''}</button>`;
+    const items = M.hosts.map((h) => { const open = M.expP.has(h.id); return `<div class="host-item ${h.online ? '' : 'is-off'}"><button class="host-line" aria-expanded="${open}" aria-controls="ws-${h.id}" ${A('togP', h.id)}>${ic('monitor', 18)}<span class="two"><div class="t">${h.name}</div><div class="s">${h.online ? `${dotOn}Online · ${h.type}` : `<span class="dot off"></span>Offline${h.seen ? ' · ' + h.seen : ''}`}</div></span><span class="chev">${ic(open ? 'chevron-down' : 'chevron-right', 16)}</span></button>${open ? `<div id="ws-${h.id}">${wsRow(h, 'bubblepaw-base')}${wsRow(h, 'scratch')}</div>` : ''}</div>`; }).join('');
     const hb = `<button class="hostbtn" aria-haspopup="dialog" ${A('sheet', 1)} style="min-height:48px"><span class="two"><div class="h">${ah ? (ah.online ? `${dotOn} ${ah.name} · Online` : `<span class="dot off"></span> ${ah.name} · Offline`) : 'No host'}</div><div class="w">${ah ? M.ws : 'Add a host'}</div></span>${ic('chevron-down', 16)}</button>`;
     return frameOpen(`<div class="main"><div class="topbar" style="gap:4px">${hb}${iconBtn('settings', 'Settings', 'toSettings')}</div>
       <div class="phone-body" style="padding:8px 8px 12px">
@@ -423,9 +423,10 @@
   function desktopChat() {
     const sel = M.dsel;
     const selHost = sel.h === 'local' ? 'This computer' : (M.hosts.find((h) => h.id === sel.h) || {}).name || 'This computer';
-    const wsBtn = (h, w) => `<button class="pop-i ${sel.h === h && sel.w === w ? 'on' : ''}" ${A('dsel', h + '|' + w)}>${w}${sel.h === h && sel.w === w ? `<span class="ck">${ic('check', 15)}</span>` : ''}</button>`;
-    const pop = M.pop ? `<div class="popover" role="menu"><div class="pop-group"><div class="pop-h">${ic('laptop', 16)}<span class="t">This computer</span><span class="s">${dotOn} Running</span></div>${wsBtn('local', 'bubblepaw-base')}${wsBtn('local', 'scratch')}</div>
-      ${M.hosts.map((h) => `<div class="pop-group"><div class="pop-h">${ic('monitor', 16)}<span class="t">${h.name}</span><span class="s">${h.online ? `${dotOn} Online · ${h.type}` : '<span class="dot off"></span> Offline'}</span></div>${h.online ? wsBtn(h.id, 'bubblepaw-base') + wsBtn(h.id, 'notes') : ''}</div>`).join('')}
+    const wsBtn = (h, w, off) => `<button class="pop-i ${sel.h === h && sel.w === w ? 'on' : ''}" ${off ? 'disabled' : A('dsel', h + '|' + w)}>${w}${sel.h === h && sel.w === w ? `<span class="ck">${ic('check', 15)}</span>` : ''}</button>`;
+    const grp = (id, icon, name, state, wss, off) => { const open = M.expD.has(id); return `<div class="pop-group ${off ? 'is-off' : ''}"><button class="pop-h" aria-expanded="${open}" ${A('togD', id)}>${ic(icon, 16)}<span class="t">${name}</span><span class="s">${state}</span><span class="chev">${ic(open ? 'chevron-down' : 'chevron-right', 15)}</span></button>${open ? wss.map((w) => wsBtn(id, w, off)).join('') : ''}</div>`; };
+    const pop = M.pop ? `<div class="popover" role="menu">${grp('local', 'laptop', 'This computer', `${dotOn} Running`, ['bubblepaw-base', 'scratch'], false)}
+      ${M.hosts.map((h) => grp(h.id, 'monitor', h.name, h.online ? `${dotOn} Online · ${h.type}` : '<span class="dot off"></span> Offline', ['bubblepaw-base', 'notes'], !h.online)).join('')}
       <div class="pop-group"><button class="pop-i plain" ${A('startAdd')}>${ic('plus', 15)}Add a host</button></div></div>` : '';
     return `<div class="app"><aside class="rail"><div class="rail-head"><button class="hostbtn" aria-expanded="${M.pop}" aria-haspopup="menu" ${A('pop')}><span class="two"><div class="h">${selHost}</div><div class="w">${sel.w}</div></span>${ic('chevron-down', 15)}</button>${iconBtn('square-pen', 'New chat')}${iconBtn('panel-left', 'Hide the rail')}</div>
       <div class="rail-search">${ic('search', 16)}Search<kbd>Ctrl K</kbd></div><div class="rail-label">Today</div>
@@ -600,8 +601,10 @@
     pview: (v) => { M.pview = v; },
     sheet: (v) => { M.sheet = v === undefined ? !M.sheet : !!+v; },
     sw: () => { M.sw = !M.sw; },
+    togP: (v) => { if (M.expP.has(v)) M.expP.delete(v); else M.expP.add(v); },
+    togD: (v) => { if (M.expD.has(v)) M.expD.delete(v); else M.expD.add(v); },
     setHost: (v) => { M.active = v; const h = M.hosts.find((x) => x.id === v); if (h && !h.online) M.sheet = false; },
-    setWs: (v) => { M.ws = v; M.sheet = false; },
+    setWs: (v) => { const [h, w] = v.split('|'); M.active = h; M.ws = w; M.sheet = false; },
     pop: () => { M.pop = !M.pop; },
     dsel: (v) => { const [h, w] = v.split('|'); M.dsel = { h, w }; M.pop = false; },
   };
@@ -634,6 +637,7 @@
     if (k === 'zone') { M.f.zone = ev.target.value; render(); }
   });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && M.dlg) { ACT.close(); render(); } });
+  if (H.exp) H.exp.split(',').forEach((x) => { M.expP.add(x); M.expD.add(x); });
   if (H.other === '1') M.other = true;
   if (H.coreMode) M.coreMode = H.coreMode;
   if (H.lic) M.licOpen.add(H.lic);
