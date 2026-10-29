@@ -144,15 +144,19 @@ class _LicencesPageState extends State<LicencesPage> {
       onBack: widget.onBack,
       backKey: const ValueKey('settings-page-back'),
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextBtn(
-            'About',
-            key: const ValueKey('licences-back'),
-            onTap: widget.onBack,
+        // The compact top bar has its own back button.
+        if (!SizeClass.of(context).isCompact) ...[
+          Row(
+            children: [
+              TextBtn(
+                'About',
+                key: const ValueKey('licences-back'),
+                onTap: widget.onBack,
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
+        ],
         SettingsRow(
           label: 'Search',
           stack: true,

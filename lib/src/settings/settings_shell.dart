@@ -157,6 +157,7 @@ class _SettingsShellState extends State<SettingsShell> {
           }
           final section = _section ?? SettingsSection.general;
           return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _Nav(
                 selected: section,

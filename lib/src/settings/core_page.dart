@@ -131,7 +131,6 @@ class _CorePageState extends State<CorePage> {
       onBack: widget.onBack,
       backKey: const ValueKey('settings-page-back'),
       children: [
-        const SettingsHeading('Core'),
         SettingsRow(
           label: 'Status',
           description: host.usingScripted
@@ -226,7 +225,7 @@ class _CorePageState extends State<CorePage> {
           value: host.prefs.startHost,
           onChanged: (v) => host.updatePrefs(host.prefs.copyWith(startHost: v)),
         ),
-        const SettingsHeading('Settings', top: 24),
+        const SettingsHeading('Host options', top: 24),
         SettingsRow(
           label: 'Data directory',
           description:
