@@ -73,6 +73,11 @@ jobs:
           flutter test --tags golden --update-goldens || true
           git add -N .
           git diff --binary > fix.patch
+          # The log carries the patch too, for when artifact storage is full:
+          # join the lines between the markers, then base64 -d | gunzip | git apply
+          echo "PATCH-BEGIN"
+          gzip -9 < fix.patch | base64 -w 2000
+          echo "PATCH-END"
       - name: Save patch
         if: always() && github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
