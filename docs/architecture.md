@@ -88,7 +88,7 @@ and a new one started. The data directory is not touched. Picking the open
 workspace does nothing; cancelling the picker does nothing. Saving a different
 workspace in Settings joins the list too. The tests pass their own folder
 picker (`BubblePawApp.pickFolder`); the plugin is built into the Windows and
-Linux runners only, which this repository's CI does not build.
+Linux runners. CI builds only the Linux runner (debug), not Windows.
 
 ## Failure notices
 
@@ -131,8 +131,8 @@ message.
   - **About**: versions of the app, agent kit, Core (`bubblepaw --version`) and protocol;
     "Check for updates" reads the latest release of `BubbleBuffer/BubblePaw-Core` from the
     GitHub API and shows *Update available* with a link to the release page when it is
-    newer (nothing is downloaded). There is no app update row: the app repository is
-    private. **Licences** lists `LicenseRegistry` entries (packages, the font licences from
+    newer (nothing is downloaded). There is no app update row: the check covers Core
+    releases only. **Licences** lists `LicenseRegistry` entries (packages, the font licences from
     `assets/fonts/licenses`, Lucide), grouped, searchable and expandable.
 - **Tray and background** (`lib/src/platform/`): `DesktopIntegration` talks to three
   adapters (`TrayAdapter`, `WindowAdapter`, `StartupAdapter`), implemented with
