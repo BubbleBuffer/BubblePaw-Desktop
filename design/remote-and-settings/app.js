@@ -14,9 +14,9 @@
     ...['screen', 'size', 'page', 'ppage', 'tab', 'sub', 'still', 'tall', 'chrome'].map((k) => (k in H ? { [k]: H[k] } : {})));
   const SCREENS = [
     ['settings', '1', 'Settings'], ['share', '2', 'Share this host'], ['pair', '3', 'Pairing, host'],
-    ['add', '4', 'Pairing, phone'], ['phone', '5', 'Phone chat'], ['switcher', '6', 'Host switcher'],
+    ['add', '4', 'Pairing, phone'], ['phone', '5', 'Phone chat'], ['switcher', '6', 'Host switcher'], ['tray', '7', 'Tray'],
   ];
-  const FIXED = { share: 'desktop', pair: 'desktop', add: 'phone', phone: 'phone', switcher: 'desktop' };
+  const FIXED = { share: 'desktop', pair: 'desktop', add: 'phone', phone: 'phone', switcher: 'desktop', tray: 'desktop' };
 
   /* ---------- model ---------- */
   const ALPHA = 'ABCDEFGHJKMNPQRSTVWXYZ0123456789';
@@ -28,9 +28,9 @@
   let uid = 10;
 
   const M = {
-    pref: H.theme || 'light', turn: 'closed', login: false,
+    pref: H.theme || 'light', turn: 'closed', login: false, startTray: false, keepTray: true, toast: H.toast === '1', hostAuto: true, hostKeep: H.keep !== '0', autoShare: true, chats: H.chats !== undefined ? +H.chats : 2, tmenu: true,
     f: { binary: '/opt/bubblepaw/bubblepaw', workspace: '/home/maya/projects/bubblepaw-base', data: '/home/maya/.local/share/bubblepaw-desktop/data', args: '', relay: 'wss://relay.example.com', hostname: 'bubblepaw-desk', zone: 'example.com', token: '', devname: 'Studio desktop', licq: '', pairName: 'Pixel 8', addCode: '', pass1: '', pass2: '', keyFile: '', keySecret: '', apiKey: '' },
-    hostState: 'running', hostSaved: null, coreMode: 'bundled', other: false, autoUpd: true, licOpen: new Set(),
+    hostState: H.hs || 'running', hostSaved: null, coreMode: 'bundled', other: false, autoUpd: true, licOpen: new Set(),
     u: { app: { cur: '0.1.0', latest: null, st: 'idle' }, core: { cur: '0.3.0', latest: null, st: 'idle' } },
     on: H.on !== '0', reach: H.reach || 'temp', cf: { signed: H.cf !== 'signedout' && H.cf !== 'token', tokenOpen: H.cf === 'token', busy: false, account: 'maya@example.com' },
     cfd: H.cfd !== 'missing', cfdBusy: false, upd: 'idle', ver: '2026.10.1',
@@ -68,7 +68,7 @@
   const iconBtn = (name, label, act, arg) => `<button class="iconbtn" aria-label="${label}" title="${label}" ${A(act, arg)}>${ic(name, 18)}</button>`;
   const field = (label, hintText, key, o = {}) =>
     `<div class="field ${o.err ? 'err' : ''}"><label for="f-${key}">${label}</label>${hintText ? `<div class="hint">${hintText}</div>` : ''}<input id="f-${key}" class="input ${o.sans ? 'sans' : ''}" data-k="${key}" value="${(M.f[key] || '').replace(/"/g, '&quot;')}" placeholder="${o.ph || ''}" ${o.type ? `type="${o.type}"` : ''} ${o.cap ? 'autocapitalize="characters"' : ''}>${o.err ? `<div class="hint errtxt">${o.err}</div>` : ''}</div>`;
-  const sw = (on, label, act) => `<button class="switch" role="switch" aria-checked="${on}" ${A(act)}><span class="track"><span class="thumb"></span></span><span class="st">${on ? 'On' : 'Off'}</span><span class="sr">${label}</span></button>`;
+  const sw = (on, label, act, dis) => `<button class="switch" role="switch" aria-checked="${on}" ${dis ? 'disabled' : A(act)}><span class="track"><span class="thumb"></span></span><span class="st">${on ? 'On' : 'Off'}</span><span class="sr">${label}</span></button>`;
   const seg = (items, cur, act) => `<div class="seg" role="group">${items.map(([v, l]) => `<button aria-pressed="${cur === v}" ${A(act, v)}>${l}</button>`).join('')}</div>`;
   const pill = (txt, kind) => `<span class="pill ${kind}">${txt}</span>`;
   const sec = (title, body, right = '') => `<section class="sec"><h2><span>${title}</span>${right}</h2>${body}</section>`;
@@ -109,17 +109,23 @@
     return sec('Appearance',
       `<div class="rowline"><div class="grow"><div class="t">Theme</div><div class="s">System follows the operating system.</div></div>${seg([['system', 'System'], ['light', 'Light'], ['dark', 'Dark']], M.pref, 'pref')}</div>
        <div class="rowline"><div class="grow"><div class="t">Turn layout</div><div class="s">How the steps of a finished turn are shown.</div></div>${seg([['closed', 'Collapsed'], ['open', 'Open']], M.turn, 'turn')}</div>`) +
-      (p ? '' : sec('Startup', `<div class="rowline"><div class="grow"><div class="t">Open at login</div><div class="s">BubblePaw starts with this computer. Remote access only works while it is running.</div></div>${sw(M.login, 'Open at login', 'login')}</div>`));
+      (p ? '' : sec('Startup',
+        `<div class="rowline"><div class="grow"><div class="t">Open at login</div><div class="s">BubblePaw starts with this computer. Remote access only works while it is running.</div></div>${sw(M.login, 'Open at login', 'login')}</div>
+         <div class="rowline"><div class="grow"><div class="t">Start in the tray</div><div class="s">${M.login ? 'At login, BubblePaw starts hidden in the tray instead of opening the window.' : 'Needs Open at login.'}</div></div>${sw(M.login && M.startTray, 'Start in the tray', 'startTray', !M.login)}</div>
+         <div class="rowline"><div class="grow"><div class="t">Keep running in the tray when the window is closed</div><div class="s">${M.keepTray ? 'Closing the window hides it to the tray. Quit from the tray menu.' : 'Closing the window quits BubblePaw.'}</div></div>${sw(M.keepTray, 'Keep running in the tray when the window is closed', 'keepTray')}</div>`));
   }
   function pageHost() {
     const run = M.hostState === 'running', custom = M.coreMode === 'custom';
     return sec('Core',
-      `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Status</div><div class="s mono">bubblepaw ${M.u.core.cur} · protocol 0.1</div></div>${run ? pill('Running', 'ok') : pill('Restarting', 'attn')}${btn('Restart', { icon: 'refresh-cw', act: 'hostRestart', disabled: !run })}</div>`) +
+      `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Status</div><div class="s mono">bubblepaw ${M.u.core.cur} · protocol 0.1</div></div>${run ? pill('Running', 'ok') : M.hostState === 'restarting' ? pill('Restarting', 'attn') : pill(M.hostState === 'error' ? 'Error' : 'Stopped', 'danger')}${btn('Restart', { icon: 'refresh-cw', act: 'hostRestart', disabled: !run })}</div>`) +
       sec('Binary',
         `<div role="radiogroup" aria-label="Binary">
           <button class="opt" role="radio" aria-checked="${!custom}" ${A('coreMode', 'bundled')}><span class="rd"></span><span><div class="t">Bundled with BubblePaw</div><div class="s">Version <span class="mono">${M.u.core.cur}</span>. It updates with the app.</div></span></button>
           <button class="opt" role="radio" aria-checked="${custom}" ${A('coreMode', 'custom')}><span class="rd"></span><span><div class="t">Custom binary</div><div class="s">Run a bubblepaw executable you installed yourself.</div></span></button>
           ${custom ? `<div class="subpanel"><div class="field"><label for="f-binary">Path to the bubblepaw executable</label><div class="affix"><input id="f-binary" class="input" data-k="binary" value="${M.f.binary}"><button class="btn suffixbtn" ${A('browse')}>${ic('folder-open', 15)}Browse…</button></div></div></div>` : ''}</div>`) +
+      sec('Background',
+        `<div class="rowline"><div class="grow"><div class="t">Start the host when BubblePaw starts</div><div class="s">The host is the Core process. BubblePaw starts it in the background.</div></div>${sw(M.hostAuto, 'Start the host when BubblePaw starts', 'hostAuto')}</div>
+         <div class="rowline"><div class="grow"><div class="t">Keep the host running after BubblePaw quits</div><div class="s">Paired devices can still reach this computer while the host runs, but only when sharing uses the relay or your own domain.</div></div>${sw(M.hostKeep, 'Keep the host running after BubblePaw quits', 'hostKeep')}</div>`) +
       sec('Settings',
         field('Data directory', "Where this app's chats are stored. Do not share it with another BubblePaw host.", 'data') +
         field('Extra arguments', "Added to the host's command line, for example --provider demo. Optional.", 'args', { ph: 'None' }) +
@@ -250,6 +256,10 @@
     if (!M.devices.length) return '<div class="empty">No paired devices. Pair a device to open this computer from a phone or laptop.</div>';
     return M.devices.map((d) => `<div class="dev"><span class="di">${ic(d.icon, 18)}</span><div class="grow"><div class="t">${d.name}</div><div class="s">Last seen ${d.seen}</div></div><span class="tag" title="Permission profile">${d.prof}</span>${btn('Revoke', { kind: 'danger', cls: 'quiet', act: 'dlg', arg: 'revoke:' + d.id })}</div>`).join('');
   }
+  function autoShareRow() {
+    const temp = M.reach === 'temp';
+    return `<div class="rowline" style="margin-top:12px"><div class="grow"><div class="t">Share automatically when the host starts</div><div class="s">${temp ? 'Needs a relay server or your own domain. A temporary address changes on every start.' : 'The host starts sharing as soon as it runs, for example at login.'}</div></div>${sw(!temp && M.autoShare, 'Share automatically when the host starts', 'autoShare', temp)}</div>`;
+  }
   function pageShare() {
     const t = tun();
     const opts = REACH.map(([v, ti, s]) => `<button class="opt" role="radio" aria-checked="${M.reach === v}" ${A('reach', v)}><span class="rd"></span><span><div class="t">${ti}</div><div class="s">${s}</div></span></button>` +
@@ -257,7 +267,7 @@
       (M.reach === v && v === 'relay' ? `<div class="subpanel">${field('Relay address', '', 'relay')}</div>` : '')).join('');
     return sec('Sharing', `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Share this host</div><div class="s">${M.on ? 'Paired devices can open chats on this computer while BubblePaw is running.' : 'Nobody can reach this computer. Paired devices stay paired.'}</div></div>${sw(M.on, 'Share this host', 'on')}</div>${M.on && M.other ? `<div class="notice info">${ic('info', 16)}<div>Another BubblePaw host on this computer is already shared: device ID <span class="mono">T4WK-9HDB-2QXN-6MRE</span>, data directory <span class="mono">/var/lib/bubblepaw/data</span>. Devices paired with it can't open this app's chats.</div></div>` : ''}`) +
       sec('How devices reach this computer', `<div role="radiogroup" aria-label="How devices reach this computer">${opts}</div>
-        <div class="consequence">${ic('shield-check', 16)}<span>${M.reach === 'relay' ? 'Traffic is end-to-end encrypted between paired devices. The relay sees only encrypted data.' : 'Traffic is end-to-end encrypted between paired devices. Cloudflare sees only encrypted data.'}</span></div>${statusBlock()}`) +
+        <div class="consequence">${ic('shield-check', 16)}<span>${M.reach === 'relay' ? 'Traffic is end-to-end encrypted between paired devices. The relay sees only encrypted data.' : 'Traffic is end-to-end encrypted between paired devices. Cloudflare sees only encrypted data.'}</span></div>${autoShareRow()}${statusBlock()}`) +
       sec('Paired devices', devRows(), btn('Pair a device', { kind: t.s !== 'stopped' ? 'primary' : '', icon: 'plus', act: 'startPair', disabled: !M.on }));
   }
   function pageRemote(p) {
@@ -436,6 +446,34 @@
       <div class="stream">${transcript(false)}</div>${composer(false)}</div></div>`;
   }
 
+  /* ---------- tray ---------- */
+  const reachName = () => (M.reach === 'temp' ? 'Cloudflare Tunnel' : M.reach === 'domain' ? 'Cloudflare Tunnel, your domain' : 'relay server');
+  const trayState = () => (M.hostState === 'stopped' ? 'stopped' : M.hostState === 'error' ? 'error' : M.on ? 'shared' : 'run');
+  const glyph = (st, size) => `<span class="tg ${st}" style="width:${size}px;height:${size}px">${ic('paw-print', size)}${st === 'shared' || st === 'error' ? '<i class="tdot"></i>' : ''}</span>`;
+  const hostLine = () => (M.hostState === 'stopped' ? 'Host stopped' : M.hostState === 'error' ? 'Host stopped with an error' : M.hostState === 'restarting' ? 'Host restarting' : M.on ? `Host running \u00b7 shared via ${reachName()}` : 'Host running \u00b7 not shared');
+  function trayScreen() {
+    const up = M.hostState === 'running';
+    const down = M.hostState === 'stopped' || M.hostState === 'error';
+    const mi = (label, o = {}) => `<button class="wi ${o.bold ? 'bold' : ''}" role="${o.check ? 'menuitemcheckbox' : 'menuitem'}" ${o.check ? `aria-checked="${!!o.on}"` : ''} ${o.dis ? 'disabled' : A(o.act, o.arg)}><span class="wck">${o.check && o.on ? ic('check', 16) : ''}</span><span class="wl">${label}</span></button>`;
+    const sep = '<div class="wsep" role="separator"></div>';
+    const n = M.chats;
+    const menu = M.tmenu ? `<div class="winmenu" role="menu" aria-label="BubblePaw">
+      ${mi('Open BubblePaw', { bold: true, act: 'trayClose' })}${sep}
+      <div class="wi status" role="presentation"><span class="wck"></span><span class="wl">${hostLine()}</span></div>
+      ${mi('Share this host', { check: true, on: M.on && up, act: 'trayShare', dis: down })}
+      ${n > 0 ? mi(`${n} chat${n === 1 ? '' : 's'} waiting for you`, { act: 'trayChats' }) : ''}${sep}
+      ${mi('Restart host', { act: 'trayRestart', dis: M.hostState === 'restarting' })}${sep}
+      ${M.hostKeep && up ? mi('Quit BubblePaw (host keeps running)', { act: 'trayClose' }) + mi('Quit and stop host', { act: 'trayClose' }) : mi('Quit BubblePaw', { act: 'trayClose' })}</div>` : '';
+    const tile = (st, label) => `<div class="ttile">${glyph(st, 40)}<div class="t">${label}</div></div>`;
+    const cur = trayState();
+    return `<div class="tray-scr win"><section class="tpanel"><h2>Tray icon</h2><div class="tiles">${tile('run', 'Running')}${tile('shared', 'Shared')}${tile('error', 'Stopped or error')}</div><div class="hint">The taskbar icon follows the host. Now: ${cur === 'shared' ? 'shared' : cur === 'run' ? 'running' : 'stopped or error'}.</div></section>
+      ${menu}<div class="taskbar"><span class="grow"></span><span class="tbi">${ic('chevron-up', 16)}</span><button class="tbi tray-btn" aria-label="BubblePaw" aria-expanded="${M.tmenu}" aria-haspopup="menu" ${A('tmenu')}>${glyph(cur, 16)}</button><span class="clock"><div>09:14</div><div>29/10/2026</div></span></div></div>`;
+  }
+  function toastHTML() {
+    if (!M.toast || ph()) return '';
+    return `<div class="toast ${S.screen === 'tray' ? 'above' : ''}" role="status">${ic('info', 16)}<span>BubblePaw is still running in the tray</span><button class="btn quiet" ${A('toastX')}>Dismiss</button></div>`;
+  }
+
   /* ---------- review bar ---------- */
   function curTab() {
     if (S.screen === 'settings' || S.screen === 'share' || S.screen === 'pair') {
@@ -455,7 +493,11 @@
     const chip = (act, arg, label, on, dis) => `<button class="chip" aria-pressed="${on}" ${A(act, arg)} ${dis ? 'disabled' : ''}>${label}</button>`;
     const grp = (lbl, items) => `<span class="chips"><span class="lbl">${lbl}</span>${items.join('')}</span>`;
     const fixed = FIXED[S.screen];
-    const sim = (S.page === 'remote' && S.tab === 'share' && !ph() && (S.screen === 'settings' || S.screen === 'share' || S.screen === 'pair')) ? grp('Simulate', [chip('simfail', 1, 'Tunnel failure', M.fail), chip('simother', 1, 'Other host shared', M.other)]) : '';
+    const sims = [];
+    if (S.page === 'remote' && S.tab === 'share' && !ph() && (S.screen === 'settings' || S.screen === 'share' || S.screen === 'pair')) sims.push(chip('simfail', 1, 'Tunnel failure', M.fail), chip('simother', 1, 'Other host shared', M.other));
+    if (S.screen === 'tray') sims.push(...['running', 'stopped', 'error'].map((v) => chip('hs', v, 'Host ' + v, M.hostState === v)), chip('chatsT', 1, '2 chats waiting', M.chats > 0), chip('hostKeep', 1, 'Host keeps running', M.hostKeep));
+    if ((S.screen === 'settings' || S.screen === 'tray') && !ph()) sims.push(chip('toastT', 1, 'First window close', M.toast));
+    const sim = sims.length ? grp('Simulate', sims) : '';
     return `<div class="bar-row"><div class="tabs" role="tablist" aria-label="Screens">${scr}</div><span class="grow"></span>
       ${grp('Theme', [['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => chip('pref', v, l, M.pref === v)))}
       ${grp('Frame', [['desktop', 'Desktop 1280×800'], ['phone', 'Phone 390×844']].map(([v, l]) => chip('size', v, l, (fixed || S.size) === v, !!fixed)))}</div>
@@ -481,8 +523,9 @@
       case 'add': html = addPage(); break;
       case 'phone': html = phoneChat(); break;
       case 'switcher': html = desktopChat(); break;
+      case 'tray': html = trayScreen(); break;
     }
-    frame.innerHTML = html + dialogHTML();
+    frame.innerHTML = html + dialogHTML() + toastHTML();
     if (M.dlg) { const ov = frame.querySelector('.overlay'); if (ov) ov.classList.add('top'); }
     document.getElementById('bar').innerHTML = bar();
     fit();
@@ -537,6 +580,7 @@
     if (id === 'add') { M.add = { step: 1 }; M.addDone = false; M.f.addCode = ''; S.size = 'phone'; }
     if (id === 'phone') { M.sheet = false; M.pview = 'list'; S.size = 'phone'; }
     if (id === 'switcher') { M.pop = true; S.size = 'desktop'; }
+    if (id === 'tray') { M.tmenu = true; S.size = 'desktop'; }
   };
 
   const ACT = {
@@ -555,7 +599,21 @@
     tab2: (v) => { S.tab = v; },
     pref: (v) => { M.pref = v; },
     turn: (v) => { M.turn = v; },
-    login: () => { M.login = !M.login; },
+    login: () => { M.login = !M.login; if (!M.login) M.startTray = false; },
+    startTray: () => { M.startTray = !M.startTray; },
+    keepTray: () => { M.keepTray = !M.keepTray; },
+    hostAuto: () => { M.hostAuto = !M.hostAuto; },
+    hostKeep: () => { M.hostKeep = !M.hostKeep; },
+    autoShare: () => { M.autoShare = !M.autoShare; },
+    tmenu: () => { M.tmenu = !M.tmenu; },
+    trayClose: () => { M.tmenu = false; },
+    trayChats: () => { M.tmenu = false; S.screen = 'switcher'; M.pop = false; },
+    trayShare: () => { if (M.hostState === 'running') { M.on = !M.on; if (M.on) restart(); } },
+    trayRestart: () => { M.hostState = 'restarting'; later(() => { M.hostState = 'running'; }, 1200); },
+    hs: (v) => { M.hostState = v; },
+    chatsT: () => { M.chats = M.chats > 0 ? 0 : 2; },
+    toastT: () => { M.toast = !M.toast; },
+    toastX: () => { M.toast = false; },
     size: (v) => { S.size = v; M.dlg = null; },
     toChat: () => { if (ph()) { S.screen = 'phone'; M.sheet = false; M.pview = 'list'; } else { S.screen = 'switcher'; M.pop = false; } },
     toSettings: () => { S.size = ph() ? 'phone' : 'desktop'; S.screen = 'settings'; if (!ph()) S.page = 'general'; else S.ppage = 'list'; },

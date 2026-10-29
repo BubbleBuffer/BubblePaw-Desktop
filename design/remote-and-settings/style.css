@@ -388,3 +388,35 @@ body.still * { animation: none !important; }
 .is-off .ws, .is-off .pop-i { color: var(--muted); opacity: .55; cursor: default; }
 .is-off .ws:hover, .is-off .pop-i:hover { background: transparent; }
 .phone .host-line { min-height: 52px; }
+
+/* Tray and background mode. Tray menu follows the native Windows 11 look. */
+.switch:disabled { opacity: .5; cursor: default; }
+.pill.danger { background: var(--danger); color: var(--danger-ink); }
+.toast { position: absolute; z-index: 30; right: 16px; bottom: 16px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--raised); border: 1px solid var(--thread); border-radius: var(--r-panel); box-shadow: var(--seam-shadow-hover); }
+.toast.above { bottom: 64px; }
+.win { --w-bar: rgba(243,243,243,.92); --w-menu: #FBFBFB; --w-line: #E0E0E0; --w-hover: #EAEAEA; --w-ink: #1B1B1B; --w-mut: #5F5F5F; --w-wall: linear-gradient(135deg,#D9E3EE,#EBE3D6); font-family: "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif; }
+:root[data-theme="dark"] .win { --w-bar: rgba(32,32,32,.94); --w-menu: #2C2C2C; --w-line: #454545; --w-hover: #3A3A3A; --w-ink: #FFFFFF; --w-mut: #B5B5B5; --w-wall: linear-gradient(135deg,#1C2430,#2B2622); }
+.tray-scr { position: relative; width: 1280px; height: 800px; background: var(--w-wall); color: var(--w-ink); }
+.tpanel { position: absolute; left: 32px; top: 32px; width: 420px; padding: 16px; background: var(--w-menu); border: 1px solid var(--w-line); border-radius: 8px; }
+.tpanel h2 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+.tpanel .hint { color: var(--w-mut); margin-top: 12px; font-size: 12px; }
+.tiles { display: flex; gap: 12px; }
+.ttile { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 8px; border: 1px solid var(--w-line); border-radius: 6px; }
+.ttile .t { font-size: 12.5px; text-align: center; }
+.tg { position: relative; display: inline-flex; align-items: center; justify-content: center; color: var(--w-ink); }
+.tg.stopped, .tg.error { color: var(--w-mut); opacity: .75; }
+.tg .tdot { position: absolute; right: -2px; bottom: -2px; width: 34%; height: 34%; min-width: 6px; min-height: 6px; border-radius: 50%; background: #3FA45B; border: 1.5px solid var(--w-menu); }
+.tg.error .tdot { background: #D13438; }
+.taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: 48px; display: flex; align-items: center; gap: 4px; padding: 0 12px; background: var(--w-bar); border-top: 1px solid var(--w-line); }
+.taskbar .grow { flex: 1; }
+.tbi { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 36px; border: 0; background: transparent; border-radius: 4px; color: var(--w-ink); }
+.tbi:hover { background: var(--w-hover); }
+.clock { text-align: right; font-size: 12px; line-height: 16px; padding: 0 8px; }
+.winmenu { position: absolute; right: 70px; bottom: 56px; width: 340px; padding: 4px; background: var(--w-menu); border: 1px solid var(--w-line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.28); }
+.wi { display: flex; align-items: center; width: 100%; min-height: 36px; padding: 0 12px 0 0; border: 0; border-radius: 4px; background: transparent; color: var(--w-ink); text-align: left; font-size: 14px; }
+button.wi:hover:not(:disabled) { background: var(--w-hover); }
+.wi.bold .wl { font-weight: 600; }
+.wi.status { color: var(--w-mut); }
+.wi:disabled { color: var(--w-mut); opacity: .6; }
+.wck { width: 32px; flex: none; display: inline-flex; justify-content: center; }
+.wsep { height: 1px; margin: 4px 8px; background: var(--w-line); }
