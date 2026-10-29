@@ -15,13 +15,22 @@ import 'scripted.dart';
 
 /// A started backend and how to end it.
 class StartedBackend {
-  const StartedBackend(this.backend, this.dispose, {this.createdChats});
+  const StartedBackend(
+    this.backend,
+    this.dispose, {
+    this.createdChats,
+    this.now,
+  });
 
   final AgentBackend backend;
   final Future<void> Function() dispose;
 
   /// Chats the backend creates by itself (a rewind makes a new one).
   final Stream<ChatSummary>? createdChats;
+
+  /// The time ages are measured against, when it is not the wall clock (the
+  /// scripted backend runs on its own clock).
+  final DateTime? now;
 }
 
 typedef BackendStarter = Future<StartedBackend> Function(AppConfig config);
@@ -63,6 +72,7 @@ class HostController extends ChangeNotifier {
   HostFailure? _failure;
   GuardedBackend? _backend;
   Stream<ChatSummary>? _createdChats;
+  DateTime? _now;
   Future<void> Function()? _dispose;
   bool _settingsOpen = false;
   late bool _real = !scripted;
@@ -87,6 +97,9 @@ class HostController extends ChangeNotifier {
   HostFailure? get failure => _failure;
   GuardedBackend? get backend => _backend;
   Stream<ChatSummary>? get createdChats => _createdChats;
+
+  /// Replaces the wall clock for ages; null for a real host.
+  DateTime? get now => _now;
 
   /// Whether the settings screen is drawn over the current state.
   bool get settingsOpen => _settingsOpen || _phase == HostPhase.setup;
@@ -150,6 +163,7 @@ class HostController extends ChangeNotifier {
       }
       _dispose = started.dispose;
       _createdChats = started.createdChats;
+      _now = started.now;
       _backend = GuardedBackend(started.backend, onFailure: _hostFailed);
       _phase = HostPhase.running;
       _notify();

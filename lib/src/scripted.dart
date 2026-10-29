@@ -9,8 +9,11 @@ import 'host_controller.dart';
 /// The "Quota bar flickers on reconnect" chat, played to its end on a manual
 /// clock, so it opens waiting for an edit approval. A message sent to a new
 /// chat gets one scripted reply.
-Future<StartedBackend> startScripted(AppConfig _) async =>
-    StartedBackend(await playedScript(), () async {});
+Future<StartedBackend> startScripted(AppConfig _) async {
+  final backend = await playedScript();
+  // Ages ("waiting 3h 47m") are measured on the script's clock, not the wall.
+  return StartedBackend(backend, () async {}, now: backend.clock.now());
+}
 
 /// The scripted backend after its script has played to the end.
 Future<ScriptedBackend> playedScript() async {

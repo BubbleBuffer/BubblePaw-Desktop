@@ -120,6 +120,7 @@ class AppShell extends StatelessWidget {
           key: ObjectKey(controller.backend),
           backend: controller.backend!,
           createdChats: controller.createdChats,
+          now: controller.now,
           workspaceName: controller.workspaceLabel,
           onSettings: controller.openSettings,
         ),
@@ -136,10 +137,12 @@ class Workbench extends StatefulWidget {
     required this.workspaceName,
     required this.onSettings,
     this.createdChats,
+    this.now,
   });
 
   final GuardedBackend backend;
   final Stream<ChatSummary>? createdChats;
+  final DateTime? now;
   final String workspaceName;
   final VoidCallback onSettings;
 
@@ -178,12 +181,14 @@ class _WorkbenchState extends State<Workbench> {
           backend: widget.backend,
           initialChatId: _openChatId,
           workspaceName: widget.workspaceName,
+          now: widget.now,
           onSettings: widget.onSettings,
           onReviewApproval: (approval) {
             final diff = approval.diff;
             if (diff != null) _showDiff(diff);
           },
           transcriptActions: TranscriptActions(
+            now: widget.now,
             onReviewDiff: (edit) => _showDiff(edit.diff),
           ),
         ),
