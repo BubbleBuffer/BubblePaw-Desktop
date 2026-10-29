@@ -1,6 +1,6 @@
 name: bubblepaw_desktop
 description: BubblePaw Desktop, the desktop app shell for BubblePaw on the BubbleBuffer agent kit.
-version: 0.1.0+1
+version: 0.1.0
 publish_to: none
 
 environment:

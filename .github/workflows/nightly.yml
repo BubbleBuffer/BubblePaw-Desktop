@@ -1,0 +1,54 @@
+name: Nightly desktop
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize the complete check/build/publish cycle, including manual runs.
+concurrency:
+  group: desktop-nightly
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Check current main against published nightly
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      should_build: ${{ steps.check.outputs.should_build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Manual dispatches also always build main, regardless of the selected ref.
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Pin the source commit for all jobs
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Skip only a complete nightly at this exact commit
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: >-
+          python installer/publish_release.py nightly-check --sha "$SOURCE_SHA"
+          --output "$GITHUB_OUTPUT"
+
+  release:
+    name: Build and publish nightly
+    needs: prepare
+    if: needs.prepare.outputs.should_build == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      channel: nightly
+      source_sha: ${{ needs.prepare.outputs.sha }}
