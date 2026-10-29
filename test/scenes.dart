@@ -27,6 +27,34 @@ final stdioCapabilities = KitCapabilities([
   KitCapability.usage,
 ]);
 
+/// A chat whose run has finished, so it can be rewound.
+ChatScript finishedScript() => ChatScript(
+  chatId: 'done-chat',
+  title: 'Rename the quota label',
+  steps: [
+    const ScriptStep(Duration.zero, {
+      'kind': 'message.user',
+      'itemId': 'u1',
+      'text': 'Rename the quota label to Weekly usage.',
+    }),
+    const ScriptStep(Duration.zero, {
+      'kind': 'run.started',
+      'runId': 'run-done-1',
+    }),
+    const ScriptStep(Duration(seconds: 1), {
+      'kind': 'message.assistant',
+      'itemId': 'a1',
+      'markdown': 'Renamed it in the quota bar.',
+      'runId': 'run-done-1',
+    }),
+    const ScriptStep(Duration.zero, {
+      'kind': 'run.finished',
+      'runId': 'run-done-1',
+      'outcome': 'completed',
+    }),
+  ],
+);
+
 /// A chat with a plan in progress, for the checklist.
 ChatScript planScript() => ChatScript(
   chatId: 'plan-chat',
@@ -55,11 +83,19 @@ ChatScript planScript() => ChatScript(
 
 /// A host controller whose backend is the played [scripts].
 class Played {
-  Played({this.scripts, this.capabilities, this.connectionLost});
+  Played({
+    this.scripts,
+    this.capabilities,
+    this.connectionLost,
+    this.createdChats,
+  });
 
   final List<ChatScript>? scripts;
   final KitCapabilities? capabilities;
   Future<Object>? connectionLost;
+
+  /// Chats the host creates by itself, as BubblePawBackend does for a rewind.
+  final Stream<ChatSummary>? createdChats;
   late final ScriptedBackend backend;
   final configs = <AppConfig>[];
 
@@ -71,6 +107,7 @@ class Played {
       () async {},
       now: backend.clock.now(),
       connectionLost: connectionLost,
+      createdChats: createdChats,
     );
   }
 
