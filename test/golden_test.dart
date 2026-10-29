@@ -10,6 +10,7 @@ import 'package:bubblepaw_desktop/src/app.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/feedback/feedback_controller.dart';
 import 'package:bubblepaw_desktop/src/feedback/feedback_sheet.dart';
+import 'package:bubblepaw_desktop/src/feedback/log_buffer.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
 import 'package:flutter/foundation.dart'
@@ -99,6 +100,7 @@ void _feedbackGoldens(Map<String, Size> sizes, Map<String, Brightness> themes) {
             written,
           );
           await tester.pump();
+          FocusManager.instance.primaryFocus?.unfocus();
           await tester.tap(find.byKey(const ValueKey('feedback-diag-toggle')));
           await settle(tester);
         },
@@ -109,8 +111,15 @@ void _feedbackGoldens(Map<String, Size> sizes, Map<String, Brightness> themes) {
             written,
           );
           await tester.pump();
+          FocusManager.instance.primaryFocus?.unfocus();
+          await tester.ensureVisible(
+            find.byKey(const ValueKey('feedback-chat-check')),
+          );
           await tester.tap(find.byKey(const ValueKey('feedback-chat-check')));
           await settle(tester);
+          await tester.ensureVisible(
+            find.byKey(const ValueKey('feedback-chat-toggle')),
+          );
           await tester.tap(find.byKey(const ValueKey('feedback-chat-toggle')));
           await settle(tester);
         },
@@ -142,7 +151,13 @@ void _feedbackGoldens(Map<String, Size> sizes, Map<String, Brightness> themes) {
       for (final theme in themes.entries) {
         final name = '${scene.key}_${size.key}_${theme.key}';
         testWidgets(name, (tester) async {
-          final controller = Played().controller();
+          // A fixed clock, so the log lines in the diagnostics do not change.
+          final controller = HostController(
+            store: MemoryConfigStore(sampleConfig),
+            starter: Played().start,
+            fileExists: (_) => true,
+            log: LogBuffer(now: () => DateTime(2026, 10, 29, 22, 13)),
+          );
           var clock = DateTime(2026, 10, 29, 22, 14, 5);
           final storage = MemoryFeedbackStorage();
           final feedback = TestFeedback(
