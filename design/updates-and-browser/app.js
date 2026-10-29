@@ -21,7 +21,7 @@
     ch: H.ch === 'nightly' ? 'nightly' : 'stable',
     auto: true, last: 'today, 09:14', chk: H.chk || 'idle', chkResult: H.result === 'none' ? 'none' : 'found',
     pu: H.pu || 'available', prog: H.pu === 'downloading' ? 42 : 0,
-    coreMode: H.core || 'bundled', det: H.det || 'found', detBusy: false, run: H.run === '1', att: H.att === '1', saved: '',
+    coreMode: H.core || 'bundled', det: H.det || 'found', detBusy: false, att: H.att === 'process' ? 'process' : H.att ? 'service' : '', saved: '',
     f: { binary: '/opt/bubblepaw/bubblepaw', data: '/home/maya/.local/share/bubblepaw-desktop/data', args: '' },
     br: { st: H.br || 'acting', tab: 0, pane: true, dl: H.br === 'downloading' ? 34 : 0,
       tabs: [{ t: 'Changelog', u: 'docs.example.com/changelog' }, { t: 'Install guide', u: 'docs.example.com/install' }, { t: 'Issue 482', u: 'github.com/example/app/issues/482' }] },
@@ -129,11 +129,6 @@
   }
 
   /* ---------- 3. core ---------- */
-  function detectedHost() {
-    return `<div class="notice info hostfound" style="margin:0 0 20px"><span>${ic('info', 16)}</span><div class="grow"><div style="font-weight:600;font-size:14px">A host is already running</div>
-      <div class="kvs"><span>Version</span><span class="mono">${CORE.installed}</span><span>Data directory</span><span class="mono">/var/lib/bubblepaw/data</span><span>Runs as</span><span>systemd service, bubblepaw.service</span></div>
-      <div style="margin:8px 0 10px">Using it attaches BubblePaw to that host instead of starting a second one.</div><div class="row-actions">${btn('Use it', { kind: 'primary', act: 'useHost' })}${btn('Not now', { act: 'dismissHost' })}</div></div></div>`;
-  }
   function binary() {
     const m = M.coreMode, found = M.det === 'found';
     const instSub = M.det === 'found' ? `Found <span class="mono">/usr/local/bin/bubblepaw</span>, version ${CORE.installed}.` : M.det === 'old' ? `Found version ${CORE.old}. It is too old.` : 'Not found on this computer.';
@@ -151,23 +146,14 @@
       <button class="opt" role="radio" aria-checked="${m === 'custom'}" ${A('coreMode', 'custom')}><span class="rd"></span><span><div class="t">Custom binary</div><div class="s">Run a bubblepaw executable from a path you choose.</div></span></button>${custom}</div>`);
   }
   function core() {
-    let body;
-    if (M.att) {
-      body = sec('Core', `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Status</div><div class="s mono">bubblepaw ${CORE.installed} · protocol 0.1</div></div>${pill('Attached', 'info')}${btn('Restart', { icon: 'refresh-cw', disabled: true })}</div>
-          <div class="consequence" style="margin:4px 0 0">${ic('info', 16)}<span>Restart is disabled. This host is managed outside BubblePaw, so BubblePaw does not start, stop or restart it.</span></div>`) +
-        sec('Attached host', `<div class="card"><div class="kv" style="grid-template-columns:130px 1fr"><span class="k">Version</span><span class="v mono">${CORE.installed}</span></div><div class="kv" style="grid-template-columns:130px 1fr"><span class="k">Data directory</span><span class="v mono">/var/lib/bubblepaw/data</span></div><div class="kv" style="grid-template-columns:130px 1fr"><span class="k">Runs as</span><span class="v">systemd service, bubblepaw.service</span></div></div>
-          <div class="actions" style="margin-top:12px">${btn('Detach', { act: 'detachHost' })}<span class="hint">Detaching stops using this host. It keeps running. BubblePaw then starts its own host with the Binary settings.</span></div>
-          <p class="hint" style="margin:16px 0 0">Binary and background settings apply when BubblePaw starts its own host.</p>`);
-    } else {
-      const blocked = M.run;
-      const bad = M.coreMode === 'installed' && M.det !== 'found';
-      body = (M.run ? detectedHost() : '') +
-        sec('Core', `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Status</div><div class="s mono">${blocked ? 'Not started' : `bubblepaw ${M.coreMode === 'bundled' ? CORE.bundled : CORE.installed} · protocol 0.1`}</div></div>${blocked ? pill('Not started', 'off') : bad ? pill('Stopped', 'danger') : pill('Running', 'ok')}${btn(blocked ? 'Start host' : 'Restart', { icon: 'refresh-cw', disabled: blocked || bad })}</div>
-          ${blocked ? `<div class="consequence" style="margin:4px 0 0">${ic('info', 16)}<span>Start host is disabled while another host is running. Use that host, or stop it first.</span></div>` : ''}`) +
-        binary() +
-        sec('Settings', field('Data directory', "Where this app's chats are stored. Do not share it with another BubblePaw host.", 'data') + field('Extra arguments', 'Added to the host’s command line. Optional.', 'args', { ph: 'None' }) +
-          `<div class="actions">${btn('Save and restart', { kind: 'primary', act: 'save', disabled: bad || blocked })}${btn('Cancel', { act: 'cancel' })}${M.saved ? `<span class="hint">${M.saved}</span>` : bad ? '<span class="hint">Installed Core can’t be used until it is found and recent enough.</span>' : ''}</div>`);
-    }
+    const svc = M.att === 'service', att = !!M.att;
+    const bad = !att && M.coreMode === 'installed' && M.det !== 'found';
+    const body = sec('Core', `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Status</div><div class="s mono">bubblepaw ${att || M.coreMode !== 'bundled' ? CORE.installed : CORE.bundled} · protocol 0.1</div></div>${bad ? pill('Stopped', 'danger') : pill('Running', 'ok')}${btn('Restart', { icon: 'refresh-cw', disabled: bad || svc })}</div>
+        ${att ? `<div class="consequence" style="margin:4px 0 0">${ic('info', 16)}<span>Attached to the running host.${svc ? ' Managed by the system service, bubblepaw.service.' : ''}</span></div>` : ''}`) +
+      (att ? sec('Running host', `<div class="card"><div class="kv" style="grid-template-columns:130px 1fr"><span class="k">Version</span><span class="v mono">${CORE.installed}</span></div><div class="kv" style="grid-template-columns:130px 1fr"><span class="k">Data directory</span><span class="v mono">${M.f.data}</span></div><div class="kv" style="grid-template-columns:130px 1fr"><span class="k">Runs as</span><span class="v">${svc ? 'System service, bubblepaw.service' : 'Process started outside BubblePaw'}</span></div></div>`) : '') +
+      binary() +
+      sec('Settings', field('Data directory', "Where this app's chats are stored. Do not share it with another BubblePaw host.", 'data') + field('Extra arguments', 'Added to the host’s command line. Optional.', 'args', { ph: 'None' }) +
+        `<div class="actions">${btn('Save and restart', { kind: 'primary', act: 'save', disabled: bad || svc })}${btn('Cancel', { act: 'cancel' })}${M.saved ? `<span class="hint">${M.saved}</span>` : svc ? '<span class="hint">Managed by the system service.</span>' : bad ? '<span class="hint">Installed Core can’t be used until it is found and recent enough.</span>' : ''}</div>`);
     return `<div class="set-desk"><nav class="set-nav" aria-label="Settings"><button class="nav-item back">${ic('chevron-left', 16)}Back to chat</button><h1>Settings</h1>
       <button class="nav-item" aria-current="page">${ic('cpu', 16)}Core</button><button class="nav-item" ${A('screen', 'about')}>${ic('info', 16)}About</button></nav>
       <div class="set-main"><div class="set-col"><h1 class="pt">Core</h1>${body}</div></div></div>`;
@@ -249,7 +235,7 @@
     }
     if (S.screen === 'core') {
       sims.push(grp('Installed Core', [['found', 'Found'], ['missing', 'Not found'], ['old', 'Too old']].map(([v, l]) => chip('det', v, l, M.det === v))));
-      sims.push(grp('Host', [chip('simrun', 1, 'A host is already running', M.run && !M.att, M.att)]));
+      sims.push(grp('Host', [['', 'Own host'], ['service', 'Attached, system service'], ['process', 'Attached, other process']].map(([v, l]) => chip('att', v, l, M.att === v))));
     }
     if (S.screen === 'browser') {
       sims.push(grp('State', [['acting', 'Agent acting'], ['ready', 'Agent idle'], ['empty', 'Empty'], ['nobrowser', 'No browser'], ['stopped', 'Stopped when idle']].map(([v, l]) => chip('brState', v, l, M.br.st === v))));
@@ -318,10 +304,7 @@
     coreMode: (v) => { M.coreMode = v; M.saved = ''; },
     det: (v) => { M.det = v; },
     detect: () => { M.detBusy = true; later(() => { M.detBusy = false; }, 900); },
-    simrun: () => { M.run = !M.run; },
-    useHost: () => { M.att = true; M.run = false; },
-    dismissHost: () => { M.run = false; },
-    detachHost: () => { M.att = false; M.run = true; },
+    att: (v) => { M.att = v; },
     browse: () => { M.f.binary = '/usr/local/bin/bubblepaw'; },
     save: () => { M.saved = 'Host restarted with the saved settings.'; },
     cancel: () => { M.coreMode = 'bundled'; M.saved = ''; },
