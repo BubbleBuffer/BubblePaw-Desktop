@@ -3,7 +3,8 @@
 // page lists them with the packages.
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart'
+    show LicenseEntryWithLineBreaks, rootBundle;
 
 const _fontLicences = {
   'Atkinson Hyperlegible Next':

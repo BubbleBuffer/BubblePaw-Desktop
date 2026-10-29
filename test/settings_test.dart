@@ -9,6 +9,7 @@ import 'package:bubblepaw_desktop/src/preferences.dart';
 import 'package:bubblepaw_desktop/src/settings/licences_page.dart';
 import 'package:bubblepaw_desktop/src/versions.dart';
 import 'package:flutter/foundation.dart' show LicenseEntry;
+import 'package:flutter/services.dart' show LicenseEntryWithLineBreaks;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 

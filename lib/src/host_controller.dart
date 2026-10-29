@@ -74,13 +74,12 @@ typedef HostVersionReader = Future<String?> Function(String binaryPath);
 class HostController extends ChangeNotifier {
   HostController({
     required this.store,
-    BackendStarter? starter,
+    this.starter,
     this.scripted = false,
     bool Function(String path)? fileExists,
     this.bundledBinary,
     this.versionReader,
-  }) : _starter = starter,
-       _fileExists = fileExists ?? ((path) => File(path).existsSync());
+  }) : _fileExists = fileExists ?? ((path) => File(path).existsSync());
 
   final ConfigStore store;
   final bool scripted;
@@ -92,7 +91,7 @@ class HostController extends ChangeNotifier {
   final HostVersionReader? versionReader;
 
   /// Starts a host from a config. Null starts the real one.
-  final BackendStarter? _starter;
+  final BackendStarter? starter;
   final bool Function(String path) _fileExists;
 
   HostPhase _phase = HostPhase.starting;
@@ -330,10 +329,10 @@ class HostController extends ChangeNotifier {
       return;
     }
     try {
-      final BackendStarter starter = useScripted
+      final BackendStarter start = useScripted
           ? startScripted
-          : (_starter ?? (c) => startBubblePaw(c, binaryPath: binary));
-      final started = await starter(config);
+          : (starter ?? (c) => startBubblePaw(c, binaryPath: binary));
+      final started = await start(config);
       if (ticket != _generation || _disposed) {
         await started.dispose();
         return;

@@ -47,7 +47,7 @@ void main() {
         find.byKey(const ValueKey('provider-openrouter')),
       );
       expect(find.byKey(const ValueKey('provider-demo')), findsOneWidget);
-      expect(find.text('Key missing'), findsOneWidget);
+      expect(find.text('No key'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('provider-key-openrouter')),
         findsOneWidget,

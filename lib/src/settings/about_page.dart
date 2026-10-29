@@ -78,7 +78,7 @@ class _AboutPageState extends State<AboutPage> {
       _Check.failed => 'Could not check. ${_failure ?? ''}'.trim(),
       _Check.done =>
         newer
-            ? '${latest!.version} is out.'
+            ? '${latest.version} is out.'
             : current == null
             ? 'Latest release is ${latest!.version}.'
             : '${latest!.version} is the latest release.',
@@ -105,7 +105,7 @@ class _AboutPageState extends State<AboutPage> {
                 OutlineButton(
                   key: const ValueKey('core-release-link'),
                   label: 'View release',
-                  onTap: () => unawaited(widget.services.open(latest!.page)),
+                  onTap: () => unawaited(widget.services.open(latest.page)),
                 ),
               ] else if (_check == _Check.done && latest != null && current == null)
                 OutlineButton(
