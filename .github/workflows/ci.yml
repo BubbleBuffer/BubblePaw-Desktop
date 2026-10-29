@@ -1,7 +1,5 @@
-# Self-hosted runner only: no GitHub-hosted runners. Pull requests from forks
-# are skipped, so code from a fork never runs on the self-hosted runner. One job
-# runs every check in turn, so a single runner slot is used; each step runs even
-# when an earlier one failed.
+# GitHub-hosted runner (the repository is public, so hosted minutes are free).
+# One job runs every check in turn; each step runs even when an earlier one failed.
 name: ci
 
 on:
@@ -19,8 +17,7 @@ env:
 jobs:
   checks:
     name: format, analyze, test, goldens, live host
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, build01]
+    runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4

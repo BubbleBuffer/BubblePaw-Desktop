@@ -61,7 +61,7 @@ preferences (theme, login and tray switches, whether the host starts with the ap
 
 ## Tests
 
-All builds and tests run on Linux: in CI on a self-hosted runner, or on any Linux machine.
+All builds and tests run on Linux: in CI on a GitHub-hosted Ubuntu runner, or on any Linux machine.
 
 ```sh
 flutter analyze
