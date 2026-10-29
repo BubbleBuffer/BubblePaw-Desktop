@@ -200,6 +200,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('binary-bundled')));
       await settle(tester);
+      await tester.ensureVisible(find.byKey(const ValueKey('settings-save')));
       await tester.tap(find.byKey(const ValueKey('settings-save')));
       await settle(tester);
       expect(store.saved?.binarySource, BinarySource.bundled);

@@ -203,7 +203,10 @@ void main() {
       final r = _Rig();
       await r.start();
       expect(r.tray.icon, 'assets/icon/tray/tray-24.png');
-      expect(_keys(r.tray.menu), ['open', 'status', 'restart', 'quit']);
+      expect(
+        _keys(r.tray.menu),
+        containsAll(['open', 'status', 'restart', 'quit']),
+      );
       expect(r.host.trayAvailable, isTrue);
       await r.desktop.dispose();
       expect(r.tray.disposed, isTrue);

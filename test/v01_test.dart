@@ -88,6 +88,7 @@ void main() {
         find.byKey(const ValueKey('settings-arguments')),
         '--provider demo --set "a=b c"',
       );
+      await tester.ensureVisible(find.byKey(const ValueKey('settings-save')));
       await tester.tap(find.byKey(const ValueKey('settings-save')));
       await settle(tester);
 

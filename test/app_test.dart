@@ -164,6 +164,7 @@ void main() {
       expect(find.byKey(const ValueKey('settings-back')), findsNothing);
 
       // Saving without a binary says what is missing and starts nothing.
+      await tester.ensureVisible(find.byKey(const ValueKey('settings-save')));
       await tester.tap(find.byKey(const ValueKey('settings-save')));
       await settle(tester);
       expect(find.textContaining('Enter the binary'), findsOneWidget);
@@ -173,6 +174,7 @@ void main() {
         find.byKey(const ValueKey('settings-binary')),
         '/opt/bubblepaw/bubblepaw',
       );
+      await tester.ensureVisible(find.byKey(const ValueKey('settings-save')));
       await tester.tap(find.byKey(const ValueKey('settings-save')));
       await settle(tester);
 
