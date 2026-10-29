@@ -1,16 +1,23 @@
 @Tags(['golden'])
 library;
 
+import 'dart:io';
+
 import 'package:agent_kit_core/fake.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
+import 'package:bubblepaw_desktop/src/core/core_manager.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
+import 'package:bubblepaw_desktop/src/platform/download.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
+import 'package:bubblepaw_desktop/src/semver.dart';
+import 'package:bubblepaw_desktop/src/updates/update_controller.dart';
 import 'package:flutter/foundation.dart'
     show LicenseEntry, LicenseEntryWithLineBreaks;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
 
@@ -50,6 +57,115 @@ Stream<LicenseEntry> sampleLicences() => Stream.fromIterable([
   ], 'Permission to use, copy, modify, and/or distribute this software'),
 ]);
 
+const downloadedConfig = AppConfig(
+  binarySource: BinarySource.downloaded,
+  coreVersion: '0.3.1',
+  binaryPath: '',
+  workspaceDirectory: '/home/user/project',
+  dataDirectory: '/home/user/.local/share/bubblepaw-desktop/data',
+);
+
+/// A Core page scene over fakes: [stored] versions on disk, [releases]
+/// published, [installed] copies found on PATH with their [detected] version,
+/// and [state] for a download shown mid-way. Opens [section] of Settings.
+Scene coreScene({
+  required AppConfig config,
+  List<String> stored = const [],
+  List<String> releases = const [],
+  List<String> installed = const [],
+  Map<String, String> detected = const {},
+  CoreDownloadState? state,
+  String section = 'core',
+  bool failed = false,
+}) {
+  late CoreHarness harness;
+  return (
+    controller: () {
+      harness = CoreHarness(
+        releases: releases,
+        installed: installed,
+        at: Directory('${Directory.systemTemp.path}/bp-golden-core'),
+      );
+      addTearDown(harness.dispose);
+      harness.detectedVersions.addAll(detected);
+      for (final version in stored) {
+        harness.storeVersion(version);
+      }
+      return HostController(
+        store: MemoryConfigStore(config),
+        starter: Played().start,
+        fileExists: (_) => true,
+        core: harness.manager,
+      );
+    },
+    after: (tester) async {
+      await tester.runAsync(harness.manager.refresh);
+      await tester.runAsync(harness.manager.detect);
+      if (state != null) harness.manager.debugSetState(state);
+      if (failed) {
+        // The host did not start: Settings opens from the failure notice.
+        await tester.tap(find.byKey(const ValueKey('notice-settings')));
+        await settle(tester);
+        final nav = find.byKey(ValueKey('settings-nav-$section'));
+        if (nav.evaluate().isNotEmpty) {
+          await tester.tap(nav);
+          await settle(tester);
+        }
+      } else {
+        await openSettings(tester, section);
+      }
+    },
+  );
+}
+
+UpdateManifest sampleManifest() => UpdateManifest(
+  channel: UpdateChannel.stable,
+  version: SemVer(0, 2, 0),
+  publishedAt: DateTime.utc(2026, 10, 29, 8),
+  notesUrl: Uri.parse('https://example.test/notes/0.2.0'),
+  assets: const {},
+);
+
+final sampleFile = File(
+  '/home/user/.local/share/bubblepaw-desktop/updates/0.2.0/'
+  'bubblepaw-desktop-0.2.0-linux-x64.tar.gz',
+);
+
+/// A scene with an update in [phase]. With [dialog] the update dialog is open
+/// over the app; otherwise [section] of Settings is shown.
+Scene updateScene({
+  required UpdatePhase phase,
+  bool dialog = true,
+  bool canInstall = true,
+  String? section,
+  AppPrefs? prefs,
+}) {
+  return (
+    controller: () {
+      final updates = UpdateController(
+        fetcher: const OfflineFetcher(),
+        downloads: Directory('/nonexistent/bubblepaw-updates'),
+        installer: FakeInstaller(canInstall: canInstall),
+        platform: canInstall ? 'windows-x64' : 'linux-x64',
+        current: SemVer(0, 1, 0),
+      );
+      final controller = HostController(
+        store: MemoryConfigStore(
+          sampleConfig,
+          prefs ?? AppPrefs(lastUpdateCheck: DateTime.utc(2026, 10, 27, 9, 14)),
+        ),
+        starter: Played().start,
+        fileExists: (_) => true,
+        versionReader: (_) async => '0.3.1',
+        updates: updates,
+      );
+      updates.debugShow(phase, dialog: dialog);
+      return controller;
+    },
+    after: section == null ? null : (tester) => openSettings(tester, section),
+  );
+}
+
 /// Screens that tell the person where the app stands: the chat, first-run
 /// settings and a failure notice, plus the screens that follow what the
 /// backend can do (plan, question, context). Light and dark, at a wide and a
@@ -64,7 +180,7 @@ void main() {
           HostController(scripted: true, store: MemoryConfigStore()),
       after: null,
     ),
-    // First run with no bundled binary: Core on the custom binary.
+    // First run, offline: Core is not downloaded, with Retry.
     'settings': (
       controller: () => HostController(store: MemoryConfigStore()),
       after: null,
@@ -121,18 +237,134 @@ void main() {
       controller: () => Played().controller(),
       after: (tester) => openSettings(tester, 'core'),
     ),
-    // Core on the binary that ships with the app.
-    'settings_core_bundled': (
+    // Core downloaded: version, an update and Remove.
+    'settings_core_downloaded': coreScene(
+      config: downloadedConfig,
+      stored: ['0.3.1'],
+      releases: ['0.4.0'],
+    ),
+    // Core downloaded and up to date: no Update.
+    'settings_core_current': coreScene(
+      config: downloadedConfig,
+      stored: ['0.4.0'],
+      releases: ['0.4.0'],
+    ),
+    // A Core download in progress, with Cancel.
+    'settings_core_downloading': coreScene(
+      config: downloadedConfig,
+      stored: ['0.3.1'],
+      releases: ['0.4.0'],
+      state: CoreDownloading(SemVer(0, 4, 0), 18400000, 42100000),
+    ),
+    // The download stopped: what failed, Retry.
+    'settings_core_failed': coreScene(
+      config: downloadedConfig,
+      stored: ['0.3.1'],
+      releases: ['0.4.0'],
+      state: const CoreFailed(
+        FetchFailure.interrupted,
+        'The Core download failed. The connection dropped.',
+        received: 18400000,
+        total: 42100000,
+      ),
+    ),
+    // The download does not match the published checksum.
+    'settings_core_checksum': coreScene(
+      config: downloadedConfig,
+      stored: ['0.3.1'],
+      releases: ['0.4.0'],
+      state: const CoreFailed(
+        FetchFailure.checksum,
+        'The Core download does not match the checksum published for it, so '
+        'it was deleted and not stored.',
+      ),
+    ),
+    // Installed Core found in range.
+    'settings_core_installed': coreScene(
+      config: sampleConfig.copyWith(binarySource: BinarySource.installed),
+      installed: ['/usr/local/bin/bubblepaw'],
+      detected: {'/usr/local/bin/bubblepaw': '0.3.2'},
+    ),
+    // Installed Core found but older than BubblePaw supports.
+    'settings_core_installed_old': coreScene(
+      config: sampleConfig.copyWith(binarySource: BinarySource.installed),
+      installed: ['/usr/local/bin/bubblepaw'],
+      detected: {'/usr/local/bin/bubblepaw': '0.2.4'},
+      failed: true,
+    ),
+    // Installed Core: none on this computer.
+    'settings_core_installed_none': coreScene(
+      config: sampleConfig.copyWith(binarySource: BinarySource.installed),
+      failed: true,
+    ),
+    // BubblePaw is attached to a host that was already running.
+    'settings_core_attached': (
       controller: () => HostController(
-        store: MemoryConfigStore(
-          sampleConfig.copyWith(binarySource: BinarySource.bundled),
-        ),
+        store: MemoryConfigStore(downloadedConfig),
         starter: Played().start,
         fileExists: (_) => true,
-        bundledBinary: '/opt/bubblepaw/bubblepaw',
-        versionReader: (_) async => '0.3.1',
+        attacher: (config) async {
+          final started = await Played().start(config);
+          return StartedBackend(
+            started.backend,
+            () async {},
+            now: started.now,
+            attached: true,
+            version: '0.3.2',
+          );
+        },
       ),
       after: (tester) => openSettings(tester, 'core'),
+    ),
+    // About with a newer BubblePaw on the Stable channel.
+    'settings_about_update': updateScene(
+      phase: UpdateAvailable(sampleManifest()),
+      dialog: false,
+      section: 'about',
+    ),
+    // About on the Nightly channel, with its notice.
+    'settings_about_nightly': updateScene(
+      phase: const UpdateIdle(),
+      dialog: false,
+      section: 'about',
+      prefs: AppPrefs(
+        updateChannel: UpdateChannel.nightly,
+        lastUpdateCheck: DateTime.utc(2026, 10, 27, 9, 14),
+      ),
+    ),
+    // The update dialog, one scene per state.
+    'update_available': updateScene(phase: UpdateAvailable(sampleManifest())),
+    'update_downloading': updateScene(
+      phase: UpdateDownloading(sampleManifest(), 18400000, 42100000),
+    ),
+    'update_ready': updateScene(
+      phase: UpdateReady(sampleManifest(), sampleFile),
+    ),
+    'update_ready_linux': updateScene(
+      phase: UpdateReady(sampleManifest(), sampleFile),
+      canInstall: false,
+    ),
+    'update_failed': updateScene(
+      phase: UpdateFailed(
+        sampleManifest(),
+        const FetchException(
+          FetchFailure.interrupted,
+          'The connection dropped.',
+          received: 18400000,
+          total: 42100000,
+        ),
+      ),
+    ),
+    'update_checksum': updateScene(
+      phase: UpdateFailed(
+        sampleManifest(),
+        FetchException(
+          FetchFailure.checksum,
+          'The file does not match its published checksum.',
+          expected: '9f2c4e1ab7d8035c61e0a9b4d7f31c2e8a50b6d9',
+          actual: 'c41d77e0b3a95f12d86e4a07b9c3e5f1a2d8467b',
+        ),
+      ),
     ),
     // Core v0.3.1: Models lists the host's providers and their models.
     'settings_models': (

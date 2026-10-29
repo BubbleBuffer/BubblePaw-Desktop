@@ -20,6 +20,7 @@ import 'preferences.dart';
 import 'screens/diff_review.dart';
 import 'screens/notice.dart';
 import 'screens/tray_notice.dart';
+import 'screens/update_dialog.dart';
 import 'screens/workspace_menu.dart';
 import 'settings/licences_page.dart';
 import 'settings/settings_section.dart';
@@ -139,6 +140,13 @@ class AppShell extends StatelessWidget {
             right: 16,
             bottom: 16,
             child: TrayNotice(onDismiss: controller.dismissTrayNotice),
+          ),
+        if (controller.updates.dialogOpen)
+          Positioned.fill(
+            child: UpdateDialog(
+              updates: controller.updates,
+              services: services,
+            ),
           ),
       ],
     ),

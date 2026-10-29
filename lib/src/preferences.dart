@@ -10,6 +10,9 @@ enum ThemeSetting {
   dark,
 }
 
+/// Which releases of the app the update check looks at.
+enum UpdateChannel { stable, nightly }
+
 class AppPrefs {
   const AppPrefs({
     this.theme = ThemeSetting.system,
@@ -18,6 +21,10 @@ class AppPrefs {
     this.keepInTray = false,
     this.startHost = true,
     this.trayNoticeShown = false,
+    this.updateChannel = UpdateChannel.stable,
+    this.checkUpdates = true,
+    this.lastUpdateCheck,
+    this.skippedUpdate = '',
   });
 
   final ThemeSetting theme;
@@ -38,6 +45,18 @@ class AppPrefs {
   /// The one-time "still running in the tray" notice was dismissed.
   final bool trayNoticeShown;
 
+  /// The releases the update check follows.
+  final UpdateChannel updateChannel;
+
+  /// Look for a new version when the app starts, at most once a day.
+  final bool checkUpdates;
+
+  /// When the last check ran (UTC); null before the first.
+  final DateTime? lastUpdateCheck;
+
+  /// A version the person chose to skip, such as `0.2.0`.
+  final String skippedUpdate;
+
   /// Whether a login start hides the window.
   bool get effectiveStartInTray => openAtLogin && startInTray;
 
@@ -48,7 +67,15 @@ class AppPrefs {
     bool? keepInTray,
     bool? startHost,
     bool? trayNoticeShown,
+    UpdateChannel? updateChannel,
+    bool? checkUpdates,
+    DateTime? lastUpdateCheck,
+    String? skippedUpdate,
   }) => AppPrefs(
+    updateChannel: updateChannel ?? this.updateChannel,
+    checkUpdates: checkUpdates ?? this.checkUpdates,
+    lastUpdateCheck: lastUpdateCheck ?? this.lastUpdateCheck,
+    skippedUpdate: skippedUpdate ?? this.skippedUpdate,
     theme: theme ?? this.theme,
     openAtLogin: openAtLogin ?? this.openAtLogin,
     startInTray: startInTray ?? this.startInTray,
@@ -64,6 +91,11 @@ class AppPrefs {
     'keepInTray': keepInTray,
     'startHost': startHost,
     'trayNoticeShown': trayNoticeShown,
+    'updateChannel': updateChannel.name,
+    'checkUpdates': checkUpdates,
+    if (lastUpdateCheck != null)
+      'lastUpdateCheck': lastUpdateCheck!.toUtc().toIso8601String(),
+    if (skippedUpdate.isNotEmpty) 'skippedUpdate': skippedUpdate,
   };
 
   /// Reads what it can; anything missing or of the wrong type is a default.
@@ -85,6 +117,19 @@ class AppPrefs {
       keepInTray: flag('keepInTray', defaults.keepInTray),
       startHost: flag('startHost', defaults.startHost),
       trayNoticeShown: flag('trayNoticeShown', defaults.trayNoticeShown),
+      updateChannel: UpdateChannel.values.firstWhere(
+        (c) => c.name == json['updateChannel'],
+        orElse: () => defaults.updateChannel,
+      ),
+      checkUpdates: flag('checkUpdates', defaults.checkUpdates),
+      lastUpdateCheck: switch (json['lastUpdateCheck']) {
+        final String text => DateTime.tryParse(text),
+        _ => null,
+      },
+      skippedUpdate: switch (json['skippedUpdate']) {
+        final String text => text,
+        _ => '',
+      },
     );
   }
 
@@ -96,7 +141,11 @@ class AppPrefs {
       other.startInTray == startInTray &&
       other.keepInTray == keepInTray &&
       other.startHost == startHost &&
-      other.trayNoticeShown == trayNoticeShown;
+      other.trayNoticeShown == trayNoticeShown &&
+      other.updateChannel == updateChannel &&
+      other.checkUpdates == checkUpdates &&
+      other.lastUpdateCheck == lastUpdateCheck &&
+      other.skippedUpdate == skippedUpdate;
 
   @override
   int get hashCode => Object.hash(
@@ -106,5 +155,9 @@ class AppPrefs {
     keepInTray,
     startHost,
     trayNoticeShown,
+    updateChannel,
+    checkUpdates,
+    lastUpdateCheck,
+    skippedUpdate,
   );
 }

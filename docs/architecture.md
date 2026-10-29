@@ -35,7 +35,7 @@ added "Rewind from here" and hides the empty ledger.
 
 | Phase | Shown | Reached when |
 |---|---|---|
-| `setup` | Settings on Core, no way back | No saved config (and no bundled binary), or one that is incomplete |
+| `setup` | Settings on Core, no way back | No saved config (the first run downloads Core), or one that is incomplete |
 | `stopped` | "The host is not running" notice | "Start the host when BubblePaw starts" is off |
 | `starting` | "Starting BubblePaw" notice | Starting or restarting |
 | `running` | `AgentWorkbench` | The backend answered `initialize` |
@@ -98,6 +98,7 @@ Every failure is a title, a cause with its consequence, and two actions: Restart
 | Cause | Title |
 |---|---|
 | File missing at the configured binary path | BubblePaw binary not found |
+| Downloaded or installed Core missing or out of range | Core is not downloaded, or the reason it cannot be used |
 | `BubblePawProtocolMismatch` | BubblePaw version not supported (both versions named) |
 | `BubblePawHostExited` or a stream ending | BubblePaw stopped (exit code when known) |
 | Anything else while starting | BubblePaw did not start |
@@ -116,24 +117,24 @@ message.
     app preferences in `preferences.json` (`AppPrefs`), beside `config.json`, and apply
     at once. No tray on the system: the Keep switch is off and closing quits. The app
     has no turn-layout setting, so none is shown.
-  - **Core**: status with Restart; the binary is either *Bundled with BubblePaw* (a
-    `bubblepaw`/`bubblepaw.exe` next to the app executable, found by `bundledBinaryPath`;
-    unavailable with a reason when absent) or *Custom binary* (path and Browse);
+  - **Core**: status with one button (Restart, Start host, or Detach when attached);
+    the binary is *Downloaded (default)*, *Installed on this computer* or *Custom binary*
+    (path, Browse and the version it reports). See [Core and updates](core-and-updates.md).
     "Start the host when BubblePaw starts"; data directory; extra arguments. Binary,
     directories and arguments are saved with "Save and restart"; the switch applies at
-    once. With a bundled binary and no saved config the app saves the bundled choice and
-    default directories and starts without asking. The workspace is not a setting: it is
-    chosen from the rail.
+    once. On a first run with no Core the app downloads the newest compatible one,
+    saves the choice and default directories and starts; offline or failed, Settings
+    stays on Core with Retry. The workspace is not a setting: it is chosen from the rail.
   - **Models**: the host's providers (kind, base URL, whether the host found the key, never
     the key) and their models with the Default mark or Make default (on hover or focus at
     desktop width, always at compact width). The key is an environment variable the host
     reads, so the app has no Edit key action.
-  - **About**: versions of the app, agent kit, Core (`bubblepaw --version`) and protocol;
-    "Check for updates" reads the latest release of `BubbleBuffer/BubblePaw-Core` from the
-    GitHub API and shows *Update available* with a link to the release page when it is
-    newer (nothing is downloaded). There is no app update row: the check covers Core
-    releases only. **Licences** lists `LicenseRegistry` entries (packages, the font licences from
-    `assets/fonts/licenses`, Lucide), grouped, searchable and expandable.
+  - **About**: Updates (BubblePaw state, Channel Stable or Nightly, "Check automatically",
+    Last checked with Review update and Check now, and a Core row), then the versions of
+    the app, agent kit, Core (`bubblepaw --version`) and protocol. See
+    [Core and updates](core-and-updates.md). **Licences** lists `LicenseRegistry` entries
+    (packages, the font licences from `assets/fonts/licenses`, Lucide), grouped,
+    searchable and expandable.
 - **Tray and background** (`lib/src/platform/`): `DesktopIntegration` talks to three
   adapters (`TrayAdapter`, `WindowAdapter`, `StartupAdapter`), implemented with
   `tray_manager`, `window_manager` and `launch_at_startup`, so the logic runs headless.
@@ -182,9 +183,10 @@ dark setting, and the form factor is always desktop.
 | `test/crew_test.dart` | Crew: the ledger lists a running and a finished child, a child's open question shows in the parent and is answered (reaches `answerChildQuestion`), no answer action without the capability; rail: 2000 chats, rows build lazily and the last is reachable |
 | `test/host_controls_test.dart` | Core v0.3.1 on the scripted backend: providers section (list, missing key, Make default, no capability), the composer's default-model pick, rail paging, crew Cancel and its heading |
 | `test/workspace_switch_test.dart` | Recent workspaces (order, repeats, cap of 8, JSON), the rail menu, switching restarts the host with the same data directory, Open folder, a cancelled picker |
-| `test/settings_test.dart` | General switches and theme, Core (bundled, custom, Browse, save, Restart, host off), Models, About (versions, update states, Licences search and expand), the tray notice, version constants |
+| `test/settings_test.dart` | General switches and theme, Core (downloaded, installed, custom, Browse, save, Restart, host off), Models, About (versions, Core row, Updates, Licences search and expand), the tray notice, version constants |
+| `test/semver_test.dart`, `test/core_test.dart`, `test/updates_test.dart`, `test/update_dialog_test.dart` | Versions and the Core range, the Core download and detection, attach versus start, app updates and the dialog; see [core-and-updates.md](core-and-updates.md) |
 | `test/tray_test.dart` | The tray menu model, icon file choice, and the integration against fake tray, window and login adapters (close-to-tray, quit, waiting count, login entry) |
-| `test/golden_test.dart` | Main screen, first-run Core, General, Core (custom and bundled), Models, About, Licences, a failure notice, plan, question, crew (with Cancel) and the context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
+| `test/golden_test.dart` | Main screen, first-run Core, General, Core (downloaded, downloading, failed, installed, attached), Models, About (with updates), the update dialog states, Licences, a failure notice, plan, question, crew (with Cancel) and the context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
 | `test/live_test.dart` | Opt-in (`BP_TEST_BIN`): the real host with the offline demo provider |
 
 Goldens are rendered on Linux with the bundled fonts and the Flutter version CI
@@ -200,4 +202,5 @@ pins; renders from another platform will not match.
 - Worktrees, crew and the Context pane show only what the stdio backend reports. With BubblePaw-Core v0.3.0 that includes the context (pane, summaries, history ranges) and child questions; it still reports no jobs. Compaction needs a real model, so the demo provider shows an empty structure.
 - The header shows a branch only when the backend reports one; the
   stdio host reports none, so none is shown.
+- **Attach is not wired.** Core has no discovery file or endpoint, so Desktop always starts its own host (`attachToRunningHost` returns null).
 - Windows is not built or tested yet.

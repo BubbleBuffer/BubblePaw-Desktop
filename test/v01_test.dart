@@ -78,6 +78,8 @@ void main() {
         fileExists: (_) => true,
       );
       await pumpApp(tester, controller);
+      await tester.tap(find.byKey(const ValueKey('binary-custom')));
+      await settle(tester);
 
       expect(find.text('Extra arguments'), findsOneWidget);
       await tester.enterText(
