@@ -1,8 +1,8 @@
 // About: the versions in use, whether a newer BubblePaw Core is published and
 // the way to the open source licences.
 //
-// The app has no update row: its repository is private, so there is no
-// release to look up.
+// The app has no update row: the update check looks up BubblePaw Core
+// releases only, not releases of this app.
 
 import 'dart:async';
 

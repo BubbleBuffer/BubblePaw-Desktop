@@ -29,7 +29,7 @@
 
   const M = {
     pref: H.theme || 'light', turn: 'closed', login: false, startTray: false, keepTray: true, toast: H.toast === '1', hostAuto: true, hostKeep: H.keep !== '0', autoShare: true, chats: H.chats !== undefined ? +H.chats : 2, tmenu: true,
-    f: { binary: '/opt/bubblepaw/bubblepaw', workspace: '/home/maya/projects/bubblepaw-base', data: '/home/maya/.local/share/bubblepaw-desktop/data', args: '', relay: 'wss://relay.example.com', hostname: 'bubblepaw-desk', zone: 'example.com', token: '', devname: 'Studio desktop', licq: '', pairName: 'Pixel 8', addCode: '', pass1: '', pass2: '', keyFile: '', keySecret: '', apiKey: '' },
+    f: { binary: '/opt/bubblepaw/bubblepaw', workspace: '/home/maya/projects/garden-api', data: '/home/maya/.local/share/bubblepaw-desktop/data', args: '', relay: 'wss://relay.example.com', hostname: 'bubblepaw-desk', zone: 'example.com', token: '', devname: 'Studio desktop', licq: '', pairName: 'Pixel 8', addCode: '', pass1: '', pass2: '', keyFile: '', keySecret: '', apiKey: '' },
     hostState: H.hs || 'running', hostSaved: null, coreMode: 'bundled', other: false, autoUpd: true, licOpen: new Set(),
     u: { app: { cur: '0.1.0', latest: null, st: 'idle' }, core: { cur: '0.3.0', latest: null, st: 'idle' } },
     on: H.on !== '0', reach: H.reach || 'temp', cf: { signed: H.cf !== 'signedout' && H.cf !== 'token', tokenOpen: H.cf === 'token', busy: false, account: 'maya@example.com' },
@@ -52,7 +52,7 @@
     ],
     def: 'deepseek-v4.1-flash',
     dlg: null, add: { step: 1 }, addDone: false, back: 'phone',
-    pview: H.pview === 'chat' ? 'chat' : 'list', sheet: H.sheet === '1', sw: H.sw !== '0', pop: H.pop !== '0', dsel: { h: H.dsel || 'local' }, expR: new Set(), lastProj: 'bubblepaw-base', ppick: H.ppick === '1', active: H.active || 'h1',
+    pview: H.pview === 'chat' ? 'chat' : 'list', sheet: H.sheet === '1', sw: H.sw !== '0', pop: H.pop !== '0', dsel: { h: H.dsel || 'local' }, expR: new Set(), lastProj: 'garden-api', ppick: H.ppick === '1', active: H.active || 'h1',
     fail2: false,
   };
   if (S.screen === 'pair') M.dlg = { type: 'pair', step: +(H.step || 1), left: 292, code: 'K7M2Q-9XFD4', prof: 'edit' };
@@ -145,7 +145,7 @@
       `<div class="card"><div class="kv"><span class="k">Device ID</span><span class="v mono">${M.key.id}</span>${btn('Copy', { icon: 'copy', cls: 'quiet', act: 'copy' })}</div>
         <div class="kv"><span class="k">Fingerprint</span><span class="v mono" style="font-size:12.5px">${M.key.fp}</span><span></span></div></div>`) +
       sec('Key file',
-        `<div class="rowline"><div class="grow"><div class="t">Export key file</div><div class="s">Saves a .bpkey file locked with a passphrase you choose. The same key works in BubblePlay.</div></div>${btn('Export…', { icon: 'download', act: 'dlg', arg: 'export' })}</div>
+        `<div class="rowline"><div class="grow"><div class="t">Export key file</div><div class="s">Saves a .bpkey file locked with a passphrase you choose. The same key works in Garden Notes.</div></div>${btn('Export…', { icon: 'download', act: 'dlg', arg: 'export' })}</div>
          <div class="rowline"><div class="grow"><div class="t">Import key file</div><div class="s">Replaces this device's key. Existing pairings stop working.</div></div>${btn('Import…', { icon: 'folder-open', act: 'dlg', arg: 'import' })}</div>`) +
       sec('Regenerate', `<div class="notice danger">${ic('circle-alert', 16)}<div>Regenerating creates a new device ID. ${cons}</div></div>${btn('Regenerate device key…', { kind: 'danger', icon: 'trash-2', act: 'dlg', arg: 'regen' })}`);
   }
@@ -410,7 +410,7 @@
   const activeHost = () => M.hosts.find((h) => h.id === M.active);
   const SEL = 'Quota bar flickers on reconnect';
   const PROJ = [
-    { id: 'bubblepaw-base', last: 'Now', chats: [{ t: SEL, st: 'approval', s: 'Needs approval' }, { t: 'Review the pairing copy', st: 'running', s: 'Running' }, { t: 'Plan the settings page', st: 'idle', s: 'Finished 2h ago' }] },
+    { id: 'garden-api', last: 'Now', chats: [{ t: SEL, st: 'approval', s: 'Needs approval' }, { t: 'Review the pairing copy', st: 'running', s: 'Running' }, { t: 'Plan the settings page', st: 'idle', s: 'Finished 2h ago' }] },
     { id: 'agent-kit', last: '12 minutes ago', chats: [{ t: 'Which provider should the kit default to?', st: 'answer', s: 'Needs an answer' }, { t: 'Run the golden tests', st: 'running', s: 'Running' }] },
     { id: 'scratch', last: 'Yesterday', chats: [{ t: 'Rename the vault tags', st: 'idle', s: 'Finished yesterday' }] },
     { id: 'notes', last: '3 days ago', chats: [{ t: 'Draft the release notes', st: 'idle', s: 'Finished 3 days ago' }] },
@@ -471,7 +471,7 @@
       ${offline ? `<div class="notice" style="margin:2px 0">${ic('wifi-off', 16)}<div>${sh.name} is offline.${sh.seen ? ' ' + sh.seen.charAt(0).toUpperCase() + sh.seen.slice(1) + '.' : ''}</div></div>` : ''}
       <div class="rail-scroll">${chatList(false)}</div>
       <div class="rail-foot"><button class="btn" ${A('toSettings')}>${ic('settings', 16)}Settings</button></div>${pop}</aside>
-      <div class="main"><div class="topbar"><span class="ct">${SEL}</span>${pill('Needs approval', 'attn')}<span class="tag" style="margin-left:4px">bubblepaw-base</span><span class="muted mono" style="font-size:12px;margin-left:4px">${ic('git-branch', 13)} bp/quota-reconnect</span></div>
+      <div class="main"><div class="topbar"><span class="ct">${SEL}</span>${pill('Needs approval', 'attn')}<span class="tag" style="margin-left:4px">garden-api</span><span class="muted mono" style="font-size:12px;margin-left:4px">${ic('git-branch', 13)} bp/quota-reconnect</span></div>
       <div class="stream">${transcript(false)}</div>${composer(false)}</div></div>`;
   }
 

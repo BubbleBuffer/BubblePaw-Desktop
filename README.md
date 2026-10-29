@@ -61,7 +61,7 @@ preferences (theme, login and tray switches, whether the host starts with the ap
 
 ## Tests
 
-All builds and tests run on Linux (CI on the build01 runner, or `linux01-run`).
+All builds and tests run on Linux: in CI on a self-hosted runner, or on any Linux machine.
 
 ```sh
 flutter analyze
