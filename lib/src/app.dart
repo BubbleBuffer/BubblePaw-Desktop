@@ -9,15 +9,21 @@ import 'package:agent_kit_core/agent_kit_core.dart'
     show ChatSummary, FileDiff, KitCapability;
 import 'package:bb_ui/bb_ui.dart'
     show AppColors, Ico, PrimaryButton, SecondaryButton;
+import 'package:flutter/foundation.dart' show LicenseEntry;
 import 'package:flutter/widgets.dart';
 
 import 'guarded_backend.dart';
 import 'host_controller.dart';
 import 'pick_folder.dart' as picker;
+import 'platform/releases.dart';
+import 'preferences.dart';
 import 'screens/diff_review.dart';
 import 'screens/notice.dart';
-import 'screens/settings_screen.dart';
+import 'screens/tray_notice.dart';
 import 'screens/workspace_menu.dart';
+import 'settings/licences_page.dart';
+import 'settings/settings_section.dart';
+import 'settings/settings_shell.dart';
 
 class BubblePawApp extends StatefulWidget {
   const BubblePawApp({
@@ -25,12 +31,24 @@ class BubblePawApp extends StatefulWidget {
     required this.controller,
     this.brightness,
     this.pickFolder = picker.pickFolder,
+    this.pickBinary = picker.pickBinary,
+    this.services = const PlatformServices(),
+    this.licenceSource = LicencesPage.defaultSource,
   });
 
   final HostController controller;
 
   /// Asks for a folder (the native picker); tests pass their own.
   final Future<String?> Function() pickFolder;
+
+  /// Asks for the custom binary (the native file picker).
+  final Future<String?> Function() pickBinary;
+
+  /// The network and the operating system, for About.
+  final PlatformServices services;
+
+  /// Where the Licences page reads its entries.
+  final Stream<LicenseEntry> Function() licenceSource;
 
   /// Forces light or dark; follows the platform when null.
   final Brightness? brightness;
@@ -70,13 +88,25 @@ class _BubblePawAppState extends State<BubblePawApp> {
     ),
     // The theme sits above the navigator, so overlays (selection handles,
     // menus) read it too.
-    builder: (context, child) => BbThemeScope(
-      brightness: widget.brightness ?? MediaQuery.platformBrightnessOf(context),
-      child: child!,
+    builder: (context, child) => ListenableBuilder(
+      listenable: widget.controller,
+      builder: (context, _) => BbThemeScope(
+        brightness:
+            widget.brightness ??
+            switch (widget.controller.prefs.theme) {
+              ThemeSetting.light => Brightness.light,
+              ThemeSetting.dark => Brightness.dark,
+              ThemeSetting.system => MediaQuery.platformBrightnessOf(context),
+            },
+        child: child!,
+      ),
     ),
     home: AppShell(
       controller: widget.controller,
       pickFolder: widget.pickFolder,
+      pickBinary: widget.pickBinary,
+      services: widget.services,
+      licenceSource: widget.licenceSource,
     ),
   );
 }
@@ -87,74 +117,112 @@ class AppShell extends StatelessWidget {
     super.key,
     required this.controller,
     this.pickFolder = picker.pickFolder,
+    this.pickBinary = picker.pickBinary,
+    this.services = const PlatformServices(),
+    this.licenceSource = LicencesPage.defaultSource,
   });
 
   final HostController controller;
   final Future<String?> Function() pickFolder;
+  final Future<String?> Function() pickBinary;
+  final PlatformServices services;
+  final Stream<LicenseEntry> Function() licenceSource;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
-    builder: (context, _) {
-      if (controller.settingsOpen) {
-        final first = controller.phase == HostPhase.setup;
-        return SettingsScreen(
-          // A fresh form each time it opens.
-          key: ValueKey(('settings', controller.config)),
-          initial: controller.config ?? controller.store.defaults,
-          firstRun: first && controller.config == null,
-          scripted: controller.usingScripted,
-          backend: controller.phase == HostPhase.running
-              ? controller.backend
-              : null,
-          onSave: (config) => unawaited(controller.saveAndStart(config)),
-          onCancel: first ? null : controller.closeSettings,
-        );
-      }
-      return switch (controller.phase) {
-        HostPhase.setup || HostPhase.starting => Notice(
-          title: controller.usingScripted
-              ? 'Starting the scripted backend'
-              : 'Starting BubblePaw',
-          message: 'Connecting to the host. Chats appear when it answers.',
-        ),
-        HostPhase.failed => Notice(
-          title: controller.failure!.title,
-          message: controller.failure!.message,
-          actions: [
-            PrimaryButton(
-              key: const ValueKey('notice-restart'),
-              label: 'Restart',
-              height: 36,
-              icon: Ico.turnInto,
-              onTap: () => unawaited(controller.restart()),
-            ),
-            SecondaryButton(
-              key: const ValueKey('notice-settings'),
-              label: 'Settings',
-              height: 36,
-              onTap: controller.openSettings,
-            ),
-          ],
-        ),
-        HostPhase.running => Workbench(
-          // A new host is a new workbench.
-          key: ObjectKey(controller.backend),
-          backend: controller.backend!,
-          createdChats: controller.createdChats,
-          now: controller.now,
-          workspaceName: controller.workspaceLabel,
-          initials: controller.workspaceInitials,
-          onSettings: controller.openSettings,
-          workspace: controller.config?.workspaceDirectory ?? '',
-          workspaces: controller.recentWorkspaces,
-          onSwitchWorkspace: (path) =>
-              unawaited(controller.switchWorkspace(path)),
-          pickFolder: pickFolder,
-        ),
-      };
-    },
+    builder: (context, _) => Stack(
+      children: [
+        Positioned.fill(child: _screen(context)),
+        if (controller.trayNoticePending)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: TrayNotice(onDismiss: controller.dismissTrayNotice),
+          ),
+      ],
+    ),
   );
+
+  Widget _screen(BuildContext context) {
+    if (controller.settingsOpen) {
+      final first = controller.phase == HostPhase.setup;
+      return SettingsShell(
+        // A fresh form each time it opens, and after each save.
+        key: ValueKey(('settings', controller.config)),
+        controller: controller,
+        firstRun: first && controller.config == null,
+        services: services,
+        pickBinary: pickBinary,
+        licenceSource: licenceSource,
+        onSave: (config) => unawaited(controller.saveAndStart(config)),
+        onClose: first ? null : controller.closeSettings,
+      );
+    }
+    return switch (controller.phase) {
+      HostPhase.stopped => Notice(
+        title: 'The host is not running',
+        message:
+            'BubblePaw starts without the host while "Start the host when '
+            'BubblePaw starts" is off. Chats are unavailable until it runs.',
+        actions: [
+          PrimaryButton(
+            key: const ValueKey('notice-start'),
+            label: 'Start the host',
+            height: 36,
+            icon: Ico.turnInto,
+            onTap: () => unawaited(controller.restart()),
+          ),
+          SecondaryButton(
+            key: const ValueKey('notice-settings'),
+            label: 'Settings',
+            height: 36,
+            onTap: () => controller.openSettings(SettingsSection.core),
+          ),
+        ],
+      ),
+      HostPhase.setup || HostPhase.starting => Notice(
+        title: controller.usingScripted
+            ? 'Starting the scripted backend'
+            : 'Starting BubblePaw',
+        message: 'Connecting to the host. Chats appear when it answers.',
+      ),
+      HostPhase.failed => Notice(
+        title: controller.failure!.title,
+        message: controller.failure!.message,
+        actions: [
+          PrimaryButton(
+            key: const ValueKey('notice-restart'),
+            label: 'Restart',
+            height: 36,
+            icon: Ico.turnInto,
+            onTap: () => unawaited(controller.restart()),
+          ),
+          SecondaryButton(
+            key: const ValueKey('notice-settings'),
+            label: 'Settings',
+            height: 36,
+            onTap: () => controller.openSettings(SettingsSection.core),
+          ),
+        ],
+      ),
+      HostPhase.running => Workbench(
+        // A new host is a new workbench.
+        key: ObjectKey(controller.backend),
+        backend: controller.backend!,
+        createdChats: controller.createdChats,
+        now: controller.now,
+        workspaceName: controller.workspaceLabel,
+        initials: controller.workspaceInitials,
+        onSettings: controller.openSettings,
+        workspace: controller.config?.workspaceDirectory ?? '',
+        workspaces: controller.recentWorkspaces,
+        onSwitchWorkspace: (path) =>
+            unawaited(controller.switchWorkspace(path)),
+        pickFolder: pickFolder,
+      ),
+    };
+  }
 }
 
 /// The kit's workbench plus the diff overlay and rewind navigation.

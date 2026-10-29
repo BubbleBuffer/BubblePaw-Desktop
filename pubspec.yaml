@@ -31,6 +31,13 @@ dependencies:
       ref: v0.6.0
       path: packages/bb_ui
   file_selector: ^1.1.0
+  # Tray, window hiding and login start. tray_manager stays on the classic
+  # plugin (0.5.x): 0.7+ builds on native assets.
+  tray_manager: 0.5.3
+  window_manager: 0.5.2
+  launch_at_startup: 0.5.1
+  # The same pin as bb_ui's, for the Lucide glyphs its Ico enum lacks.
+  lucide_icons_flutter: 3.1.25
 
 dev_dependencies:
   flutter_test:
@@ -39,6 +46,7 @@ dev_dependencies:
 
 flutter:
   assets:
+    - assets/fonts/licenses/
     - assets/icon/tray/
   fonts:
     - family: Bricolage Grotesque

@@ -6,6 +6,17 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show listEquals;
 
+import 'preferences.dart';
+
+/// Which `bubblepaw` binary the host is started from.
+enum BinarySource {
+  /// The one that ships next to the app (see [bundledBinaryPath]).
+  bundled,
+
+  /// One the person installed; [AppConfig.binaryPath] says where.
+  custom,
+}
+
 /// What a BubblePaw host needs: the binary, two directories and any extra
 /// arguments.
 class AppConfig {
@@ -15,12 +26,18 @@ class AppConfig {
     required this.dataDirectory,
     this.extraArguments = '',
     this.recentWorkspaces = const [],
+    this.binarySource = BinarySource.custom,
   });
 
   /// How many recent workspaces the rail's menu lists.
   static const maxRecentWorkspaces = 8;
 
-  /// The `bubblepaw` executable.
+  /// Where the binary comes from. Configs saved before this existed are
+  /// custom.
+  final BinarySource binarySource;
+
+  /// The custom `bubblepaw` executable. Kept when [binarySource] is bundled,
+  /// so switching back finds it again.
   final String binaryPath;
 
   /// The directory the agent works in.
@@ -39,9 +56,9 @@ class AppConfig {
   /// [extraArguments] as a list, ready for the host's command line.
   List<String> get hostArguments => splitArguments(extraArguments);
 
-  /// Whether every field has a value.
+  /// Whether every field has a value. A bundled binary needs no path.
   bool get isComplete =>
-      binaryPath.trim().isNotEmpty &&
+      (binarySource == BinarySource.bundled || binaryPath.trim().isNotEmpty) &&
       workspaceDirectory.trim().isNotEmpty &&
       dataDirectory.trim().isNotEmpty;
 
@@ -51,7 +68,9 @@ class AppConfig {
     String? dataDirectory,
     String? extraArguments,
     List<String>? recentWorkspaces,
+    BinarySource? binarySource,
   }) => AppConfig(
+    binarySource: binarySource ?? this.binarySource,
     binaryPath: binaryPath ?? this.binaryPath,
     workspaceDirectory: workspaceDirectory ?? this.workspaceDirectory,
     dataDirectory: dataDirectory ?? this.dataDirectory,
@@ -76,6 +95,7 @@ class AppConfig {
   }
 
   Map<String, Object?> toJson() => {
+    'binarySource': binarySource.name,
     'binaryPath': binaryPath,
     'workspaceDirectory': workspaceDirectory,
     'dataDirectory': dataDirectory,
@@ -86,7 +106,8 @@ class AppConfig {
   /// Null when [json] is not an object of strings.
   static AppConfig? fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
-    final binary = json['binaryPath'];
+    final binary = json['binaryPath'] ?? '';
+    final source = json['binarySource'];
     final workspace = json['workspaceDirectory'];
     final data = json['dataDirectory'];
     final extra = json['extraArguments'] ?? '';
@@ -98,6 +119,9 @@ class AppConfig {
       return null;
     }
     return AppConfig(
+      binarySource: source == BinarySource.bundled.name
+          ? BinarySource.bundled
+          : BinarySource.custom,
       binaryPath: binary,
       workspaceDirectory: workspace,
       dataDirectory: data,
@@ -111,6 +135,7 @@ class AppConfig {
   @override
   bool operator ==(Object other) =>
       other is AppConfig &&
+      other.binarySource == binarySource &&
       other.binaryPath == binaryPath &&
       other.workspaceDirectory == workspaceDirectory &&
       other.dataDirectory == dataDirectory &&
@@ -119,6 +144,7 @@ class AppConfig {
 
   @override
   int get hashCode => Object.hash(
+    binarySource,
     binaryPath,
     workspaceDirectory,
     dataDirectory,
@@ -167,6 +193,27 @@ class ConfigStore {
       binaryPath: '',
       workspaceDirectory: '${directory.path}${sep}workspace',
       dataDirectory: '${directory.path}${sep}data',
+    );
+  }
+
+  File get prefsFile =>
+      File('${directory.path}${Platform.pathSeparator}preferences.json');
+
+  /// The saved preferences, or the defaults when there are none or they
+  /// cannot be read.
+  Future<AppPrefs> loadPrefs() async {
+    try {
+      if (!await prefsFile.exists()) return const AppPrefs();
+      return AppPrefs.fromJson(jsonDecode(await prefsFile.readAsString()));
+    } on Object {
+      return const AppPrefs();
+    }
+  }
+
+  Future<void> savePrefs(AppPrefs prefs) async {
+    await directory.create(recursive: true);
+    await prefsFile.writeAsString(
+      '${const JsonEncoder.withIndent('  ').convert(prefs.toJson())}\n',
     );
   }
 
@@ -223,4 +270,21 @@ List<String> splitArguments(String text) {
 String workspaceFolderName(String path) {
   final parts = path.split(RegExp(r'[\\/]')).where((p) => p.isNotEmpty);
   return parts.isEmpty ? path : parts.last;
+}
+
+/// The `bubblepaw` (`bubblepaw.exe`) that sits next to [executable], the
+/// app's own executable; null when there is none. [exists] replaces the file
+/// check.
+String? bundledBinaryPath({
+  String? executable,
+  bool? isWindows,
+  bool Function(String path)? exists,
+}) {
+  final windows = isWindows ?? Platform.isWindows;
+  final exe = executable ?? Platform.resolvedExecutable;
+  final cut = exe.lastIndexOf(RegExp(r'[\\/]'));
+  if (cut < 0) return null;
+  final name = windows ? 'bubblepaw.exe' : 'bubblepaw';
+  final path = '${exe.substring(0, cut + 1)}$name';
+  return (exists ?? (p) => File(p).existsSync())(path) ? path : null;
 }

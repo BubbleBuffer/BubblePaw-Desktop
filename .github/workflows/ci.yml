@@ -39,8 +39,9 @@ jobs:
         if: always()
         run: flutter test --exclude-tags golden
       # Goldens are rendered on Linux with the bundled fonts. To accept new
-      # renders, run `flutter test --tags golden --update-goldens` on Linux and
-      # commit test/goldens.
+      # renders, run this workflow by hand (workflow_dispatch): the last step
+      # formats the code, re-renders the goldens and uploads the result as
+      # fix.patch (`git apply fix.patch`).
       - name: goldens
         if: always()
         run: flutter test --tags golden
@@ -65,3 +66,17 @@ jobs:
           (cd "$dir" && grep " $archive\$" SHA256SUMS | sha256sum -c - && tar xzf "$archive")
           BP_TEST_BIN="$dir/bubblepaw-$BP_VERSION-x86_64-unknown-linux-gnu/bubblepaw" \
             flutter test --tags live test/live_test.dart
+      - name: Patch with formatting and new goldens (manual runs)
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: |
+          dart format lib test
+          flutter test --tags golden --update-goldens || true
+          git add -N .
+          git diff --binary > fix.patch
+      - name: Save patch
+        if: always() && github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fix-patch
+          path: fix.patch
+          if-no-files-found: ignore

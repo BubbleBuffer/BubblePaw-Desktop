@@ -5,14 +5,17 @@ owns the backend's lifetime, its settings and what to show when it is not
 running.
 
 ```
-main.dart            flags (--scripted, --config-dir), builds the controller
-BubblePawApp         WidgetsApp + BbThemeScope (above the navigator)
+main.dart            flags (--scripted, --hidden, --config-dir), builds the controller
+                     and the DesktopIntegration, registers the font licences
+BubblePawApp         WidgetsApp + BbThemeScope (above the navigator; follows the theme preference)
  AppShell            draws HostController's state
-  SettingsScreen     binary, workspace, data directory, extra host arguments
-  Notice             failure and starting states (Restart, Settings)
+  SettingsShell      General, Core, Models, About (+ Licences); lib/src/settings/
+  Notice             failure, stopped and starting states (Restart, Settings)
   Workbench          AgentWorkbench + DiffReview overlay
-HostController       config, start/restart, phase, failure
+  TrayNotice         the one-time "still running in the tray" notice
+HostController       config, preferences, start/restart, phase, failure
 GuardedBackend       AgentBackend wrapper that spots a dead host
+DesktopIntegration   tray menu, close-to-tray, login entry (lib/src/platform/)
 ```
 
 ## Dependencies
@@ -28,18 +31,19 @@ added "Rewind from here" and hides the empty ledger.
 
 ## State
 
-`HostController` is a `ChangeNotifier` with four phases.
+`HostController` is a `ChangeNotifier` with five phases.
 
 | Phase | Shown | Reached when |
 |---|---|---|
-| `setup` | Settings, no Cancel | No saved config, or one that is incomplete |
+| `setup` | Settings on Core, no way back | No saved config (and no bundled binary), or one that is incomplete |
+| `stopped` | "The host is not running" notice | "Start the host when BubblePaw starts" is off |
 | `starting` | "Starting BubblePaw" notice | Starting or restarting |
 | `running` | `AgentWorkbench` | The backend answered `initialize` |
 | `failed` | Failure notice | Binary missing, start failed, protocol mismatch, host exited |
 
-Settings can also be opened over `running` and `failed` (from the rail's Settings,
-or the notice) and cancelled back. Saving writes `config.json` and starts the host
-with the new values.
+Settings can also be opened over `running`, `failed` and `stopped` (from the rail's
+Settings, or the notice) and left with Back. Saving the Core form writes `config.json`
+and starts the host with the new values.
 
 ## The backend
 
@@ -104,9 +108,44 @@ message.
 
 ## Screens the app adds
 
-- **Settings**: four fields with bb_ui's `SettingsField`; no validation beyond
-  "not empty" (the arguments may be empty). The binary's existence is checked on
-  start, not on save.
+- **Settings** (`lib/src/settings/`): `SettingsShell` shows a 240 px section list beside
+  the page at medium and expanded widths, and the list as the first screen with pushed
+  pages at compact width. There is no Remote access item yet.
+  - **General**: theme (System, Light, Dark), Open at login, Start in the tray (on only
+    with Open at login), Keep running in the tray when the window is closed. These are
+    app preferences in `preferences.json` (`AppPrefs`), beside `config.json`, and apply
+    at once. No tray on the system: the Keep switch is off and closing quits. The app
+    has no turn-layout setting, so none is shown.
+  - **Core**: status with Restart; the binary is either *Bundled with BubblePaw* (a
+    `bubblepaw`/`bubblepaw.exe` next to the app executable, found by `bundledBinaryPath`;
+    unavailable with a reason when absent) or *Custom binary* (path and Browse);
+    "Start the host when BubblePaw starts"; data directory; extra arguments. Binary,
+    directories and arguments are saved with "Save and restart"; the switch applies at
+    once. With a bundled binary and no saved config the app saves the bundled choice and
+    default directories and starts without asking. The workspace is not a setting: it is
+    chosen from the rail.
+  - **Models**: the host's providers (kind, base URL, whether the host found the key, never
+    the key) and their models with the Default mark or Make default (on hover or focus at
+    desktop width, always at compact width). The key is an environment variable the host
+    reads, so the app has no Edit key action.
+  - **About**: versions of the app, agent kit, Core (`bubblepaw --version`) and protocol;
+    "Check for updates" reads the latest release of `BubbleBuffer/BubblePaw-Core` from the
+    GitHub API and shows *Update available* with a link to the release page when it is
+    newer (nothing is downloaded). There is no app update row: the app repository is
+    private. **Licences** lists `LicenseRegistry` entries (packages, the font licences from
+    `assets/fonts/licenses`, Lucide), grouped, searchable and expandable.
+- **Tray and background** (`lib/src/platform/`): `DesktopIntegration` talks to three
+  adapters (`TrayAdapter`, `WindowAdapter`, `StartupAdapter`), implemented with
+  `tray_manager`, `window_manager` and `launch_at_startup`, so the logic runs headless.
+  The tray menu (`trayMenu`) is Open BubblePaw, the host status line, "N chats waiting for
+  you" when any chat needs the person (counted from `listChats` on each phase change and
+  every 20 s), Restart host and Quit BubblePaw. With Keep running in the tray, closing
+  the window hides it and the first time `TrayNotice` is shown when the window comes back;
+  otherwise closing quits. The login entry starts the app with `--hidden` when Start in
+  the tray is on; the native runners then skip showing the first frame. The icon files
+  are named in `trayIconAsset` (`assets/icon/tray/`): dark-taskbar files by default, the
+  light-taskbar ones when the system theme is light (the plugin cannot ask the taskbar
+  itself). Linux needs libayatana-appindicator to build.
 - **Rail avatar**: two letters from the workspace folder name (`my-cool_app` is
   MC, `BubblePaw` is BP). The kit draws the circle; it cannot be left out.
 - **Plan, question, usage, context meter, branch**: the kit's chat pane already
@@ -143,7 +182,9 @@ dark setting, and the form factor is always desktop.
 | `test/crew_test.dart` | Crew: the ledger lists a running and a finished child, a child's open question shows in the parent and is answered (reaches `answerChildQuestion`), no answer action without the capability; rail: 2000 chats, rows build lazily and the last is reachable |
 | `test/host_controls_test.dart` | Core v0.3.1 on the scripted backend: providers section (list, missing key, Make default, no capability), the composer's default-model pick, rail paging, crew Cancel and its heading |
 | `test/workspace_switch_test.dart` | Recent workspaces (order, repeats, cap of 8, JSON), the rail menu, switching restarts the host with the same data directory, Open folder, a cancelled picker |
-| `test/golden_test.dart` | Main screen, settings, a failure notice, plan, question, crew (with Cancel), the providers section and the context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
+| `test/settings_test.dart` | General switches and theme, Core (bundled, custom, Browse, save, Restart, host off), Models, About (versions, update states, Licences search and expand), the tray notice, version constants |
+| `test/tray_test.dart` | The tray menu model, icon file choice, and the integration against fake tray, window and login adapters (close-to-tray, quit, waiting count, login entry) |
+| `test/golden_test.dart` | Main screen, first-run Core, General, Core (custom and bundled), Models, About, Licences, a failure notice, plan, question, crew (with Cancel) and the context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
 | `test/live_test.dart` | Opt-in (`BP_TEST_BIN`): the real host with the offline demo provider |
 
 Goldens are rendered on Linux with the bundled fonts and the Flutter version CI
@@ -151,9 +192,9 @@ pins; renders from another platform will not match.
 
 ## Known gaps
 
-- **Core v0.3.1 host controls need a v0.3.1 host.** A host that advertises `session.list.pagination`, `providers.list`, `roles.set_main` and `child.cancel` gets rail paging ("Show older sessions"), the Models section in Settings, the composer's default-model pick and Cancel on a running child. A v0.3.0 host advertises none of them and shows none; the adapter turns each on by its own feature.
+- **Core v0.3.1 host controls need a v0.3.1 host.** A host that advertises `session.list.pagination`, `providers.list`, `roles.set_main` and `child.cancel` gets rail paging ("Show older sessions"), the Models page in Settings, the composer's default-model pick and Cancel on a running child. A v0.3.0 host advertises none of them and shows none; the adapter turns each on by its own feature.
 - **The model pick is host-wide.** `roles.set_main` saves one default model for every chat; there is no per-chat model. The pick is titled "Default model", and a run in progress keeps its own. There is no new-chat sheet: `session.open` takes only a title, and agent profiles exist only in JS.
-- **Provider setup stays in the host config.** Settings lists providers, whether the host found each key (never the key) and Make default. Adding a provider or setting a key is done in the host configuration: the host reads `$BUBBLEPAW_CONFIG`, else `~/.bubblepaw/config.toml` and `<workspace>/.bubblepaw/config.toml`, and keys come from environment variables the config names. The app never handles keys.
+- **Provider setup stays in the host config.** Settings > Models lists providers, whether the host found each key (never the key) and Make default. Adding a provider or setting a key is done in the host configuration: the host reads `$BUBBLEPAW_CONFIG`, else `~/.bubblepaw/config.toml` and `<workspace>/.bubblepaw/config.toml`, and keys come from environment variables the config names. The app never handles keys.
 - Chat search filters the loaded pages only; the host's `session.list` has no query.
 - Jobs: the stdio host reports none. Cancel is offered in the crew ledger (expanded width), not in the crew strip.
 - Worktrees, crew and the Context pane show only what the stdio backend reports. With BubblePaw-Core v0.3.0 that includes the context (pane, summaries, history ranges) and child questions; it still reports no jobs. Compaction needs a real model, so the demo provider shows an empty structure.

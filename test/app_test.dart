@@ -142,7 +142,7 @@ void main() {
   });
 
   group('settings', () {
-    testWidgets('first run shows the three fields and starts on save', (
+    testWidgets('first run opens Core and starts on save', (
       tester,
     ) async {
       final store = MemoryConfigStore();
@@ -155,12 +155,13 @@ void main() {
       await pumpApp(tester, controller);
 
       expect(controller.phase, HostPhase.setup);
-      expect(find.text('Settings'), findsOneWidget);
-      expect(find.textContaining('not set up yet'), findsOneWidget);
-      expect(find.text('Binary'), findsOneWidget);
-      expect(find.text('Workspace'), findsOneWidget);
+      expect(find.byKey(const ValueKey('page-core')), findsOneWidget);
+      expect(find.text('Not set up'), findsWidgets);
+      expect(find.text('Binary path'), findsOneWidget);
+      expect(find.text('Workspace'), findsNothing);
       expect(find.text('Data directory'), findsOneWidget);
-      expect(find.byKey(const ValueKey('settings-cancel')), findsNothing);
+      // Nothing to go back to before the host has run once.
+      expect(find.byKey(const ValueKey('settings-back')), findsNothing);
 
       // Saving without a binary says what is missing and starts nothing.
       await tester.tap(find.byKey(const ValueKey('settings-save')));
@@ -181,19 +182,50 @@ void main() {
       expect(find.text('Needs approval'), findsOneWidget);
     });
 
-    testWidgets('opens from the rail and cancels back to the chat', (
+    testWidgets('opens from the rail on General and goes back to the chat', (
       tester,
     ) async {
       await pumpApp(tester, Scripted().controller());
 
       await tester.tap(find.text('Settings'));
       await settle(tester);
-      expect(find.text('BubblePaw host'), findsOneWidget);
-      expect(find.byKey(const ValueKey('settings-cancel')), findsOneWidget);
+      expect(find.byKey(const ValueKey('page-general')), findsOneWidget);
+      for (final section in ['general', 'core', 'models', 'about']) {
+        expect(
+          find.byKey(ValueKey('settings-nav-$section')),
+          findsOneWidget,
+        );
+      }
+      expect(find.textContaining('Remote'), findsNothing);
 
-      await tester.tap(find.byKey(const ValueKey('settings-cancel')));
+      await tester.tap(find.byKey(const ValueKey('settings-nav-core')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('page-core')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('settings-back')));
       await settle(tester);
       expect(find.text('Needs approval'), findsOneWidget);
+    });
+
+    testWidgets('at the compact width sections are pushed pages', (
+      tester,
+    ) async {
+      await pumpApp(tester, Scripted().controller(), size: narrow);
+      await tester.tap(find.byKey(const ValueKey('rail-show')));
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('rail-settings')));
+      await settle(tester);
+
+      // The list first, no page beside it.
+      expect(find.byKey(const ValueKey('page-general')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('settings-nav-about')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('page-about')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('settings-page-back')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('page-about')), findsNothing);
+      expect(find.byKey(const ValueKey('settings-nav-core')), findsOneWidget);
     });
   });
 
@@ -287,9 +319,9 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('notice-settings')));
       await settle(tester);
-      expect(find.text('BubblePaw host'), findsOneWidget);
+      expect(find.byKey(const ValueKey('page-core')), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('settings-cancel')));
+      await tester.tap(find.byKey(const ValueKey('settings-back')));
       await settle(tester);
       expect(find.text('BubblePaw binary not found'), findsOneWidget);
     });

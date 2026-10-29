@@ -7,14 +7,19 @@ import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
+import 'package:bubblepaw_desktop/src/platform/releases.dart';
+import 'package:bubblepaw_desktop/src/preferences.dart';
+import 'package:flutter/foundation.dart' show LicenseEntry;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A config store that never touches the disk.
 class MemoryConfigStore extends ConfigStore {
-  MemoryConfigStore([this.saved]) : super(Directory('/nonexistent'));
+  MemoryConfigStore([this.saved, this.prefs = const AppPrefs()])
+    : super(Directory('/nonexistent'));
 
   AppConfig? saved;
+  AppPrefs prefs;
 
   @override
   AppConfig get defaults => const AppConfig(
@@ -28,6 +33,12 @@ class MemoryConfigStore extends ConfigStore {
 
   @override
   Future<void> save(AppConfig config) async => saved = config;
+
+  @override
+  Future<AppPrefs> loadPrefs() async => prefs;
+
+  @override
+  Future<void> savePrefs(AppPrefs next) async => prefs = next;
 }
 
 const sampleConfig = AppConfig(
@@ -47,6 +58,9 @@ Future<void> pumpApp(
   Brightness brightness = Brightness.light,
   bool init = true,
   Future<String?> Function()? pickFolder,
+  Future<String?> Function()? pickBinary,
+  PlatformServices services = const PlatformServices(),
+  Stream<LicenseEntry> Function()? licenceSource,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -56,6 +70,9 @@ Future<void> pumpApp(
       controller: controller,
       brightness: brightness,
       pickFolder: pickFolder ?? (() async => null),
+      pickBinary: pickBinary ?? (() async => null),
+      services: services,
+      licenceSource: licenceSource ?? (() => const Stream.empty()),
     ),
   );
   if (init) await tester.runAsync(controller.init);

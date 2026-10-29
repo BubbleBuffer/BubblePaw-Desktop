@@ -25,12 +25,19 @@ Played _played({
 );
 
 Future<void> _openSettings(WidgetTester tester) async {
+  final show = find.byKey(const ValueKey('rail-show'));
+  if (show.evaluate().isNotEmpty) {
+    await tester.tap(show);
+    await settle(tester);
+  }
   await tester.tap(find.byKey(const ValueKey('rail-settings')));
+  await settle(tester);
+  await tester.tap(find.byKey(const ValueKey('settings-nav-models')));
   await settle(tester);
 }
 
 void main() {
-  group('providers in Settings', () {
+  group('providers in Settings > Models', () {
     testWidgets('list the host providers and say which key is missing', (
       tester,
     ) async {
@@ -69,12 +76,12 @@ void main() {
       expect(button, findsNothing);
     });
 
-    testWidgets('a host without the capability has no section', (tester) async {
+    testWidgets('a host without the capability says so', (tester) async {
       final played = _played(capabilities: stdioCapabilities, providers: false);
       await pumpApp(tester, played.controller());
       await _openSettings(tester);
-      expect(find.text('Models'), findsNothing);
-      expect(find.text('BubblePaw host'), findsOneWidget);
+      expect(find.byKey(const ValueKey('models-unsupported')), findsOneWidget);
+      expect(find.byKey(const ValueKey('provider-demo')), findsNothing);
     });
   });
 
