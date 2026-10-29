@@ -38,6 +38,8 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
+  assets:
+    - assets/icon/tray/
   fonts:
     - family: Bricolage Grotesque
       fonts:

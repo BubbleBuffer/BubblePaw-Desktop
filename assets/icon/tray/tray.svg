@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="300 295 680 680">
+<title>BubblePaw tray glyph (a-folder-cat)</title>
+<defs><mask id="m" maskUnits="userSpaceOnUse" x="300" y="295" width="680" height="680">
+<rect x="300" y="295" width="680" height="680" fill="#000"/>
+<path d="M426.66 434.06L520.53 331.66H546.13L640 425.53L733.87 331.66H759.47L853.34 434.06V621.8L768 758.34H494.93L426.66 690.07Z" fill="#fff" stroke="#fff" stroke-width="30" stroke-linejoin="round"/>
+<path d="M320 760H960L922 940H358Z" fill="#000" stroke="#000" stroke-width="88" stroke-linejoin="round"/>
+<path d="M320 760H960L922 940H358Z" fill="#fff" stroke="#fff" stroke-width="30" stroke-linejoin="round"/>
+<path d="M538 456Q554.56 531.44 630 548Q554.56 564.56 538 640Q521.44 564.56 446 548Q521.44 531.44 538 456Z" fill="#000"/><path d="M742 456Q758.56 531.44 834 548Q758.56 564.56 742 640Q725.44 564.56 650 548Q725.44 531.44 742 456Z" fill="#000"/>
+
+</mask></defs>
+<rect x="300" y="295" width="680" height="680" fill="#FFFAF1" mask="url(#m)"/>
+</svg>

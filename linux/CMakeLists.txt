@@ -97,6 +97,12 @@ install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
 install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   COMPONENT Runtime)
 
+# Window icon: my_application.cc loads data/icon/bubblepaw-icon.png beside the
+# executable.
+install(FILES "${CMAKE_SOURCE_DIR}/../assets/icon/png/icon-256.png"
+  DESTINATION "${INSTALL_BUNDLE_DATA_DIR}/icon" RENAME "bubblepaw-icon.png"
+  COMPONENT Runtime)
+
 install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
 
