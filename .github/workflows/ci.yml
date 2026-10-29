@@ -66,6 +66,20 @@ jobs:
           (cd "$dir" && grep " $archive\$" SHA256SUMS | sha256sum -c - && tar xzf "$archive")
           BP_TEST_BIN="$dir/bubblepaw-$BP_VERSION-x86_64-unknown-linux-gnu/bubblepaw" \
             flutter test --tags live test/live_test.dart
+      # Catches native breakage: the plugin registrants, the tray's
+      # libayatana-appindicator and the runner changes.
+      - name: linux build (debug)
+        if: always()
+        run: |
+          missing=""
+          for p in clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev; do
+            dpkg -s "$p" >/dev/null 2>&1 || missing="$missing $p"
+          done
+          if [ -n "$missing" ]; then
+            sudo -n apt-get update -qq
+            sudo -n apt-get install -y -qq $missing
+          fi
+          flutter build linux --debug
       - name: Patch with formatting and new goldens (manual runs)
         if: always() && github.event_name == 'workflow_dispatch'
         run: |
