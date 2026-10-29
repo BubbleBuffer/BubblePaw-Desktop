@@ -11,10 +11,10 @@
     if (k && v !== undefined) H[k] = decodeURIComponent(v);
   });
   const S = { screen: H.screen || 'list', size: H.size || 'desktop', still: H.still || '0', tall: H.tall || '0', chrome: H.chrome || '1', pv: H.pv || '' };
-  const SCREENS = [['list', '1', 'Chat list'], ['other', '2', 'Other sessions'], ['imported', '3', 'Show in BubblePaw'], ['chat', '4', 'Imported chat'], ['general', '5', 'Setting']];
+  const SCREENS = [['list', '1', 'Chat list'], ['other', '2', 'Other sessions'], ['imported', '3', 'Add to project'], ['chat', '4', 'Added chat'], ['general', '5', 'Setting']];
 
   /* ---------- data ---------- */
-  const SRC = { cli: ['terminal', 'CLI', 'the CLI'], sdk: ['code', 'SDK', 'the SDK'], tool: ['plug', 'Other tool', 'another tool'] };
+  const SRC = { cli: ['terminal', 'CLI', 'the CLI'], sdk: ['code', 'Scratch', 'Scratch'], tool: ['code', 'SDK app', 'an SDK app'] };
   const SEL = 'Quota bar flickers on reconnect';
   const BASE = [
     { id: 'garden-api', last: 'Now', chats: [{ t: SEL, st: 'approval', s: 'Needs approval', k: 'chat' }, { t: 'Review the pairing copy', st: 'running', s: 'Running', k: 'chat' }, { t: 'Plan the settings page', st: 'idle', s: 'Finished 2h ago', k: 'chat' }] },
@@ -147,7 +147,7 @@
       <div class="stream">${transcript(false)}</div>${composer(false)}</div>`;
     if (M.sel.k === 'prev') return `<div class="main"><div class="topbar"><span class="ct">${o.t}</span>${srcTag(o)}<span class="tag">${o.proj}</span>${statusPill(o)}</div>
       ${previewBanner(o, false)}<div class="stream">${otherTranscript(o, false, o.run)}</div><div class="composer dis"><div class="ph">Read-only preview</div></div></div>`;
-    return `<div class="main"><div class="topbar"><span class="ct">${o.t}</span>${srcTag(o)}${statusPill(o)}<span class="tag">${o.proj}</span><span class="grow" style="flex:1"></span>${btn('Hide', { icon: 'eye-off', cls: 'quiet', act: 'hide', arg: o.id })}</div>
+    return `<div class="main"><div class="topbar"><span class="ct">${o.t}</span>${srcTag(o)}${statusPill(o)}<span class="tag">${o.proj}</span><span class="grow" style="flex:1"></span>${btn('Remove from list', { icon: 'eye-off', cls: 'quiet', act: 'hide', arg: o.id })}</div>
       ${M.note ? impNote(o) : ''}<div class="stream">${otherTranscript(o, false, o.run)}</div>${composer(false, o)}</div>`;
   }
 
@@ -167,7 +167,7 @@
       <div class="stream">${transcript(true)}</div>${composer(true)}</div></div>`;
     if (M.sel.k === 'prev') return `<div class="phone-col"><div class="statusgap"></div><div class="main"><div class="topbar">${iconBtn('chevron-left', 'Back to chats', 'pv', 'list')}<div class="two"><div class="ct">${o.t}</div><div class="sub">${srcTag(o)}<span class="tag">${o.proj}</span><span>${o.run ? 'Running' : 'Idle'}</span></div></div></div>
       ${previewBanner(o, true)}<div class="stream">${otherTranscript(o, true, o.run)}</div><div class="composer dis"><div class="ph">Read-only preview</div><div class="homebar"></div></div></div></div>`;
-    return `<div class="phone-col"><div class="statusgap"></div><div class="main"><div class="topbar">${iconBtn('chevron-left', 'Back to chats', 'pv', 'list')}<div class="two"><div class="ct">${o.t}</div><div class="sub">${srcTag(o)}<span class="tag">${o.proj}</span><span class="${o.run ? 'on' : ''}">${o.run ? `Running in ${SRC[o.src][2]}` : 'Idle'}</span></div></div>${btn('Hide', { icon: 'eye-off', cls: 'quiet', act: 'hide', arg: o.id })}</div>
+    return `<div class="phone-col"><div class="statusgap"></div><div class="main"><div class="topbar">${iconBtn('chevron-left', 'Back to chats', 'pv', 'list')}<div class="two"><div class="ct">${o.t}</div><div class="sub">${srcTag(o)}<span class="tag">${o.proj}</span><span class="${o.run ? 'on' : ''}">${o.run ? `Running in ${SRC[o.src][2]}` : 'Idle'}</span></div></div>${btn('Remove from list', { icon: 'eye-off', cls: 'quiet', act: 'hide', arg: o.id })}</div>
       ${M.note ? impNote(o) : ''}<div class="stream">${otherTranscript(o, true, o.run)}</div>${composer(true, o)}</div></div>`;
   }
 
@@ -175,7 +175,7 @@
   const NAV = [['general', 'General', 'sliders-horizontal'], ['host', 'Core', 'cpu'], ['models', 'Models', 'layers'], ['remote', 'Remote access', 'globe'], ['about', 'About', 'info']];
   function pageGeneral() {
     return sec('Appearance', `<div class="rowline"><div class="grow"><div class="t">Theme</div><div class="s">System follows the operating system.</div></div>${seg([['system', 'System'], ['light', 'Light'], ['dark', 'Dark']], M.pref, 'pref')}</div>`) +
-      sec('Sessions', `<div class="rowline"><div class="grow"><div class="t">Show sessions from other tools</div><div class="s">${M.tools ? 'Sessions started in the CLI, the SDK or other tools appear in your project lists with a source tag.' : 'Sessions started in the CLI, the SDK or other tools stay in a collapsed Other sessions row under each host.'}</div></div>${sw(M.tools, 'Show sessions from other tools', 'tools')}</div>
+      sec('Sessions', `<div class="rowline"><div class="grow"><div class="t">Show chats started outside BubblePaw</div><div class="s">${M.tools ? 'Chats started in the terminal or by other apps appear in your project lists, tagged with where they started.' : 'Chats started in the terminal or by other apps stay in a collapsed Other sessions row under each host.'}</div></div>${sw(M.tools, 'Show chats started outside BubblePaw', 'tools')}</div>
         <p class="hint" style="margin:4px 0 0">Subagent sessions never appear in the list. They stay inside their parent chat.</p>`);
   }
   function settingsDesktop() {
