@@ -1,0 +1,171 @@
+name: Release desktop
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        default: stable
+      source_sha:
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release-${{ inputs.channel || github.ref }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: 3.47.7
+
+jobs:
+  identity:
+    name: Validate source and version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      channel: ${{ steps.identity.outputs.channel }}
+      tag: ${{ steps.identity.outputs.tag }}
+      sha: ${{ steps.identity.outputs.sha }}
+      version: ${{ steps.identity.outputs.version }}
+      build_name: ${{ steps.identity.outputs.build_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate tag against pubspec.yaml
+        id: identity
+        env:
+          CHANNEL: ${{ inputs.channel || 'stable' }}
+          TAG: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ inputs.source_sha || github.sha }}
+        run: >-
+          python installer/release_metadata.py prepare
+          --channel "$CHANNEL" --tag "$TAG" --sha "$SOURCE_SHA"
+          --output "$GITHUB_OUTPUT"
+
+  windows:
+    name: Windows x64 installer
+    needs: identity
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      VERSION: ${{ needs.identity.outputs.version }}
+      BUILD_NAME: ${{ needs.identity.outputs.build_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.identity.outputs.sha }}
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter pub get
+      - name: Build release bundle
+        shell: pwsh
+        run: |
+          flutter build windows --release --build-name "$env:BUILD_NAME" --build-number 0
+          if ($LASTEXITCODE -ne 0) { throw 'Flutter Windows build failed' }
+      - name: Package with Inno Setup
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (!(Test-Path -LiteralPath $compiler)) { throw 'Hosted runner is missing Inno Setup 6' }
+          $bundle = Join-Path $env:GITHUB_WORKSPACE 'build/windows/x64/runner/Release'
+          if (!(Test-Path -LiteralPath (Join-Path $bundle 'bubblepaw_desktop.exe'))) { throw 'Windows bundle is missing its executable' }
+          $output = Join-Path $env:GITHUB_WORKSPACE 'dist'
+          & $compiler "/DMyAppVersion=$env:VERSION" "/DSourceDir=$bundle" "/DOutputDir=$output" installer/bubblepaw.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
+          $installer = Join-Path $output "BubblePaw-$env:VERSION-windows-x64-setup.exe"
+          if (!(Test-Path -LiteralPath $installer)) { throw 'Expected installer was not produced' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: dist/BubblePaw-${{ env.VERSION }}-windows-x64-setup.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  linux:
+    name: Linux x64 bundle
+    needs: identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ needs.identity.outputs.version }}
+      BUILD_NAME: ${{ needs.identity.outputs.build_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.identity.outputs.sha }}
+          persist-credentials: false
+      - name: Install Linux desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter pub get
+      - name: Build and archive the complete bundle
+        run: |
+          set -euo pipefail
+          flutter build linux --release --build-name "$BUILD_NAME" --build-number 0
+          test -x build/linux/x64/release/bundle/bubblepaw_desktop
+          mkdir -p dist
+          tar -czf "dist/BubblePaw-$VERSION-linux-x64.tar.gz" -C build/linux/x64/release bundle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: dist/BubblePaw-${{ env.VERSION }}-linux-x64.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Stage assets and publish
+    needs: [identity, windows, linux]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      CHANNEL: ${{ needs.identity.outputs.channel }}
+      VERSION: ${{ needs.identity.outputs.version }}
+      TAG: ${{ needs.identity.outputs.tag }}
+      SOURCE_SHA: ${{ needs.identity.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.identity.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Generate update.json and SHA256SUMS
+        run: >-
+          python installer/release_metadata.py manifest --directory dist
+          --channel "$CHANNEL" --version "$VERSION" --tag "$TAG"
+          --repository "$GITHUB_REPOSITORY"
+      - name: Publish complete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python installer/publish_release.py publish --directory dist
+          --channel "$CHANNEL" --version "$VERSION" --tag "$TAG" --sha "$SOURCE_SHA"
