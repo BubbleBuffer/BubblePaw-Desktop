@@ -334,3 +334,15 @@ body.still * { animation: none !important; }
 .phone .dev .s .mono { display: block; }
 .phone .dev > .pill, .phone .dev > .tag { margin-left: 48px; }
 .phone .dev .sep { display: none; }
+
+.empty { padding: 14px 0; color: var(--muted); font-size: 13px; }
+.field.err .input { border-color: var(--danger-ink); }
+.errtxt { color: var(--danger-ink); }
+.btn:disabled .ic { opacity: .6; }
+.phone .overlay { place-items: end stretch; }
+.phone .dialog { width: 100%; border-radius: 18px 18px 0 0; border-width: 1px 0 0; padding-bottom: 28px; }
+.phone .dialog footer { flex-direction: column-reverse; align-items: stretch; }
+.phone .dialog footer .btn { width: 100%; }
+.phone .dialog footer .grow { justify-content: center; }
+.phone .dialog .dbody { max-height: 62vh; overflow: auto; }
+.phone .dialog > header { padding-right: 8px; }

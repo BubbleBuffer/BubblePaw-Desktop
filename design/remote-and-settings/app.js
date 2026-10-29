@@ -1,447 +1,565 @@
 /* BubblePaw mockups: settings, remote access, pairing, phone. Static, vanilla JS, no build.
-   State lives in the URL hash, so a screen and its state can be linked or captured. */
+   One model (M) holds everything the pages show, so controls keep their state while you click around.
+   The URL hash carries screen, size, theme and page, and can also seed a state for a screenshot. */
 (function () {
   'use strict';
 
-  const SCREENS = [
-    ['settings', '1', 'Settings'],
-    ['share', '2', 'Share this host'],
-    ['pair', '3', 'Pairing, host'],
-    ['add', '4', 'Pairing, phone'],
-    ['phone', '5', 'Phone chat'],
-    ['switcher', '6', 'Host switcher'],
-  ];
-  const FIXED_SIZE = { share: 'desktop', pair: 'desktop', add: 'phone', phone: 'phone', switcher: 'desktop' };
-  const DEFAULTS = {
-    screen: 'settings', size: 'desktop', theme: 'light', page: 'general', ppage: 'list', tab: 'share',
-    reach: 'temp', cf: 'connected', tunnel: 'connected', cfd: 'ok', on: '1',
-    step: '1', add: '1', sheet: '1', sw: '1', pop: '1', still: '0', tall: '0', chrome: '1',
-  };
-  const S = Object.assign({}, DEFAULTS);
+  /* ---------- hash ---------- */
+  const H = {};
   (location.hash || '').replace(/^#/, '').split('&').forEach((kv) => {
     const [k, v] = kv.split('=');
-    if (k && k in DEFAULTS && v !== undefined) S[k] = decodeURIComponent(v);
+    if (k && v !== undefined) H[k] = decodeURIComponent(v);
   });
+  const S = Object.assign({ screen: 'settings', size: 'desktop', page: 'general', ppage: 'list', tab: 'share', still: '0', tall: '0', chrome: '1' },
+    ...['screen', 'size', 'page', 'ppage', 'tab', 'still', 'tall', 'chrome'].map((k) => (k in H ? { [k]: H[k] } : {})));
+  const SCREENS = [
+    ['settings', '1', 'Settings'], ['share', '2', 'Share this host'], ['pair', '3', 'Pairing, host'],
+    ['add', '4', 'Pairing, phone'], ['phone', '5', 'Phone chat'], ['switcher', '6', 'Host switcher'],
+  ];
+  const FIXED = { share: 'desktop', pair: 'desktop', add: 'phone', phone: 'phone', switcher: 'desktop' };
+
+  /* ---------- model ---------- */
+  const ALPHA = 'ABCDEFGHJKMNPQRSTVWXYZ0123456789';
+  const rnd = (n) => Array.from({ length: n }, () => ALPHA[Math.floor(Math.random() * ALPHA.length)]).join('');
+  const rid = () => [rnd(4), rnd(4), rnd(4), rnd(4)].join('-');
+  const hex = () => Array.from({ length: 6 }, () => Math.floor(Math.random() * 65536).toString(16).padStart(4, '0')).join(' ');
+  const WORDS = ['tidy', 'violet', 'harbor', 'amber', 'quiet', 'maple', 'river', 'lantern', 'copper', 'meadow'];
+  const tempAddr = () => `${WORDS[Math.floor(Math.random() * 10)]}-${WORDS[Math.floor(Math.random() * 10)]}-${WORDS[Math.floor(Math.random() * 10)]}-${rnd(4).toLowerCase()}.trycloudflare.com`;
+  let uid = 10;
+
+  const M = {
+    pref: H.theme || 'light', turn: 'closed', login: false,
+    f: { binary: '/opt/bubblepaw/bubblepaw', workspace: '/home/maya/projects/bubblepaw-base', data: '/home/maya/.local/share/bubblepaw-desktop/data', args: '', relay: 'wss://relay.example.com', hostname: 'bubblepaw-desk', zone: 'example.com', token: '', devname: 'Studio desktop', pairName: 'Pixel 8', addCode: '', pass1: '', pass2: '', keyFile: '', keySecret: '', apiKey: '' },
+    hostState: 'running', hostSaved: null,
+    on: H.on !== '0', reach: H.reach || 'temp', cf: { signed: H.cf !== 'signedout' && H.cf !== 'token', tokenOpen: H.cf === 'token', busy: false, account: 'maya@example.com' },
+    cfd: H.cfd !== 'missing', cfdBusy: false, upd: 'idle', ver: '2026.10.1',
+    tunnel: H.tunnel === 'starting' ? 'starting' : 'connected', fail: H.tunnel === 'stopped', addr: { temp: 'tidy-violet-harbor-7f3a.trycloudflare.com' },
+    devices: [
+      { id: 'd1', name: "Maya's Pixel", icon: 'smartphone', prof: 'Edit', seen: '2 minutes ago' },
+      { id: 'd2', name: 'Work laptop', icon: 'laptop', prof: 'Full', seen: 'today, 09:14' },
+      { id: 'd3', name: 'Pixel tablet', icon: 'tablet', prof: 'Read', seen: '5 days ago' },
+    ],
+    hosts: [
+      { id: 'h1', name: 'Studio PC', hid: 'M3QX-84KD-7TNB-2VPE', online: true, type: 'Cloudflare Tunnel', seen: '' },
+      { id: 'h2', name: 'Home server', hid: 'R9HT-C2WA-5LJF-Q6ZM', online: false, type: 'Relay', seen: 'last seen 3 days ago' },
+    ],
+    key: { id: 'K7MQ-2X9F-D4RT-8WHN', fp: 'a41c 7e09 d2b8 5f36 1c9a e07d' },
+    providers: [
+      { name: 'deepseek', kind: 'openai-compatible', url: 'https://api.deepseek.com/v1', key: true, models: ['deepseek-v4.1-flash', 'deepseek-v4.1-pro'] },
+      { name: 'anthropic', kind: 'anthropic', url: 'https://api.anthropic.com', key: true, models: ['claude-haiku-5.5', 'claude-sonnet-5.5'] },
+      { name: 'openrouter', kind: 'openai-compatible', url: 'https://openrouter.ai/api/v1', key: false, models: ['qwen3-coder'] },
+    ],
+    def: 'deepseek-v4.1-flash',
+    dlg: null, add: { step: 1 }, addDone: false, back: 'phone',
+    sheet: H.sheet !== '0', sw: H.sw !== '0', pop: H.pop !== '0', dsel: { h: 'local', w: 'bubblepaw-base' }, active: 'h1', ws: 'bubblepaw-base',
+    fail2: false,
+  };
+  if (S.screen === 'pair') M.dlg = { type: 'pair', step: +(H.step || 1), left: 292, code: 'K7M2Q-9XFD4', prof: 'edit' };
+  if (S.screen === 'add') { M.add = { step: +(H.add || 1) }; if (M.add.step === 1 && H.add) M.f.addCode = 'K7M2Q9XFD4'; }
+  if (S.screen === 'pair' || S.screen === 'share') { S.page = 'remote'; S.tab = 'share'; }
 
   /* ---------- helpers ---------- */
+  const ph = () => (FIXED[S.screen] || S.size) === 'phone';
   const ic = (n, s = 16, cls = '') =>
     `<svg class="ic ${cls}" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${window.LUCIDE[n] || ''}</svg>`;
-  const btn = (label, o = {}) =>
-    `<button class="btn ${o.kind || ''} ${o.cls || ''}" ${o.act ? `data-act="${o.act}"` : ''} ${o.arg ? `data-arg="${o.arg}"` : ''} ${o.disabled ? 'disabled' : ''}>${o.icon ? ic(o.icon, 15) : ''}${label}</button>`;
-  const iconBtn = (name, label, act, arg) =>
-    `<button class="iconbtn" aria-label="${label}" title="${label}" ${act ? `data-act="${act}"` : ''} ${arg ? `data-arg="${arg}"` : ''}>${ic(name, 18)}</button>`;
-  const field = (label, hintText, value, o = {}) =>
-    `<div class="field"><label>${label}</label>${hintText ? `<div class="hint">${hintText}</div>` : ''}<input class="input ${o.sans ? 'sans' : ''}" value="${value || ''}" placeholder="${o.ph || ''}" ${o.type ? `type="${o.type}"` : ''}></div>`;
-  const sw = (on, label, act) =>
-    `<button class="switch" role="switch" aria-checked="${on}" data-act="${act}"><span class="track"><span class="thumb"></span></span><span class="st">${on ? 'On' : 'Off'}</span><span class="sr">${label}</span></button>`;
-  const seg = (items, cur, act) =>
-    `<div class="seg" role="group">${items.map(([v, l]) => `<button aria-pressed="${cur === v}" data-act="${act}" data-arg="${v}">${l}</button>`).join('')}</div>`;
+  const A = (act, arg) => `data-act="${act}"${arg !== undefined ? ` data-arg="${arg}"` : ''}`;
+  const btn = (label, o = {}) => `<button class="btn ${o.kind || ''} ${o.cls || ''}" ${o.act ? A(o.act, o.arg) : ''} ${o.disabled ? 'disabled' : ''}>${o.icon ? ic(o.icon, 15) : ''}${label}</button>`;
+  const iconBtn = (name, label, act, arg) => `<button class="iconbtn" aria-label="${label}" title="${label}" ${A(act, arg)}>${ic(name, 18)}</button>`;
+  const field = (label, hintText, key, o = {}) =>
+    `<div class="field ${o.err ? 'err' : ''}"><label for="f-${key}">${label}</label>${hintText ? `<div class="hint">${hintText}</div>` : ''}<input id="f-${key}" class="input ${o.sans ? 'sans' : ''}" data-k="${key}" value="${(M.f[key] || '').replace(/"/g, '&quot;')}" placeholder="${o.ph || ''}" ${o.type ? `type="${o.type}"` : ''} ${o.cap ? 'autocapitalize="characters"' : ''}>${o.err ? `<div class="hint errtxt">${o.err}</div>` : ''}</div>`;
+  const sw = (on, label, act) => `<button class="switch" role="switch" aria-checked="${on}" ${A(act)}><span class="track"><span class="thumb"></span></span><span class="st">${on ? 'On' : 'Off'}</span><span class="sr">${label}</span></button>`;
+  const seg = (items, cur, act) => `<div class="seg" role="group">${items.map(([v, l]) => `<button aria-pressed="${cur === v}" ${A(act, v)}>${l}</button>`).join('')}</div>`;
   const pill = (txt, kind) => `<span class="pill ${kind}">${txt}</span>`;
   const sec = (title, body, right = '') => `<section class="sec"><h2><span>${title}</span>${right}</h2>${body}</section>`;
-  const isPhone = () => S.size === 'phone';
+  const addrNow = () => (M.reach === 'temp' ? M.addr.temp : M.reach === 'domain' ? `${M.f.hostname || 'host'}.${M.f.zone}` : M.f.relay.replace(/^wss?:\/\//, ''));
+  const hostType = () => (M.reach === 'relay' ? 'Relay' : 'Cloudflare Tunnel');
 
-  /* ---------- Settings pages ---------- */
+  /* tunnel */
+  function tun() {
+    if (!M.on) return { s: 'stopped', why: 'Sharing is off.', block: true };
+    if (M.reach !== 'relay' && !M.cfd) return { s: 'stopped', why: 'cloudflared is not installed.', block: true };
+    if (M.reach === 'domain' && !M.cf.signed) return { s: 'stopped', why: 'Not signed in to Cloudflare.', block: true };
+    if (M.reach === 'domain' && !M.f.hostname.trim()) return { s: 'stopped', why: 'Enter a hostname.', block: true };
+    if (M.fail) return { s: 'stopped', why: M.reach === 'relay' ? 'The relay did not answer. The host retries every 30 seconds.' : 'cloudflared exited with code 1. Paired devices stay paired.' };
+    return { s: M.tunnel };
+  }
+  let tTimer = null;
+  function restart() {
+    M.fail = false; M.tunnel = 'starting';
+    if (M.reach === 'temp') M.addr.temp = tempAddr();
+    clearTimeout(tTimer);
+    if (S.still !== '1') tTimer = setTimeout(() => { M.tunnel = 'connected'; render(); }, 1000);
+  }
+  function later(fn, ms) { if (S.still !== '1') setTimeout(() => { fn(); render(); }, ms); }
+
+  /* ---------- settings pages ---------- */
   const NAV = [
-    ['general', 'General', 'sliders-horizontal', ''],
-    ['host', "This computer's host", 'cpu', 'desktop'],
-    ['models', 'Models', 'layers', ''],
-    ['remote', 'Remote access', 'globe', ''],
-    ['key', 'Device key', 'key-round', ''],
-    ['about', 'About', 'info', ''],
+    ['general', 'General', 'sliders-horizontal', ''], ['host', "This computer's host", 'cpu', 'desktop'], ['models', 'Models', 'layers', ''],
+    ['remote', 'Remote access', 'globe', ''], ['key', 'Device key', 'key-round', ''], ['about', 'About', 'info', ''],
   ];
-  const PHONE_SUB = {
-    general: 'System theme', models: '3 providers, 2 with a key', remote: '2 hosts, Studio PC online',
-    key: 'ID K7MQ-2X9F-D4RT-8WHN', about: 'Version 0.1.0',
+  const phoneSub = {
+    general: () => ({ system: 'System theme', light: 'Light theme', dark: 'Dark theme' }[M.pref]),
+    models: () => `Default ${M.def}`,
+    remote: () => `${M.hosts.length} host${M.hosts.length === 1 ? '' : 's'}, ${M.hosts.filter((h) => h.online).length} online`,
+    key: () => `ID ${M.key.id}`, about: () => 'Version 0.1.0',
   };
 
-  function pageGeneral(ph) {
+  function pageGeneral(p) {
     return sec('Appearance',
-      `<div class="rowline"><div class="grow"><div class="t">Theme</div><div class="s">System follows the operating system.</div></div>${seg([['system', 'System'], ['light', 'Light'], ['dark', 'Dark']], S.theme === 'dark' ? 'dark' : 'light', 'theme')}</div>
-       <div class="rowline"><div class="grow"><div class="t">Turn layout</div><div class="s">How the steps of a finished turn are shown.</div></div>${seg([['closed', 'Collapsed'], ['open', 'Open']], 'closed', 'noop')}</div>`) +
-      (ph ? '' : sec('Startup',
-        `<div class="rowline"><div class="grow"><div class="t">Open at login</div><div class="s">BubblePaw starts with this computer. Remote access only works while it is running.</div></div>${sw(false, 'Open at login', 'noop')}</div>`));
+      `<div class="rowline"><div class="grow"><div class="t">Theme</div><div class="s">System follows the operating system.</div></div>${seg([['system', 'System'], ['light', 'Light'], ['dark', 'Dark']], M.pref, 'pref')}</div>
+       <div class="rowline"><div class="grow"><div class="t">Turn layout</div><div class="s">How the steps of a finished turn are shown.</div></div>${seg([['closed', 'Collapsed'], ['open', 'Open']], M.turn, 'turn')}</div>`) +
+      (p ? '' : sec('Startup', `<div class="rowline"><div class="grow"><div class="t">Open at login</div><div class="s">BubblePaw starts with this computer. Remote access only works while it is running.</div></div>${sw(M.login, 'Open at login', 'login')}</div>`));
   }
-  function pageHost(ph) {
+  function pageHost() {
+    const run = M.hostState === 'running';
     return sec('BubblePaw host',
-      `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Status</div><div class="s mono">bubblepaw 0.3.0 · protocol 0.1 · pid 18432</div></div>${pill('Running', 'ok')}${btn('Restart', { icon: 'refresh-cw' })}</div>` +
-      field('Binary', 'Path to the bubblepaw executable.', '/opt/bubblepaw/bubblepaw') +
-      field('Workspace', 'The directory the agent works in.', '/home/maya/projects/bubblepaw-base') +
-      field('Data directory', "Where this app's chats are stored. Do not share it with another BubblePaw host.", '/home/maya/.local/share/bubblepaw-desktop/data') +
-      field('Extra host arguments', "Added to the host's command line, for example --provider demo. Optional.", '', { ph: 'None' }) +
-      `<div class="actions">${btn('Save and restart', { kind: 'primary' })}${btn('Cancel')}</div>`);
+      `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Status</div><div class="s mono">bubblepaw 0.3.0 · protocol 0.1</div></div>${run ? pill('Running', 'ok') : pill('Restarting', 'attn')}${btn('Restart', { icon: 'refresh-cw', act: 'hostRestart', disabled: !run })}</div>` +
+      field('Binary', 'Path to the bubblepaw executable.', 'binary') + field('Workspace', 'The directory the agent works in.', 'workspace') +
+      field('Data directory', "Where this app's chats are stored. Do not share it with another BubblePaw host.", 'data') +
+      field('Extra host arguments', "Added to the host's command line, for example --provider demo. Optional.", 'args', { ph: 'None' }) +
+      `<div class="actions">${btn('Save and restart', { kind: 'primary', act: 'hostRestart', disabled: !run })}${btn('Cancel', { act: 'hostCancel' })}${M.hostSaved ? `<span class="hint">${M.hostSaved}</span>` : ''}</div>`);
   }
-  function pageModels(ph) {
-    const prov = (n, kind, state, cls) =>
-      `<div class="rowline"><div class="grow"><div class="t">${n} <span class="mono muted" style="font-size:12px;font-weight:400">${kind}</span></div><div class="s">${state[1]}</div></div>${pill(state[0], cls)}${btn(cls === 'off' ? 'Add key' : 'Edit key')}</div>`;
-    return sec('Default model',
-      `<div class="field"><div class="hint">New runs in every chat use this model. A run in progress keeps its own.</div><select class="input"><option>deepseek-v4.1-flash</option><option>claude-haiku-5.5</option></select></div>`) +
-      sec('Providers',
-        prov('deepseek', 'openai-compatible', ['Key saved', 'https://api.deepseek.com/v1'], 'ok') +
-        prov('anthropic', 'anthropic', ['Key saved', 'https://api.anthropic.com'], 'ok') +
-        prov('openrouter', 'openai-compatible', ['Key missing', 'The host did not find OPENROUTER_API_KEY. Add a key to use this provider.'], 'attn'));
+  function pageModels() {
+    const prov = M.providers.map((p) => {
+      const rows = p.models.map((m) => `<div class="rowline"><div class="grow mono" style="font-size:13.6px">${m}</div>${M.def === m ? `<span class="pill ok">Default</span>` : btn('Make default', { act: 'def', arg: m, disabled: !p.key })}</div>`).join('');
+      return `<div style="margin-bottom:16px"><div class="rowline" style="border:0;padding-bottom:2px"><div class="grow"><span class="t">${p.name}</span> <span class="mono muted" style="font-size:12px">${p.kind}</span> ${p.key ? '' : pill('Key missing', 'attn')}</div>${btn(p.key ? 'Edit key' : 'Add key', { act: 'keyDlg', arg: p.name })}</div>
+        <div class="hint mono" style="margin-bottom:4px">${p.url}</div>${p.key ? '' : '<div class="hint">The host did not find a key for this provider. Add a key to use its models.</div>'}${rows}</div>`;
+    }).join('');
+    return sec('Default model', `<div class="field"><div class="hint">New runs in every chat use this model. A run in progress keeps its own.</div><div class="mono" style="font-size:15px">${M.def}</div></div>`) + sec('Providers', prov);
   }
-  function pageKey(ph) {
+  function pageKey() {
+    const n = M.devices.length, hn = M.hosts.length;
+    const cons = n + hn ? `All ${n} paired device${n === 1 ? '' : 's'} and ${hn} host${hn === 1 ? '' : 's'} you can open stop recognising this device, and each pairing has to be done again.` : 'This device has no pairings yet, so nothing else breaks.';
     return sec('This device',
-      `<div class="card"><div class="kv"><span class="k">Device ID</span><span class="v mono">K7MQ-2X9F-D4RT-8WHN</span>${btn('Copy', { icon: 'copy', cls: 'quiet', act: 'copy' })}</div>
-        <div class="kv"><span class="k">Fingerprint</span><span class="v mono" style="font-size:12.5px">a41c 7e09 d2b8 5f36 1c9a e07d</span><span></span></div></div>`) +
+      `<div class="card"><div class="kv"><span class="k">Device ID</span><span class="v mono">${M.key.id}</span>${btn('Copy', { icon: 'copy', cls: 'quiet', act: 'copy' })}</div>
+        <div class="kv"><span class="k">Fingerprint</span><span class="v mono" style="font-size:12.5px">${M.key.fp}</span><span></span></div></div>`) +
       sec('Key file',
-        `<div class="rowline"><div class="grow"><div class="t">Export key file</div><div class="s">Saves a .bpkey file locked with a passphrase you choose. The same key works in BubblePlay.</div></div>${btn('Export…', { icon: 'download' })}</div>
-         <div class="rowline"><div class="grow"><div class="t">Import key file</div><div class="s">Replaces this device's key. Existing pairings stop working.</div></div>${btn('Import…', { icon: 'folder-open' })}</div>`) +
-      sec('Regenerate',
-        `<div class="notice danger">${ic('circle-alert', 16)}<div>Regenerating creates a new device ID. All 3 paired devices and both hosts you can open stop recognising this device, and each pairing has to be done again.</div></div>${btn('Regenerate device key', { kind: 'danger', icon: 'trash-2' })}`);
+        `<div class="rowline"><div class="grow"><div class="t">Export key file</div><div class="s">Saves a .bpkey file locked with a passphrase you choose. The same key works in BubblePlay.</div></div>${btn('Export…', { icon: 'download', act: 'dlg', arg: 'export' })}</div>
+         <div class="rowline"><div class="grow"><div class="t">Import key file</div><div class="s">Replaces this device's key. Existing pairings stop working.</div></div>${btn('Import…', { icon: 'folder-open', act: 'dlg', arg: 'import' })}</div>`) +
+      sec('Regenerate', `<div class="notice danger">${ic('circle-alert', 16)}<div>Regenerating creates a new device ID. ${cons}</div></div>${btn('Regenerate device key…', { kind: 'danger', icon: 'trash-2', act: 'dlg', arg: 'regen' })}`);
   }
   function pageAbout() {
-    return sec('Versions',
-      `<div class="card"><div class="kv"><span class="k">BubblePaw</span><span class="v mono">0.1.0+1</span><span></span></div>
-        <div class="kv"><span class="k">Agent kit</span><span class="v mono">v0.15.7</span><span></span></div>
-        <div class="kv"><span class="k">Host</span><span class="v mono">bubblepaw 0.3.0</span><span></span></div>
-        <div class="kv"><span class="k">Protocol</span><span class="v mono">0.1</span><span></span></div></div>`) +
-      sec('Licences', `<div class="rowline"><div class="grow"><div class="t">Open source licences</div><div class="s">Fonts, icons and packages bundled with this app.</div></div>${btn('View', { icon: 'chevron-right' })}</div>`);
+    return sec('Versions', `<div class="card"><div class="kv"><span class="k">BubblePaw</span><span class="v mono">0.1.0+1</span><span></span></div><div class="kv"><span class="k">Agent kit</span><span class="v mono">v0.15.7</span><span></span></div><div class="kv"><span class="k">Host</span><span class="v mono">bubblepaw 0.3.0</span><span></span></div><div class="kv"><span class="k">Protocol</span><span class="v mono">0.1</span><span></span></div></div>`) +
+      sec('Licences', `<div class="rowline"><div class="grow"><div class="t">Open source licences</div><div class="s">Fonts, icons and packages bundled with this app.</div></div>${btn('View', { icon: 'chevron-right', act: 'dlg', arg: 'licences' })}</div>`);
   }
 
-  /* Remote access: hosts you can open */
-  function hostsList(ph) {
-    const row = (name, id, online, type, seen) =>
-      `<div class="dev"><span class="di">${ic('monitor', 18)}</span><div class="grow"><div class="t">${name}</div><div class="s"><span class="mono">${id}</span><span class="sep"> · </span>${type}${seen ? ' · ' + seen : ''}</div></div>${online ? pill('Online', 'ok') : pill('Offline', 'off')}${btn('Remove', { cls: 'quiet' })}</div>`;
-    return sec('Hosts you can open',
-      row('Studio PC', 'M3QX-84KD-7TNB-2VPE', true, 'Cloudflare Tunnel', '') +
-      row('Home server', 'R9HT-C2WA-5LJF-Q6ZM', false, 'Relay', 'last seen 3 days ago'),
-      btn('Add a host', { icon: 'plus', kind: ph ? 'primary' : '', act: 'goto', arg: 'add' })) +
+  function hostsList(p) {
+    const rows = M.hosts.length ? M.hosts.map((h) =>
+      `<div class="dev"><span class="di">${ic('monitor', 18)}</span><div class="grow"><div class="t">${h.name}</div><div class="s"><span class="mono">${h.hid}</span><span class="sep"> · </span>${h.type}${h.seen ? ' · ' + h.seen : ''}</div></div>${h.online ? pill('Online', 'ok') : pill('Offline', 'off')}${btn('Remove', { cls: 'quiet', act: 'dlg', arg: 'removeHost:' + h.id })}</div>`).join('')
+      : '<div class="empty">No hosts yet. Add a host to open its chats from this device.</div>';
+    return sec('Hosts you can open', rows, btn('Add a host', { icon: 'plus', kind: p ? 'primary' : '', act: 'startAdd' })) +
       `<div class="hint" style="margin-top:-16px">Removing a host deletes its pairing from this device. The host keeps your device in its list until it is revoked there.</div>`;
   }
 
-  /* Remote access: share this host */
   const REACH = [
     ['temp', 'Cloudflare Tunnel, temporary address', 'No account. The address changes each time the host starts, so paired devices need a new code after a restart.'],
     ['domain', 'Cloudflare Tunnel, your domain', 'A stable address such as bubblepaw-desk.example.com. Needs a Cloudflare account with a domain.'],
     ['relay', 'Relay server', 'Devices meet through a relay server you run.'],
   ];
-  const ADDR = { temp: 'tidy-violet-harbor-7f3a.trycloudflare.com', domain: 'bubblepaw-desk.example.com', relay: 'relay.example.com' };
-  function tunnelState() {
-    // derive the effective state: missing binary or no sign-in stop the tunnel before it starts
-    if (S.on !== '1') return { s: 'off' };
-    if (S.reach !== 'relay' && S.cfd === 'missing') return { s: 'stopped', why: 'cloudflared is not installed.' };
-    if (S.reach === 'domain' && S.cf !== 'connected') return { s: 'stopped', why: 'Not signed in to Cloudflare.' };
-    if (S.tunnel === 'stopped') return { s: 'stopped', why: S.reach === 'relay' ? 'The relay did not answer. The host retries every 30 seconds.' : 'cloudflared exited with code 1. Paired devices stay paired.' };
-    return { s: S.tunnel };
-  }
   function domainPanel() {
-    if (S.cf === 'connected') {
-      return `<div class="subpanel">
-        <div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Signed in to Cloudflare as maya@example.com</div></div>${btn('Sign out', { icon: 'log-out', act: 'cf', arg: 'signedout' })}</div>
-        <div class="field"><label>Zone</label><select class="input"><option>example.com</option><option>maya.dev</option></select></div>
-        <div class="field"><label>Hostname</label><div class="affix"><input class="input" value="bubblepaw-desk"><span class="suffix">.example.com</span></div><div class="hint">Creates a DNS record for bubblepaw-desk.example.com that points at the tunnel.</div></div></div>`;
+    if (M.cf.signed) {
+      return `<div class="subpanel"><div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Signed in to Cloudflare as ${M.cf.account}</div></div>${btn('Sign out', { icon: 'log-out', act: 'cfOut' })}</div>
+        <div class="field"><label for="f-zone">Zone</label><select id="f-zone" class="input" data-k="zone">${['example.com', 'maya.dev'].map((z) => `<option ${M.f.zone === z ? 'selected' : ''}>${z}</option>`).join('')}</select></div>
+        <div class="field"><label for="f-hostname">Hostname</label><div class="affix"><input id="f-hostname" class="input" data-k="hostname" value="${M.f.hostname}"><span class="suffix">.${M.f.zone}</span></div><div class="hint">Creates a DNS record for ${M.f.hostname || 'hostname'}.${M.f.zone} that points at the tunnel.</div></div></div>`;
     }
-    if (S.cf === 'token') {
-      return `<div class="subpanel"><div class="field"><label>API token</label><input class="input" type="password" value="" placeholder="Cloudflare API token"><div class="hint">Needs Cloudflare Tunnel edit and DNS edit for the zone.</div></div>
-        <div class="actions" style="margin-bottom:12px">${btn('Save token', { kind: 'primary', act: 'cf', arg: 'connected' })}${btn('Cancel', { act: 'cf', arg: 'signedout' })}</div></div>`;
+    if (M.cf.busy) return `<div class="subpanel"><div class="hint" style="display:flex;gap:8px;align-items:center;margin-bottom:12px">${ic('loader', 15, 'spin')}Waiting for you to finish signing in in the browser.</div></div>`;
+    if (M.cf.tokenOpen) {
+      return `<div class="subpanel">${field('API token', 'Needs Cloudflare Tunnel edit and DNS edit for the zone.', 'token', { type: 'password', ph: 'Cloudflare API token' })}
+        <div class="actions" style="margin-bottom:12px">${btn('Save token', { kind: 'primary', act: 'cfToken', disabled: !M.f.token.trim() })}${btn('Cancel', { act: 'cfTokenClose' })}</div></div>`;
     }
     return `<div class="subpanel"><div class="hint" style="margin-bottom:8px">Not signed in to Cloudflare. The tunnel cannot start until you sign in.</div>
-      <div class="actions" style="margin-bottom:12px">${btn('Sign in with Cloudflare', { kind: 'primary', icon: 'cloud', act: 'cf', arg: 'connected' })}${btn('Use an API token', { icon: 'key-round', act: 'cf', arg: 'token' })}</div>
-      <div class="hint" style="margin:-4px 0 12px">Sign in opens your browser.</div></div>`;
+      <div class="actions" style="margin-bottom:6px">${btn('Sign in with Cloudflare', { kind: 'primary', icon: 'cloud', act: 'cfIn' })}${btn('Use an API token', { icon: 'key-round', act: 'cfTokenOpen' })}</div><div class="hint" style="margin:0 0 12px">Sign in opens your browser.</div></div>`;
   }
   function statusBlock() {
-    const t = tunnelState();
-    const relay = S.reach === 'relay';
-    let st;
-    if (t.s === 'connected') st = pill('Connected', 'ok');
-    else if (t.s === 'starting') st = pill('Starting', 'attn');
-    else if (t.s === 'stopped') st = pill('Stopped', 'danger');
-    else st = pill('Sharing is off', 'off');
-    const label = relay ? 'Relay' : 'Tunnel';
-    let rows = `<div class="kv"><span class="k">${label}</span><span class="v">${st}${t.why ? `<div class="hint" style="margin-top:4px">${t.why}</div>` : ''}</span>${t.s === 'stopped' && !(S.reach !== 'relay' && S.cfd === 'missing') && !(S.reach === 'domain' && S.cf !== 'connected') ? btn('Start again', { icon: 'refresh-cw', act: 'tunnel', arg: 'starting' }) : '<span></span>'}</div>`;
-    let addr;
-    if (t.s === 'connected') addr = `<span class="v mono">https://${ADDR[S.reach]}</span>${btn('Copy', { icon: 'copy', cls: 'quiet', act: 'copy' })}`;
-    else if (t.s === 'starting') addr = `<span class="v muted">${S.reach === 'temp' ? 'Waiting for Cloudflare to assign an address.' : 'Waiting for the address to answer.'}</span><span></span>`;
-    else addr = `<span class="v muted">${S.reach === 'temp' ? 'None. A new address is assigned at the next start.' : 'https://' + ADDR[S.reach] + ' (not reachable)'}</span><span></span>`;
-    rows += `<div class="kv"><span class="k">Public address</span>${addr}</div>`;
+    const t = tun(), relay = M.reach === 'relay';
+    const st = t.s === 'connected' ? pill('Connected', 'ok') : t.s === 'starting' ? pill('Starting', 'attn') : pill('Stopped', 'danger');
+    const canRetry = t.s === 'stopped' && !t.block;
+    let rows = `<div class="kv"><span class="k">${relay ? 'Relay' : 'Tunnel'}</span><span class="v">${st}${t.why ? `<div class="hint" style="margin-top:4px">${t.why}</div>` : ''}</span>${canRetry ? btn('Start again', { icon: 'refresh-cw', act: 'retry' }) : '<span></span>'}</div>`;
+    if (t.s === 'connected') rows += `<div class="kv"><span class="k">Public address</span><span class="v mono">https://${addrNow()}</span>${btn('Copy', { icon: 'copy', cls: 'quiet', act: 'copy' })}</div>`;
+    else if (t.s === 'starting') rows += `<div class="kv"><span class="k">Public address</span><span class="v muted">${M.reach === 'temp' ? 'Waiting for Cloudflare to assign an address.' : 'Waiting for the address to answer.'}</span></div>`;
+    else rows += `<div class="kv"><span class="k">Public address</span><span class="v muted">${M.reach === 'temp' ? 'None. A new address is assigned at the next start.' : 'https://' + addrNow() + ' (not reachable)'}</span></div>`;
     if (!relay) {
-      if (S.cfd === 'missing') {
-        rows += `<div class="kv"><span class="k">cloudflared</span><span class="v">Not installed.<div class="hint" style="margin-top:2px">Download comes from Cloudflare's GitHub releases.</div></span><span></span></div>
-        <div class="kv" style="border:0;padding-top:0"><span></span><span class="actions" style="grid-column:2/-1">${btn('Download cloudflared', { kind: 'primary', icon: 'download', act: 'cfd', arg: 'ok' })}${btn('Choose file…', { icon: 'folder-open', act: 'cfd', arg: 'ok' })}</span></div>`;
+      if (!M.cfd) {
+        rows += `<div class="kv"><span class="k">cloudflared</span><span class="v">${M.cfdBusy ? `${ic('loader', 14, 'spin')} Downloading…` : "Not installed.<div class=\"hint\" style=\"margin-top:2px\">Download comes from Cloudflare's GitHub releases.</div>"}</span></div>
+        <div class="kv" style="border:0;padding-top:0"><span></span><span class="actions" style="grid-column:2/-1">${btn('Download cloudflared', { kind: 'primary', icon: 'download', act: 'cfdGet', disabled: M.cfdBusy })}${btn('Choose file…', { icon: 'folder-open', act: 'cfdFile', disabled: M.cfdBusy })}</span></div>`;
       } else {
-        rows += `<div class="kv"><span class="k">cloudflared</span><span class="v">cloudflared <span class="mono">2026.10.1</span>, managed by BubblePaw</span>${btn('Update')}</div>`;
+        const ub = M.upd === 'busy' ? btn('Updating…', { disabled: true }) : M.upd === 'done' ? btn('Up to date', { disabled: true }) : btn('Update', { act: 'upd' });
+        rows += `<div class="kv"><span class="k">cloudflared</span><span class="v">cloudflared <span class="mono">${M.ver}</span>, managed by BubblePaw</span>${ub}</div>`;
       }
     }
     return `<div class="card">${rows}</div>`;
   }
-  function devices(ph) {
-    const d = (icon, name, prof, seen) =>
-      `<div class="dev"><span class="di">${ic(icon, 18)}</span><div class="grow"><div class="t">${name}</div><div class="s">Last seen ${seen}</div></div><span class="tag" title="Permission profile">${prof}</span>${btn('Revoke', { kind: 'danger', cls: 'quiet' })}</div>`;
-    return d('smartphone', "Maya's Pixel", 'Edit', '2 minutes ago') + d('laptop', 'Work laptop', 'Full', 'today, 09:14') + d('tablet', 'Pixel tablet', 'Read', '5 days ago');
+  function devRows() {
+    if (!M.devices.length) return '<div class="empty">No paired devices. Pair a device to open this computer from a phone or laptop.</div>';
+    return M.devices.map((d) => `<div class="dev"><span class="di">${ic(d.icon, 18)}</span><div class="grow"><div class="t">${d.name}</div><div class="s">Last seen ${d.seen}</div></div><span class="tag" title="Permission profile">${d.prof}</span>${btn('Revoke', { kind: 'danger', cls: 'quiet', act: 'dlg', arg: 'revoke:' + d.id })}</div>`).join('');
   }
   function pageShare() {
-    const pairPrimary = tunnelState().s !== 'stopped';
-    const opts = REACH.map(([v, t, s]) =>
-      `<button class="opt" role="radio" aria-checked="${S.reach === v}" data-act="reach" data-arg="${v}"><span class="rd"></span><span><div class="t">${t}</div><div class="s">${s}</div></span></button>` +
-      (S.reach === v && v === 'domain' ? domainPanel() : '') +
-      (S.reach === v && v === 'relay' ? `<div class="subpanel"><div class="field"><label>Relay address</label><input class="input" value="wss://relay.example.com"></div></div>` : '')).join('');
-    return sec('Sharing',
-      `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Share this host</div><div class="s">${S.on === '1' ? 'Paired devices can open chats on this computer while BubblePaw is running.' : 'Nobody can reach this computer. Paired devices stay paired.'}</div></div>${sw(S.on === '1', 'Share this host', 'on')}</div>`) +
-      (S.on === '1' || true ? sec('How devices reach this computer',
-        `<div role="radiogroup" aria-label="How devices reach this computer">${opts}</div>
-         <div class="consequence">${ic('shield-check', 16)}<span>${S.reach === 'relay' ? 'Traffic is end-to-end encrypted between paired devices. The relay sees only encrypted data.' : 'Traffic is end-to-end encrypted between paired devices. Cloudflare sees only encrypted data.'}</span></div>
-         ${statusBlock()}`) : '') +
-      sec('This device',
-        field('Name', 'Shown to devices you pair.', 'Studio desktop', { sans: true }) +
-        `<div class="field"><label>Device ID</label><div class="actions"><span class="mono" style="font-size:14px">K7MQ-2X9F-D4RT-8WHN</span>${btn('Copy', { icon: 'copy', cls: 'quiet', act: 'copy' })}</div></div>`) +
-      sec('Paired devices', devices(false), btn('Pair a device', { kind: pairPrimary ? 'primary' : '', icon: 'plus', act: 'goto', arg: 'pair', disabled: S.on !== '1' }));
+    const t = tun();
+    const opts = REACH.map(([v, ti, s]) => `<button class="opt" role="radio" aria-checked="${M.reach === v}" ${A('reach', v)}><span class="rd"></span><span><div class="t">${ti}</div><div class="s">${s}</div></span></button>` +
+      (M.reach === v && v === 'domain' ? domainPanel() : '') +
+      (M.reach === v && v === 'relay' ? `<div class="subpanel">${field('Relay address', '', 'relay')}</div>` : '')).join('');
+    return sec('Sharing', `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Share this host</div><div class="s">${M.on ? 'Paired devices can open chats on this computer while BubblePaw is running.' : 'Nobody can reach this computer. Paired devices stay paired.'}</div></div>${sw(M.on, 'Share this host', 'on')}</div>`) +
+      sec('How devices reach this computer', `<div role="radiogroup" aria-label="How devices reach this computer">${opts}</div>
+        <div class="consequence">${ic('shield-check', 16)}<span>${M.reach === 'relay' ? 'Traffic is end-to-end encrypted between paired devices. The relay sees only encrypted data.' : 'Traffic is end-to-end encrypted between paired devices. Cloudflare sees only encrypted data.'}</span></div>${statusBlock()}`) +
+      sec('This device', field('Name', 'Shown to devices you pair.', 'devname', { sans: true }) + `<div class="field"><label>Device ID</label><div class="actions"><span class="mono" style="font-size:14px">${M.key.id}</span>${btn('Copy', { icon: 'copy', cls: 'quiet', act: 'copy' })}</div></div>`) +
+      sec('Paired devices', devRows(), btn('Pair a device', { kind: t.s !== 'stopped' ? 'primary' : '', icon: 'plus', act: 'startPair', disabled: !M.on }));
   }
-  function pageRemote(ph) {
-    if (ph) return hostsList(true);
+  function pageRemote(p) {
+    if (p) return hostsList(true);
     return `<div style="margin-bottom:20px">${seg([['share', 'Share this host'], ['hosts', 'Hosts you can open']], S.tab, 'tab')}</div>` + (S.tab === 'hosts' ? hostsList(false) : pageShare());
   }
-  function pageBody(p, ph) {
-    return { general: pageGeneral, host: pageHost, models: pageModels, remote: pageRemote, key: pageKey, about: pageAbout }[p](ph);
-  }
+  const pageBody = (p, phn) => ({ general: pageGeneral, host: pageHost, models: pageModels, remote: pageRemote, key: pageKey, about: pageAbout }[p])(phn);
 
-  function settingsDesktop(dim) {
-    const nav = NAV.map(([id, label, icon]) => `<button class="nav-item" ${S.page === id ? 'aria-current="page"' : ''} data-act="page" data-arg="${id}">${ic(icon, 16)}${label}</button>`).join('');
-    const title = NAV.find((n) => n[0] === S.page)[1];
-    return `<div class="set-desk"><nav class="set-nav" aria-label="Settings"><button class="nav-item back" data-act="noop">${ic('chevron-left', 16)}Back to chat</button><h1>Settings</h1>${nav}</nav>
-      <div class="set-main"><div class="set-col"><h1 class="pt">${title}</h1>${pageBody(S.page, false)}</div></div></div>`;
+  function settingsDesktop() {
+    const nav = NAV.map(([id, label, icon]) => `<button class="nav-item" ${S.page === id ? 'aria-current="page"' : ''} ${A('page', id)}>${ic(icon, 16)}${label}</button>`).join('');
+    return `<div class="set-desk"><nav class="set-nav" aria-label="Settings"><button class="nav-item back" ${A('toChat')}>${ic('chevron-left', 16)}Back to chat</button><h1>Settings</h1>${nav}</nav>
+      <div class="set-main"><div class="set-col"><h1 class="pt">${NAV.find((n) => n[0] === S.page)[1]}</h1>${pageBody(S.page, false)}</div></div></div>`;
   }
   function settingsPhone() {
     const p = S.ppage;
-    const head = (title, back) => `<div class="statusgap"></div><div class="phone-head">${back ? `<button class="iconbtn" aria-label="Back to settings" data-act="ppage" data-arg="list">${ic('chevron-left', 22)}</button>` : `<button class="iconbtn" aria-label="Back to chat" data-act="noop">${ic('chevron-left', 22)}</button>`}<h1>${title}</h1></div>`;
+    const head = (title, back) => `<div class="statusgap"></div><div class="phone-head"><button class="iconbtn" aria-label="${back ? 'Back to settings' : 'Back to chat'}" ${back ? A('ppage', 'list') : A('toChat')}>${ic('chevron-left', 22)}</button><h1>${title}</h1></div>`;
     if (p === 'list') {
-      const rows = NAV.filter((n) => n[3] !== 'desktop').map(([id, label, icon]) =>
-        `<button class="nav-row" data-act="ppage" data-arg="${id}">${ic(icon, 20)}<span class="grow"><div class="t">${label}</div><div class="s">${PHONE_SUB[id]}</div></span>${ic('chevron-right', 18)}</button>`).join('');
+      const rows = NAV.filter((n) => n[3] !== 'desktop').map(([id, label, icon]) => `<button class="nav-row" ${A('ppage', id)}>${ic(icon, 20)}<span class="grow"><div class="t">${label}</div><div class="s">${phoneSub[id]()}</div></span>${ic('chevron-right', 18)}</button>`).join('');
       return `<div class="phone-col">${head('Settings', false)}<div class="phone-body" style="padding-top:8px">${rows}</div><div class="homebar"></div></div>`;
     }
-    const title = NAV.find((n) => n[0] === p)[1];
-    return `<div class="phone-col">${head(title, true)}<div class="phone-body">${pageBody(p, true)}</div><div class="homebar"></div></div>`;
+    return `<div class="phone-col">${head(NAV.find((n) => n[0] === p)[1], true)}<div class="phone-body">${pageBody(p, true)}</div><div class="homebar"></div></div>`;
   }
 
-  /* ---------- Pairing, host side ---------- */
-  function fmtCount(sec) { return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
-  function pairDialog() {
-    const step = +S.step;
-    const reachName = S.reach === 'relay' ? 'Relay' : 'Cloudflare Tunnel';
-    const headers = { 1: 'Pair a device', 2: 'Confirm the number', 3: 'Choose permissions', 4: 'Device added' };
-    let body = '', foot = '';
-    if (step === 1) {
-      body = `<div class="pairgrid"><div class="qr" role="img" aria-label="QR code placeholder">QR</div>
-        <div><div class="lab">Code</div><div class="code">K7M2Q-9XFD4</div>
-          <div class="countdown">${ic('clock', 15)}<span>Expires in <span id="cd" class="mono">${fmtCount(292)}</span></span></div>
-          <div class="addr">Address in the QR code and the code<span class="mono">${ADDR[S.reach]}</span></div></div></div>
-        <p class="hint" style="margin:16px 0 4px">On the new device, choose Add a host, then scan the QR code or enter the code. The code works once.</p>`;
-      foot = `<span class="grow">${ic('loader', 15, 'spin')}Waiting for the new device</span>${btn('New code', { icon: 'refresh-cw' })}${btn('Cancel', { act: 'goto', arg: 'share' })}`;
-    } else if (step === 2) {
-      body = `<p style="margin:0">Pixel 8 wants to pair. Check that this number is the same on that device.</p>
-        <div class="bignum" aria-label="Number to compare">482 913</div>
-        <p class="hint" style="margin:0 0 8px">If the numbers differ, someone else may be using the code. Choose They don't match; the code is cancelled.</p>`;
-      foot = `${btn("They don't match", { act: 'goto', arg: 'share' })}${btn('They match', { kind: 'primary', act: 'step', arg: '3' })}`;
-    } else if (step === 3) {
+  /* ---------- dialogs ---------- */
+  const fmt = (s) => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  const dlgShell = (title, body, foot, o = {}) =>
+    `<div class="overlay" ${A('scrimClose')}><div class="dialog" role="dialog" aria-modal="true" aria-label="${title}"><header><h2>${title}</h2><span class="stepno">${o.step || ''}</span>${iconBtn('x', 'Close', 'close')}</header><div class="dbody">${body}</div><footer>${foot}</footer></div></div>`;
+  const okNotice = (t) => `<div class="notice" style="background:var(--ok);border-left-color:var(--ok-ink)">${ic('circle-check', 16)}<div>${t}</div></div>`;
+
+  function pairDialog(d) {
+    if (d.step === 1) {
+      const gone = d.left <= 0;
+      return dlgShell('Pair a device', `<div class="pairgrid"><div class="qr" role="img" aria-label="QR code placeholder">QR</div>
+        <div><div class="lab">Code</div><div class="code">${d.code}</div>
+        <div class="countdown">${ic('clock', 15)}<span>${gone ? 'Code expired' : `Expires in <span id="cd" class="mono">${fmt(d.left)}</span>`}</span></div>
+        <div class="addr">Address in the QR code and the code<span class="mono">${addrNow()}</span></div></div></div>
+        <p class="hint" style="margin:16px 0 4px">On the new device, choose Add a host, then scan the QR code or enter the code. The code works once.</p>`,
+        `<span class="grow">${gone ? '' : `${ic('loader', 15, 'spin')}Waiting for the new device`}</span>${btn('New code', { icon: 'refresh-cw', act: 'newCode' })}${btn('Cancel', { act: 'close' })}`, { step: 'Step 1 of 3' });
+    }
+    if (d.step === 2) {
+      return dlgShell('Confirm the number', `<p style="margin:0">Pixel 8 wants to pair. Check that this number is the same on that device.</p><div class="bignum" aria-label="Number to compare">482 913</div>
+        <p class="hint" style="margin:0 0 8px">If the numbers differ, someone else may be using the code. Choose They don't match; the code is cancelled.</p>`,
+        `${btn("They don't match", { act: 'close' })}${btn('They match', { kind: 'primary', act: 'pairStep', arg: 3 })}`, { step: 'Step 2 of 3' });
+    }
+    if (d.step === 3) {
       const P = [['read', 'Read', 'View chats and results. Cannot send messages or approve anything.'], ['edit', 'Edit', 'Send messages and approve file edits. Cannot run commands.'], ['full', 'Full', "Everything on this computer's host, including running commands and changing settings."]];
-      body = field('Device name', '', "Maya's Pixel", { sans: true }) +
-        `<div role="radiogroup" aria-label="Permission profile" class="profile">${P.map(([v, t, s]) => `<button class="opt" role="radio" aria-checked="${(S.prof || 'edit') === v}" data-act="prof" data-arg="${v}"><span class="rd"></span><span><div class="t">${t}</div><div class="s">${s}</div></span></button>`).join('')}</div>
-        <p class="hint" style="margin:8px 0 0">You can change the profile or revoke the device later in Share this host.</p>`;
-      foot = `${btn('Back', { act: 'step', arg: '2' })}${btn('Add device', { kind: 'primary', act: 'step', arg: '4' })}`;
-    } else {
-      body = `<div class="notice" style="background:var(--ok);border-left-color:var(--ok-ink)">${ic('circle-check', 16)}<div>Maya's Pixel can now open this computer with the ${(S.prof || 'edit') === 'read' ? 'Read' : (S.prof || 'edit') === 'full' ? 'Full' : 'Edit'} profile.</div></div>
-        <div class="card"><div class="kv"><span class="k">Device</span><span class="v">Pixel 8 (Android)</span><span></span></div><div class="kv"><span class="k">Reaches this host by</span><span class="v">${reachName}</span><span></span></div></div>`;
-      foot = btn('Done', { kind: 'primary', act: 'goto', arg: 'share' });
+      return dlgShell('Choose permissions', field('Device name', '', 'pairName', { sans: true }) +
+        `<div role="radiogroup" aria-label="Permission profile" class="profile">${P.map(([v, t, s]) => `<button class="opt" role="radio" aria-checked="${d.prof === v}" ${A('prof', v)}><span class="rd"></span><span><div class="t">${t}</div><div class="s">${s}</div></span></button>`).join('')}</div>
+        <p class="hint" style="margin:8px 0 0">You can change the profile or revoke the device later in Share this host.</p>`,
+        `${btn('Back', { act: 'pairStep', arg: 2 })}${btn('Add device', { kind: 'primary', act: 'pairAdd', disabled: !M.f.pairName.trim() })}`, { step: 'Step 3 of 3' });
     }
-    return `<div class="overlay"><div class="dialog" role="dialog" aria-modal="true" aria-label="${headers[step]}"><header><h2>${headers[step]}</h2><span class="stepno">${step < 4 ? `Step ${step} of 3` : ''}</span>${iconBtn('x', 'Close', 'goto', 'share')}</header><div class="dbody">${body}</div><footer>${foot}</footer></div></div>`;
+    const pn = { read: 'Read', edit: 'Edit', full: 'Full' }[d.prof];
+    return dlgShell('Device added', `${okNotice(`${M.f.pairName} can now open this computer with the ${pn} profile.`)}<div class="card"><div class="kv"><span class="k">Reaches this host by</span><span class="v">${hostType()}</span><span></span></div></div>`, btn('Done', { kind: 'primary', act: 'close' }));
+  }
+  function addBody(a, phn) {
+    const code = M.f.addCode.replace(/[\s-]/g, '');
+    if (a.step === 1) {
+      return `${phn ? `<div class="camera" role="img" aria-label="Camera view placeholder"><span class="corners"></span><span>Camera</span></div><div style="margin-top:12px">${btn('Scan QR code', { kind: 'primary', icon: 'scan-line', cls: 'block', act: 'scan' })}</div><div class="divider-or">or enter the code</div>` : '<p style="margin:0 0 12px">Enter the code shown by the host, or scan its QR code with a phone.</p>'}
+        ${field('Code from the host', 'On the host: Settings, Remote access, Share this host, Pair a device.', 'addCode', { ph: '10 characters', cap: true })}
+        ${btn('Connect', { kind: phn ? '' : 'primary', cls: phn ? 'block' : '', act: 'connect', disabled: code.length < 10 })}`;
+    }
+    if (a.step === 2) {
+      return `<p style="margin:0">Check that this number is the same on the host. Its owner will be asked to confirm.</p><div class="bignum" aria-label="Number to compare">482 913</div>
+        <div class="hint" style="display:flex;gap:8px;align-items:center">${ic('loader', 15, 'spin')}Waiting for the host to confirm.</div>
+        <div style="margin-top:20px">${btn('Cancel', { cls: phn ? 'block' : '', act: 'addBack' })}</div>`;
+    }
+    const h = M.hosts[M.hosts.length - 1];
+    return `${okNotice(`${h.name} was added. You can open its chats from the menu.`)}<div class="card" style="margin-bottom:${phn ? 20 : 0}px"><div class="kv"><span class="k">Host</span><span class="v">${h.name}</span><span></span></div><div class="kv"><span class="k">Address type</span><span class="v">${h.type}</span><span></span></div><div class="kv"><span class="k">Your permissions</span><span class="v">Edit</span><span></span></div></div>
+      ${phn ? btn(`Open ${h.name}`, { kind: 'primary', cls: 'block', act: 'addOpen' }) : ''}`;
+  }
+  function dialogHTML() {
+    const d = M.dlg;
+    if (!d) return '';
+    if (d.type === 'pair') return pairDialog(d);
+    if (d.type === 'add') {
+      const a = M.add;
+      return dlgShell('Add a host', addBody(a, false), a.step === 3 ? btn('Done', { kind: 'primary', act: 'close' }) : btn('Cancel', { act: 'close' }), { step: a.step < 3 ? `Step ${a.step} of 2` : '' });
+    }
+    if (d.type === 'revoke') {
+      const x = M.devices.find((v) => v.id === d.id);
+      return dlgShell(`Revoke ${x.name}?`, `<p style="margin:0">${x.name} can no longer open this computer. It has to be paired again with a new code. Its chats on this computer stay.</p>`, `${btn('Cancel', { act: 'close' })}${btn(`Revoke ${x.name}`, { kind: 'danger', icon: 'trash-2', act: 'doRevoke' })}`);
+    }
+    if (d.type === 'removeHost') {
+      const x = M.hosts.find((v) => v.id === d.id);
+      return dlgShell(`Remove ${x.name}?`, `<p style="margin:0">This device forgets ${x.name}. Its chats stay on that host. To open it again, add the host with a new code.</p>`, `${btn('Cancel', { act: 'close' })}${btn(`Remove ${x.name}`, { kind: 'danger', icon: 'trash-2', act: 'doRemoveHost' })}`);
+    }
+    if (d.type === 'export') {
+      if (d.step === 2) return dlgShell('Key file saved', `${okNotice(`Saved bubblepaw-${M.key.id.slice(0, 9)}.bpkey to Downloads.`)}<p class="hint" style="margin:0">The file cannot be opened without its passphrase, and the passphrase cannot be recovered.</p>`, btn('Done', { kind: 'primary', act: 'close' }));
+      const short = M.f.pass1 && M.f.pass1.length < 8, diff = M.f.pass2 && M.f.pass1 !== M.f.pass2;
+      return dlgShell('Export key file', `<p style="margin:0 0 12px">The file holds this device's key. Anyone with the file and passphrase can act as this device.</p>
+        ${field('Passphrase', 'At least 8 characters.', 'pass1', { type: 'password', err: short ? 'Use at least 8 characters.' : '' })}${field('Repeat the passphrase', '', 'pass2', { type: 'password', err: diff ? 'The passphrases differ.' : '' })}`,
+        `${btn('Cancel', { act: 'close' })}${btn('Save key file', { kind: 'primary', icon: 'download', act: 'doExport', disabled: M.f.pass1.length < 8 || M.f.pass1 !== M.f.pass2 })}`);
+    }
+    if (d.type === 'import') {
+      if (d.step === 2) return dlgShell('Key imported', `${okNotice(`This device is now ${M.key.id}. All pairings were cleared.`)}`, btn('Done', { kind: 'primary', act: 'close' }));
+      return dlgShell('Import key file', `<div class="notice danger">${ic('circle-alert', 16)}<div>Importing replaces this device's key. All ${M.devices.length} paired device${M.devices.length === 1 ? '' : 's'} and ${M.hosts.length} host${M.hosts.length === 1 ? '' : 's'} stop recognising it and are cleared.</div></div>
+        <div class="field"><label>Key file</label><div class="actions"><span class="mono" style="font-size:13px">${M.f.keyFile || 'No file chosen'}</span>${btn('Choose file…', { icon: 'folder-open', act: 'pickKey' })}</div></div>${field('Passphrase', '', 'keySecret', { type: 'password' })}`,
+        `${btn('Cancel', { act: 'close' })}${btn('Import key', { kind: 'danger', act: 'doImport', disabled: !M.f.keyFile || !M.f.keySecret })}`);
+    }
+    if (d.type === 'regen') {
+      if (d.step === 2) return dlgShell('Key regenerated', `${okNotice(`This device is now ${M.key.id}. All pairings were cleared.`)}`, btn('Done', { kind: 'primary', act: 'close' }));
+      return dlgShell('Regenerate device key?', `<div class="notice danger">${ic('circle-alert', 16)}<div>${pageKeyCons()}</div></div><p style="margin:0">This cannot be undone. Export the current key file first if you may want it back.</p>`,
+        `${btn('Cancel', { act: 'close' })}${btn('Regenerate and clear pairings', { kind: 'danger', icon: 'trash-2', act: 'doRegen' })}`);
+    }
+    if (d.type === 'key') {
+      const p = M.providers.find((v) => v.name === d.name);
+      return dlgShell(`${p.key ? 'Edit' : 'Add'} key for ${p.name}`, field('API key', 'Stored on the host that runs this provider.', 'apiKey', { type: 'password' }), `${btn('Cancel', { act: 'close' })}${btn('Save key', { kind: 'primary', act: 'doKey', disabled: !M.f.apiKey.trim() })}`);
+    }
+    if (d.type === 'licences') return dlgShell('Open source licences', `<div class="card"><div class="kv"><span class="k">Atkinson Hyperlegible Next</span><span class="v">SIL OFL 1.1</span><span></span></div><div class="kv"><span class="k">Fragment Mono</span><span class="v">SIL OFL 1.1</span><span></span></div><div class="kv"><span class="k">Lucide icons</span><span class="v">ISC</span><span></span></div></div>`, btn('Close', { act: 'close' }));
+    return '';
+  }
+  function pageKeyCons() {
+    const n = M.devices.length, hn = M.hosts.length;
+    return n + hn ? `Regenerating creates a new device ID. All ${n} paired device${n === 1 ? '' : 's'} and ${hn} host${hn === 1 ? '' : 's'} you can open stop recognising this device, and each pairing has to be done again.` : 'Regenerating creates a new device ID. This device has no pairings yet, so nothing else breaks.';
   }
 
-  /* ---------- Pairing, phone side ---------- */
-  function addHost() {
-    const a = +S.add;
-    const typeName = S.reach === 'relay' ? 'Relay' : 'Cloudflare Tunnel';
-    const head = (t) => `<div class="statusgap"></div><div class="phone-head"><button class="iconbtn" aria-label="Close" data-act="goto" data-arg="phone">${ic('x', 22)}</button><h1>${t}</h1></div>`;
-    let body, foot = '';
-    if (a === 1) {
-      body = `<div class="camera" role="img" aria-label="Camera view placeholder"><span class="corners"></span><span>Camera</span></div>
-        <div style="margin-top:12px">${btn('Scan QR code', { kind: 'primary', icon: 'scan-line', cls: 'block', act: 'add', arg: '2' })}</div>
-        <div class="divider-or">or enter the code</div>
-        <div class="field"><label>Code from the host</label><input class="input" placeholder="10 characters" value="K7M2Q9XFD4" autocapitalize="characters"><div class="hint">On the host: Settings, Remote access, Share this host, Pair a device.</div></div>
-        ${btn('Connect', { cls: 'block', act: 'add', arg: '2' })}`;
-    } else if (a === 2) {
-      body = `<p style="margin:0;font-size:16px;line-height:22px">Check that this number is the same on Studio PC. Studio PC will ask its owner to confirm.</p>
-        <div class="bignum" aria-label="Number to compare">482 913</div>
-        <div class="hint" style="display:flex;gap:8px;align-items:center">${ic('loader', 15, 'spin')}Waiting for Studio PC to confirm.</div>
-        <div style="margin-top:20px">${btn('Cancel', { cls: 'block', act: 'add', arg: '1' })}</div>`;
-    } else {
-      body = `<div class="notice" style="background:var(--ok);border-left-color:var(--ok-ink)">${ic('circle-check', 18)}<div>Studio PC was added. You can open its chats from the menu.</div></div>
-        <div class="card" style="margin-bottom:20px"><div class="kv"><span class="k">Host</span><span class="v">Studio PC</span><span></span></div>
-          <div class="kv"><span class="k">Address type</span><span class="v">${typeName}</span><span></span></div>
-          <div class="kv"><span class="k">Your permissions</span><span class="v">Edit</span><span></span></div></div>
-        ${btn('Open Studio PC', { kind: 'primary', cls: 'block', act: 'goto', arg: 'phone' })}`;
-    }
-    return `<div class="phone-col">${head('Add a host')}<div class="phone-body">${body}</div><div class="homebar"></div></div>`;
+  /* ---------- add flow page (phone) ---------- */
+  function addPage() {
+    const a = M.add;
+    const head = `<div class="statusgap"></div><div class="phone-head"><button class="iconbtn" aria-label="Close" ${A('close')}>${ic('x', 22)}</button><h1>Add a host</h1></div>`;
+    return `<div class="phone-col">${head}<div class="phone-body">${addBody(a, true)}</div><div class="homebar"></div></div>`;
   }
 
-  /* ---------- Chat ---------- */
-  function transcript(ph) {
-    return `<div class="col">
-      <div class="umsg">Why does the quota bar flicker when the socket reconnects?</div>
-      <div class="amsg">Reconnected. Showing what happened while offline.</div>
+  /* ---------- chat ---------- */
+  const dotOn = '<span class="dot"></span>';
+  function transcript(p) {
+    const empty = !activeHost() && p;
+    if (empty) return '<div class="empty" style="margin-top:40px">No host selected. Open the menu and add a host to see its chats.</div>';
+    return `<div class="col"><div class="umsg">Why does the quota bar flicker when the socket reconnects?</div><div class="amsg">Reconnected. Showing what happened while offline.</div>
       <div class="step">${ic('chevron-right', 14)}<span>Ran 1 command · 1 failed · Worked 7s</span></div>
-      <div class="step">${ic('chevron-right', 14)}${ic('file-pen', 15)}<b>usage/mod.rs</b><span class="mono add">+9</span><span class="mono del">−3</span><span class="sp"></span>${ph ? '' : '<span>Review diff</span>'}</div>
+      <div class="step">${ic('chevron-right', 14)}${ic('file-pen', 15)}<b>usage/mod.rs</b><span class="mono add">+9</span><span class="mono del">−3</span><span class="sp"></span>${p ? '' : '<span>Review diff</span>'}</div>
       <div class="approval"><div class="hd">${pill('Needs approval', 'attn')}<span class="muted">${ic('clock', 13)} waiting &lt;1m</span></div>
-        <div class="hd">${ic('file-pen', 15)}<b class="mono" style="font-weight:400">edit</b><span class="mono muted">…/usage/mod.rs</span><span class="mono add" style="color:var(--ok-ink)">+8</span><span class="mono" style="color:var(--danger-ink)">−3</span><b>Review diff</b></div>
+        <div class="hd">${ic('file-pen', 15)}<b class="mono" style="font-weight:400">edit</b><span class="mono muted">…/usage/mod.rs</span><span class="mono" style="color:var(--ok-ink)">+8</span><span class="mono" style="color:var(--danger-ink)">−3</span><b>Review diff</b></div>
         <div class="acts">${btn('Approve', { kind: 'primary' })}${btn('For session')}${btn('Deny')}</div></div></div>`;
   }
-  function composer(ph, host) {
-    return `<div class="composer"><div class="ph">${ph ? 'Message ' + host : 'Steer the agent…'}</div><div class="bar2">${ph ? '' : '<span>workspace ▾</span>'}<span>deepseek-v4.1-flash ▾</span><span class="grow"></span>${btn('Stop')}${btn('Send', { kind: 'primary', icon: 'arrow-up' })}</div>${ph ? '<div class="homebar"></div>' : ''}</div>`;
+  function composer(p, host) {
+    return `<div class="composer"><div class="ph">${p ? 'Message ' + (host || 'a host') : 'Steer the agent…'}</div><div class="bar2">${p ? '' : '<span>workspace ▾</span>'}<span>${M.def} ▾</span><span class="grow"></span>${btn('Stop')}${btn('Send', { kind: 'primary', icon: 'arrow-up' })}</div>${p ? '<div class="homebar"></div>' : ''}</div>`;
   }
-  const dotOn = '<span class="dot"></span>';
-
+  const activeHost = () => M.hosts.find((h) => h.id === M.active);
   function phoneChat() {
-    const chats = `<div class="rail-label">Today</div><button class="chatrow on"><div class="t">Quota bar flickers on reconnect</div><div class="s">Waiting for you</div></button><button class="chatrow"><div class="t">Plan the settings page</div><div class="s plain">Finished 2h ago</div></button>`;
-    const wsRow = (n, on) => `<button class="ws ${on ? 'on' : ''}" data-act="noop">${n}${on ? `<span class="ck">${ic('check', 16)}</span>` : ''}</button>`;
-    const hostlist = S.sw === '1' ? `<div class="hostlist" role="menu">
-      <div class="host-item"><button class="host-line" data-act="noop">${ic('monitor', 18)}<span class="two"><div class="t">Studio PC</div><div class="s">${dotOn}Online · Cloudflare Tunnel</div></span></button>${wsRow('bubblepaw-base', true)}${wsRow('scratch', false)}</div>
-      <div class="host-item"><button class="host-line" disabled>${ic('monitor', 18)}<span class="two"><div class="t">Home server</div><div class="s"><span class="dot off"></span>Offline · last seen 3 days ago</div></span></button></div>
-      <div class="host-item"><button class="host-line" data-act="goto" data-arg="add" style="min-height:48px">${ic('plus', 18)}<span class="two"><div class="t">Add a host</div></span></button></div></div>` : '';
-    return `<div class="phone-col ${S.sheet === '1' ? 'show-sheet' : ''}" style="position:relative">
-      <div class="statusgap"></div>
-      <div class="main"><div class="topbar">${iconBtn('menu', 'Open the chat list', 'sheet')}<div class="two"><div class="ct">Quota bar flickers on reconnect</div><div class="sub"><span>Studio PC</span><span class="on">${dotOn} Online</span></div></div>${iconBtn('panel-left', 'More')}</div>
-        <div class="stream">${transcript(true)}</div>${composer(true, 'Studio PC')}</div>
-      <div class="scrim" data-act="sheet" data-arg="0"></div>
+    const ah = activeHost();
+    const chats = ah ? `<div class="rail-label">Today</div><button class="chatrow on"><div class="t">Quota bar flickers on reconnect</div><div class="s">Waiting for you</div></button><button class="chatrow"><div class="t">Plan the settings page</div><div class="s plain">Finished 2h ago</div></button>` : '';
+    const wsRow = (n) => `<button class="ws ${M.ws === n ? 'on' : ''}" ${A('setWs', n)}>${n}${M.ws === n ? `<span class="ck">${ic('check', 16)}</span>` : ''}</button>`;
+    const items = M.hosts.map((h) => `<div class="host-item"><button class="host-line" ${h.online ? A('setHost', h.id) : 'disabled'}>${ic('monitor', 18)}<span class="two"><div class="t">${h.name}</div><div class="s">${h.online ? `${dotOn}Online · ${h.type}` : `<span class="dot off"></span>Offline${h.seen ? ' · ' + h.seen.replace('last seen', 'last seen') : ''}`}</div></span></button>${h.online && M.active === h.id ? wsRow('bubblepaw-base') + wsRow('scratch') : ''}</div>`).join('');
+    const hostlist = M.sw ? `<div class="hostlist" role="menu">${items}<div class="host-item"><button class="host-line" ${A('startAdd')} style="min-height:48px">${ic('plus', 18)}<span class="two"><div class="t">Add a host</div></span></button></div></div>` : '';
+    return `<div class="phone-col ${M.sheet ? 'show-sheet' : ''}" style="position:relative"><div class="statusgap"></div>
+      <div class="main"><div class="topbar">${iconBtn('menu', 'Open the chat list', 'sheet', 1)}<div class="two"><div class="ct">${ah ? 'Quota bar flickers on reconnect' : 'No host selected'}</div><div class="sub"><span>${ah ? ah.name : 'No host'}</span>${ah ? `<span class="on">${dotOn} Online</span>` : ''}</div></div>${iconBtn('panel-left', 'More')}</div>
+        <div class="stream">${transcript(true)}</div>${composer(true, ah && ah.name)}</div>
+      <div class="scrim" ${A('sheet', 0)}></div>
       <aside class="sheet" aria-label="Chats and hosts"><div class="statusgap"></div>
-        <div class="rail-head"><button class="hostbtn" aria-expanded="${S.sw === '1'}" data-act="sw" style="min-height:52px"><span class="two"><div class="h">${dotOn} Studio PC · Online</div><div class="w">bubblepaw-base</div></span>${ic(S.sw === '1' ? 'chevron-up' : 'chevron-down', 16)}</button>${iconBtn('x', 'Close the chat list', 'sheet', '0')}</div>
+        <div class="rail-head"><button class="hostbtn" aria-expanded="${M.sw}" ${A('sw')} style="min-height:52px"><span class="two"><div class="h">${ah ? `${dotOn} ${ah.name} · Online` : 'No host'}</div><div class="w">${ah ? M.ws : 'Add a host'}</div></span>${ic(M.sw ? 'chevron-up' : 'chevron-down', 16)}</button>${iconBtn('x', 'Close the chat list', 'sheet', 0)}</div>
         ${hostlist}<div class="rail-search" style="min-height:44px">${ic('search', 16)}Search</div>${chats}
-        <div class="rail-foot" style="padding-bottom:34px"><button class="btn" data-act="goto" data-arg="settings">${ic('settings', 16)}Settings</button></div></aside></div>`;
+        <div class="rail-foot" style="padding-bottom:34px"><button class="btn" ${A('toSettings')}>${ic('settings', 16)}Settings</button></div></aside></div>`;
   }
-
   function desktopChat() {
-    const pop = S.pop === '1' ? `<div class="popover" role="menu">
-      <div class="pop-group"><div class="pop-h">${ic('laptop', 16)}<span class="t">This computer</span><span class="s">${dotOn} Running</span></div>
-        <button class="pop-i on" data-act="noop">bubblepaw-base<span class="ck">${ic('check', 15)}</span></button><button class="pop-i" data-act="noop">scratch</button></div>
-      <div class="pop-group"><div class="pop-h">${ic('monitor', 16)}<span class="t">Home server</span><span class="s">${dotOn} Online · Cloudflare Tunnel</span></div>
-        <button class="pop-i" data-act="noop">bubblepaw-base</button><button class="pop-i" data-act="noop">notes</button></div>
-      <div class="pop-group"><button class="pop-i plain" data-act="goto" data-arg="add">${ic('plus', 15)}Add a host</button></div></div>` : '';
-    return `<div class="app"><aside class="rail"><div class="rail-head"><button class="hostbtn" aria-expanded="${S.pop === '1'}" aria-haspopup="menu" data-act="pop"><span class="two"><div class="h">This computer</div><div class="w">bubblepaw-base</div></span>${ic('chevron-down', 15)}</button>${iconBtn('square-pen', 'New chat')}${iconBtn('panel-left', 'Hide the rail')}</div>
+    const sel = M.dsel;
+    const selHost = sel.h === 'local' ? 'This computer' : (M.hosts.find((h) => h.id === sel.h) || {}).name || 'This computer';
+    const wsBtn = (h, w) => `<button class="pop-i ${sel.h === h && sel.w === w ? 'on' : ''}" ${A('dsel', h + '|' + w)}>${w}${sel.h === h && sel.w === w ? `<span class="ck">${ic('check', 15)}</span>` : ''}</button>`;
+    const pop = M.pop ? `<div class="popover" role="menu"><div class="pop-group"><div class="pop-h">${ic('laptop', 16)}<span class="t">This computer</span><span class="s">${dotOn} Running</span></div>${wsBtn('local', 'bubblepaw-base')}${wsBtn('local', 'scratch')}</div>
+      ${M.hosts.map((h) => `<div class="pop-group"><div class="pop-h">${ic('monitor', 16)}<span class="t">${h.name}</span><span class="s">${h.online ? `${dotOn} Online · ${h.type}` : '<span class="dot off"></span> Offline'}</span></div>${h.online ? wsBtn(h.id, 'bubblepaw-base') + wsBtn(h.id, 'notes') : ''}</div>`).join('')}
+      <div class="pop-group"><button class="pop-i plain" ${A('startAdd')}>${ic('plus', 15)}Add a host</button></div></div>` : '';
+    return `<div class="app"><aside class="rail"><div class="rail-head"><button class="hostbtn" aria-expanded="${M.pop}" aria-haspopup="menu" ${A('pop')}><span class="two"><div class="h">${selHost}</div><div class="w">${sel.w}</div></span>${ic('chevron-down', 15)}</button>${iconBtn('square-pen', 'New chat')}${iconBtn('panel-left', 'Hide the rail')}</div>
       <div class="rail-search">${ic('search', 16)}Search<kbd>Ctrl K</kbd></div><div class="rail-label">Today</div>
       <button class="chatrow on"><div class="t">Quota bar flickers on reconnect</div><div class="s">Waiting for you</div></button><button class="chatrow"><div class="t">Plan the settings page</div><div class="s plain">Finished 2h ago</div></button>
-      <div class="rail-foot"><button class="btn" data-act="goto" data-arg="settings">${ic('settings', 16)}Settings</button><span class="avatar">BP</span></div>${pop}</aside>
+      <div class="rail-foot"><button class="btn" ${A('toSettings')}>${ic('settings', 16)}Settings</button><span class="avatar">BP</span></div>${pop}</aside>
       <div class="main"><div class="topbar"><span class="ct">Quota bar flickers on reconnect</span>${pill('Waiting for you', 'attn')}<span class="muted mono" style="font-size:12px;margin-left:4px">${ic('git-branch', 13)} bp/quota-reconnect</span></div>
       <div class="stream">${transcript(false)}</div>${composer(false)}</div></div>`;
   }
 
-  /* ---------- Review bar ---------- */
+  /* ---------- review bar ---------- */
+  function curTab() {
+    if (S.screen === 'settings' || S.screen === 'share' || S.screen === 'pair') {
+      if (M.dlg && M.dlg.type === 'pair' && !ph()) return 'pair';
+      if (S.page === 'remote' && S.tab === 'share' && !ph() && S.screen !== 'settings') return 'share';
+      if (S.screen === 'share') return 'share';
+    }
+    return S.screen;
+  }
   function bar() {
-    const scr = SCREENS.map(([id, n, l]) => `<button class="tab" role="tab" aria-selected="${S.screen === id}" data-act="goto" data-arg="${id}"><small>${n}</small>${l}</button>`).join('');
-    const chip = (act, arg, label, on, dis) => `<button class="chip" aria-pressed="${on}" data-act="${act}" data-arg="${arg}" ${dis ? 'disabled' : ''}>${label}</button>`;
+    let cur = S.screen;
+    if (S.screen === 'settings' || S.screen === 'share' || S.screen === 'pair') {
+      cur = 'settings';
+      if (!ph()) { if (M.dlg && M.dlg.type === 'pair') cur = 'pair'; else if (S.page === 'remote' && S.tab === 'share') cur = 'share'; }
+    }
+    const scr = SCREENS.map(([id, n, l]) => `<button class="tab" role="tab" aria-selected="${cur === id}" ${A('tab', id)}><small>${n}</small>${l}</button>`).join('');
+    const chip = (act, arg, label, on, dis) => `<button class="chip" aria-pressed="${on}" ${A(act, arg)} ${dis ? 'disabled' : ''}>${label}</button>`;
     const grp = (lbl, items) => `<span class="chips"><span class="lbl">${lbl}</span>${items.join('')}</span>`;
-    let state = '';
-    if (S.screen === 'settings') {
-      state = isPhone()
-        ? grp('Page', [['list', 'List'], ...NAV.filter((n) => n[3] !== 'desktop').map((n) => [n[0], n[1]])].map(([v, l]) => chip('ppage', v, l, S.ppage === v)))
-        : grp('Page', NAV.map(([v, l]) => chip('page', v, l, S.page === v)));
-    }
-    if (S.screen === 'share' || S.screen === 'pair' || (S.screen === 'settings' && !isPhone() && S.page === 'remote' && S.tab === 'share')) {
-      if (S.screen !== 'pair') {
-        state += grp('Reach', REACH.map(([v, t]) => chip('reach', v, t.replace('Cloudflare Tunnel, ', 'Tunnel, '), S.reach === v)));
-        if (S.reach === 'domain') state += grp('Cloudflare', [['connected', 'Signed in'], ['signedout', 'Signed out'], ['token', 'Token field']].map(([v, l]) => chip('cf', v, l, S.cf === v)));
-        if (S.reach !== 'relay') state += grp('cloudflared', [['ok', 'Installed'], ['missing', 'Missing']].map(([v, l]) => chip('cfd', v, l, S.cfd === v)));
-        state += grp('Tunnel', [['starting', 'Starting'], ['connected', 'Connected'], ['stopped', 'Stopped']].map(([v, l]) => chip('tunnel', v, l, S.tunnel === v)));
-        state += grp('Sharing', [['1', 'On'], ['0', 'Off']].map(([v, l]) => chip('onset', v, l, S.on === v)));
-      }
-    }
-    if (S.screen === 'pair') {
-      state += grp('Step', [['1', 'Code'], ['2', 'Compare'], ['3', 'Permissions'], ['4', 'Done']].map(([v, l]) => chip('step', v, l, S.step === v)));
-      state += grp('Reach', REACH.map(([v, t]) => chip('reach', v, t.replace('Cloudflare Tunnel, ', 'Tunnel, '), S.reach === v)));
-    }
-    if (S.screen === 'add') {
-      state = grp('Step', [['1', 'Scan or enter'], ['2', 'Compare'], ['3', 'Added']].map(([v, l]) => chip('add', v, l, S.add === v)));
-      state += grp('Host reach', [['temp', 'Tunnel'], ['relay', 'Relay']].map(([v, l]) => chip('reach', v, l, (S.reach === 'relay') === (v === 'relay'))));
-    }
-    if (S.screen === 'phone') state = grp('Rail sheet', [['1', 'Open'], ['0', 'Closed']].map(([v, l]) => chip('sheet', v, l, S.sheet === v))) + (S.sheet === '1' ? grp('Switcher', [['1', 'Expanded'], ['0', 'Collapsed']].map(([v, l]) => chip('swset', v, l, S.sw === v))) : '');
-    if (S.screen === 'switcher') state = grp('Host menu', [['1', 'Open'], ['0', 'Closed']].map(([v, l]) => chip('popset', v, l, S.pop === v)));
-    const fixed = FIXED_SIZE[S.screen];
-    const sizeNote = fixed ? `<span class="note">This screen exists at ${fixed} width only.</span>` : '';
+    const fixed = FIXED[S.screen];
+    const sim = (S.page === 'remote' && S.tab === 'share' && !ph() && (S.screen === 'settings' || S.screen === 'share' || S.screen === 'pair')) ? grp('Simulate', [chip('simfail', 1, 'Tunnel failure', M.fail)]) : '';
     return `<div class="bar-row"><div class="tabs" role="tablist" aria-label="Screens">${scr}</div><span class="grow"></span>
-      ${grp('Theme', [['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => chip('theme', v, l, S.theme === v)))}
-      ${grp('Frame', [['desktop', 'Desktop 1280×800'], ['phone', 'Phone 390×844']].map(([v, l]) => chip('size', v, l, S.size === v, !!fixed)))}</div>
-      ${(state || sizeNote) ? `<div class="bar-row">${state}${sizeNote}</div>` : ''}`;
+      ${grp('Theme', [['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => chip('pref', v, l, M.pref === v)))}
+      ${grp('Frame', [['desktop', 'Desktop 1280×800'], ['phone', 'Phone 390×844']].map(([v, l]) => chip('size', v, l, (fixed || S.size) === v, !!fixed)))}</div>
+      <div class="bar-row"><span class="note">Everything on the page is clickable.${fixed ? ` This screen exists at ${fixed} width only.` : ''}</span>${sim}</div>`;
   }
 
-  /* ---------- Render ---------- */
-  function effective() {
-    const e = Object.assign({}, S);
-    if (FIXED_SIZE[S.screen]) e.size = FIXED_SIZE[S.screen];
-    if (S.screen === 'share' || S.screen === 'pair') { e.page = 'remote'; e.tab = 'share'; }
-    return e;
-  }
-  let timer = null;
+  /* ---------- render ---------- */
+  let cdTimer = null, autoTimer = null;
   function render() {
-    const real = Object.assign({}, S);
-    Object.assign(S, effective());
-    document.documentElement.dataset.theme = S.theme === 'dark' ? 'dark' : 'light';
+    const k = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.k : null;
+    const sel = k ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
+    const scrolls = ['.set-main', '.phone-body', '.stream', '.dbody', '.sheet'].map((q) => { const e = document.querySelector(q); return [q, e ? e.scrollTop : 0]; });
+    const wy = window.scrollY;
+    if (FIXED[S.screen]) S.size = FIXED[S.screen];
+    document.documentElement.dataset.theme = M.pref === 'dark' ? 'dark' : 'light';
     document.body.className = [S.tall === '1' ? 'tall' : '', S.chrome === '0' ? 'nochrome' : '', S.still === '1' ? 'still' : ''].join(' ');
-    const ph = isPhone();
+    const p = ph();
     const frame = document.getElementById('frame');
-    frame.className = 'frame ' + (ph ? 'phone' : 'desktop');
+    frame.className = 'frame ' + (p ? 'phone' : 'desktop');
     let html;
     switch (S.screen) {
-      case 'settings': html = ph ? settingsPhone() : settingsDesktop(); break;
-      case 'share': html = settingsDesktop(); break;
-      case 'pair': html = settingsDesktop() + pairDialog(); break;
-      case 'add': html = addHost(); break;
+      case 'settings': case 'share': case 'pair': html = p ? settingsPhone() : settingsDesktop(); break;
+      case 'add': html = addPage(); break;
       case 'phone': html = phoneChat(); break;
       case 'switcher': html = desktopChat(); break;
     }
-    frame.innerHTML = html;
+    frame.innerHTML = html + dialogHTML();
+    if (M.dlg) { const ov = frame.querySelector('.overlay'); if (ov) ov.classList.add('top'); }
     document.getElementById('bar').innerHTML = bar();
     fit();
     if (S.chrome === '0') document.documentElement.dataset.h = Math.ceil(frame.getBoundingClientRect().height);
-    clearInterval(timer);
-    const cd = document.getElementById('cd');
-    if (cd && S.still !== '1') {
-      let left = 292;
-      timer = setInterval(() => { left = Math.max(0, left - 1); const el = document.getElementById('cd'); if (el) el.textContent = fmtCount(left); }, 1000);
+    scrolls.forEach(([q, v]) => { const e = document.querySelector(q); if (e) e.scrollTop = v; });
+    window.scrollTo(0, wy);
+    if (k) { const e = document.querySelector(`[data-k="${k}"]`); if (e) { e.focus(); try { e.setSelectionRange(sel[0], sel[1]); } catch (x) { /* select has none */ } } }
+    schedule();
+  }
+  function schedule() {
+    clearInterval(cdTimer); clearTimeout(autoTimer);
+    if (S.still === '1') return;
+    const d = M.dlg;
+    if (d && d.type === 'pair' && d.step === 1) {
+      cdTimer = setInterval(() => { d.left = Math.max(0, d.left - 1); const el = document.getElementById('cd'); if (el) el.textContent = fmt(d.left); else if (d.left === 0) render(); }, 1000);
+      autoTimer = setTimeout(() => { if (M.dlg === d && d.step === 1 && d.left > 0) { d.step = 2; render(); } }, 3500);
     }
-    Object.assign(S, real);
+    const onAddStep2 = (M.add.step === 2) && ((d && d.type === 'add') || S.screen === 'add');
+    if (onAddStep2) autoTimer = setTimeout(() => { if (M.add.step === 2) { finishAdd(); render(); } }, 3000);
   }
   function fit() {
     const sc = document.getElementById('scaler'), fr = document.getElementById('frame');
     sc.style.transform = ''; sc.style.width = sc.style.height = '';
     if (S.chrome === '0') return;
-    const w = fr.offsetWidth, avail = window.innerWidth - 32;
-    const k = Math.min(1, avail / w);
+    const w = fr.offsetWidth, k = Math.min(1, (window.innerWidth - 32) / w);
     if (k < 1) { sc.style.transform = `scale(${k})`; sc.style.width = w * k + 'px'; sc.style.height = fr.offsetHeight * k + 'px'; }
   }
   window.addEventListener('resize', fit);
-
   function writeHash() {
-    const parts = Object.keys(DEFAULTS).filter((k) => S[k] !== DEFAULTS[k]).map((k) => k + '=' + encodeURIComponent(S[k]));
+    const parts = ['screen', 'size', 'page', 'ppage', 'tab'].filter((k) => S[k] && S[k] !== { screen: 'settings', size: 'desktop', page: 'general', ppage: 'list', tab: 'share' }[k]).map((k) => k + '=' + S[k]);
+    if (M.pref !== 'light') parts.push('theme=' + M.pref);
     try { history.replaceState(null, '', '#' + parts.join('&')); } catch (e) { /* file:// may refuse */ }
   }
+
+  /* ---------- actions ---------- */
+  function finishAdd() {
+    if (M.addDone) { M.add.step = 3; return; }
+    const n = M.hosts.length;
+    const names = ['Office PC', 'Lab PC', 'Laptop 2', 'Laptop 3'];
+    const used = new Set(M.hosts.map((h) => h.name));
+    const name = ['Studio PC', ...names].find((x) => !used.has(x)) || 'New host';
+    M.hosts.push({ id: 'h' + (++uid), name, hid: rid(), online: true, type: n % 2 ? 'Relay' : 'Cloudflare Tunnel', seen: '' });
+    M.addDone = true; M.add.step = 3;
+  }
+  function openDlg(d) { M.dlg = d; }
+  function clearPairings() { M.devices = []; M.hosts = []; M.active = null; M.dsel = { h: 'local', w: M.dsel.w }; }
+  function newKey() { M.key = { id: rid(), fp: hex().slice(0, 29) }; }
+  const goTab = (id) => {
+    M.dlg = null; S.screen = id;
+    if (id === 'settings') { S.page = 'general'; S.ppage = 'list'; }
+    if (id === 'share' || id === 'pair') { S.size = 'desktop'; S.page = 'remote'; S.tab = 'share'; S.screen = 'settings'; if (id === 'pair') M.dlg = { type: 'pair', step: 1, left: 300, code: rnd(5) + '-' + rnd(5), prof: 'edit' }; }
+    if (id === 'add') { M.add = { step: 1 }; M.addDone = false; M.f.addCode = ''; S.size = 'phone'; }
+    if (id === 'phone') { M.sheet = true; S.size = 'phone'; }
+    if (id === 'switcher') { M.pop = true; S.size = 'desktop'; }
+  };
+
+  const ACT = {
+    tab: (v) => goTab(v),
+    page: (v) => { S.page = v; },
+    ppage: (v) => { S.ppage = v; },
+    tab2: (v) => { S.tab = v; },
+    pref: (v) => { M.pref = v; },
+    turn: (v) => { M.turn = v; },
+    login: () => { M.login = !M.login; },
+    size: (v) => { S.size = v; M.dlg = null; },
+    toChat: () => { if (ph()) { S.screen = 'phone'; M.sheet = false; } else { S.screen = 'switcher'; M.pop = false; } },
+    toSettings: () => { S.size = ph() ? 'phone' : 'desktop'; S.screen = 'settings'; if (!ph()) S.page = 'general'; else S.ppage = 'list'; },
+    close: () => { if (M.dlg && M.dlg.type === 'add') M.add = { step: 1 }; if (S.screen === 'add' && !M.dlg) { S.screen = M.back; M.add = { step: 1 }; M.addDone = false; if (M.back === 'settings') S.ppage = 'remote'; } M.dlg = null; },
+    scrimClose: () => {},
+    hostRestart: () => { M.hostState = 'restarting'; M.hostSaved = ''; later(() => { M.hostState = 'running'; M.hostSaved = 'Host restarted with the saved settings.'; }, 1200); },
+    hostCancel: () => { M.hostSaved = ''; M.f.binary = '/opt/bubblepaw/bubblepaw'; M.f.workspace = '/home/maya/projects/bubblepaw-base'; M.f.data = '/home/maya/.local/share/bubblepaw-desktop/data'; M.f.args = ''; },
+    def: (v) => { M.def = v; },
+    keyDlg: (v) => { M.f.apiKey = ''; openDlg({ type: 'key', name: v }); },
+    doKey: () => { M.providers.find((x) => x.name === M.dlg.name).key = true; M.dlg = null; },
+    reach: (v) => { if (M.reach !== v) { M.reach = v; restart(); } },
+    on: () => { M.on = !M.on; if (M.on) restart(); },
+    cfIn: () => { M.cf.busy = true; later(() => { M.cf.busy = false; M.cf.signed = true; M.cf.account = 'maya@example.com'; restart(); }, 1200); },
+    cfTokenOpen: () => { M.cf.tokenOpen = true; },
+    cfTokenClose: () => { M.cf.tokenOpen = false; M.f.token = ''; },
+    cfToken: () => { M.cf.signed = true; M.cf.tokenOpen = false; M.cf.account = 'API token for example.com'; M.f.token = ''; restart(); },
+    cfOut: () => { M.cf.signed = false; M.cf.tokenOpen = false; },
+    cfdGet: () => { M.cfdBusy = true; later(() => { M.cfdBusy = false; M.cfd = true; M.ver = '2026.10.1'; M.upd = 'idle'; restart(); }, 1400); },
+    cfdFile: () => { M.cfd = true; M.ver = '2026.9.0'; M.upd = 'idle'; restart(); },
+    upd: () => { M.upd = 'busy'; later(() => { M.upd = 'done'; M.ver = '2026.10.2'; }, 1200); },
+    retry: () => restart(),
+    simfail: () => { M.fail = !M.fail; },
+    dlg: (v) => { const [t, id] = v.split(':'); if (t === 'export') { M.f.pass1 = M.f.pass2 = ''; } if (t === 'import') { M.f.keyFile = ''; M.f.keySecret = ''; } openDlg({ type: t, id, step: 1 }); },
+    doRevoke: () => { M.devices = M.devices.filter((x) => x.id !== M.dlg.id); M.dlg = null; },
+    doRemoveHost: () => { const id = M.dlg.id; M.hosts = M.hosts.filter((x) => x.id !== id); if (M.active === id) { const n = M.hosts.find((h) => h.online); M.active = n ? n.id : null; } if (M.dsel.h === id) M.dsel = { h: 'local', w: 'bubblepaw-base' }; M.dlg = null; },
+    doExport: () => { M.dlg.step = 2; M.f.pass1 = M.f.pass2 = ''; },
+    pickKey: () => { M.f.keyFile = 'studio-backup.bpkey'; },
+    doImport: () => { newKey(); clearPairings(); M.dlg.step = 2; },
+    doRegen: () => { newKey(); clearPairings(); M.dlg.step = 2; },
+    startPair: () => { openDlg({ type: 'pair', step: 1, left: 300, code: rnd(5) + '-' + rnd(5), prof: 'edit' }); },
+    newCode: () => { M.dlg.left = 300; M.dlg.code = rnd(5) + '-' + rnd(5); },
+    pairStep: (v) => { M.dlg.step = +v; },
+    prof: (v) => { M.dlg.prof = v; },
+    pairAdd: () => { const d = M.dlg; M.devices.push({ id: 'd' + (++uid), name: M.f.pairName.trim(), icon: 'smartphone', prof: { read: 'Read', edit: 'Edit', full: 'Full' }[d.prof], seen: 'just now' }); d.step = 4; },
+    startAdd: () => {
+      M.add = { step: 1 }; M.addDone = false; M.f.addCode = '';
+      if (ph()) { M.back = S.screen === 'settings' ? 'settings' : S.screen; S.screen = 'add'; M.dlg = null; } else openDlg({ type: 'add' });
+    },
+    scan: () => { M.f.addCode = 'K7M2Q9XFD4'; M.add.step = 2; },
+    connect: () => { M.add.step = 2; },
+    addBack: () => { M.add.step = 1; },
+    addOpen: () => { const h = M.hosts[M.hosts.length - 1]; M.active = h.id; S.screen = 'phone'; M.sheet = false; M.add = { step: 1 }; M.addDone = false; },
+    sheet: (v) => { M.sheet = v === undefined ? !M.sheet : !!+v; },
+    sw: () => { M.sw = !M.sw; },
+    setHost: (v) => { M.active = v; },
+    setWs: (v) => { M.ws = v; M.sheet = false; },
+    pop: () => { M.pop = !M.pop; },
+    dsel: (v) => { const [h, w] = v.split('|'); M.dsel = { h, w }; M.pop = false; },
+  };
+  ACT.tab = (v) => goTab(v);
+  // the Share/Hosts tab control inside Remote access uses the arg key 'tab' in markup; route it
+  const ROUTE = { tab: (v, el) => (el.closest('.seg') ? ACT.tab2(v) : ACT.tab(v)) };
+
   document.addEventListener('click', (ev) => {
     const el = ev.target.closest('[data-act]');
     if (!el) return;
+    if (el.classList.contains('overlay') && ev.target !== el) return; // click inside dialog
     const a = el.dataset.act, v = el.dataset.arg;
-    switch (a) {
-      case 'goto': S.screen = v; if (v === 'pair') S.step = '1'; if (v === 'add') S.add = '1'; if (v === 'settings') { S.size = S.size; } break;
-      case 'page': S.page = v; if (v === 'remote') S.tab = S.tab || 'share'; break;
-      case 'ppage': S.ppage = v; break;
-      case 'tab': S.tab = v; break;
-      case 'reach': S.reach = v; break;
-      case 'cf': S.cf = v; break;
-      case 'cfd': S.cfd = v; break;
-      case 'tunnel': S.tunnel = v; break;
-      case 'on': S.on = S.on === '1' ? '0' : '1'; break;
-      case 'onset': S.on = v; break;
-      case 'step': S.step = v; break;
-      case 'add': S.add = v; break;
-      case 'prof': S.prof = v; break;
-      case 'theme': S.theme = v; break;
-      case 'size': S.size = v; break;
-      case 'sheet': S.sheet = v === undefined ? (S.sheet === '1' ? '0' : '1') : v; break;
-      case 'sw': S.sw = S.sw === '1' ? '0' : '1'; break;
-      case 'swset': S.sw = v; break;
-      case 'pop': S.pop = S.pop === '1' ? '0' : '1'; break;
-      case 'popset': S.pop = v; break;
-      case 'copy': el.lastChild.textContent = 'Copied'; setTimeout(() => { if (el.isConnected) el.lastChild.textContent = 'Copy'; }, 1500); return;
-      default: return;
-    }
+    if (a === 'copy') { const t = el.lastChild; t.textContent = 'Copied'; setTimeout(() => { if (el.isConnected) t.textContent = 'Copy'; }, 1500); return; }
+    if (a === 'scrimClose') { if (ev.target === el && M.dlg && !['revoke', 'removeHost'].includes(M.dlg.type)) ACT.close(); else if (ev.target === el) M.dlg = null; }
+    else if (ROUTE[a]) ROUTE[a](v, el);
+    else if (ACT[a]) ACT[a](v);
+    else return;
     writeHash();
     render();
   });
-  window.addEventListener('hashchange', () => { /* manual edits reload state */ location.reload(); });
+  document.addEventListener('input', (ev) => {
+    const k = ev.target.dataset && ev.target.dataset.k;
+    if (!k) return;
+    M.f[k] = ev.target.value;
+    // fields that gate a button or message re-render in place
+    if (['token', 'addCode', 'pass1', 'pass2', 'keySecret', 'apiKey', 'pairName', 'hostname'].includes(k)) render();
+  });
+  document.addEventListener('change', (ev) => {
+    const k = ev.target.dataset && ev.target.dataset.k;
+    if (k === 'zone') { M.f.zone = ev.target.value; render(); }
+  });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && M.dlg) { ACT.close(); render(); } });
+  writeHash();
   render();
 })();
