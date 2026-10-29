@@ -26,7 +26,32 @@
   const WORDS = ['tidy', 'violet', 'harbor', 'amber', 'quiet', 'maple', 'river', 'lantern', 'copper', 'meadow'];
   const tempAddr = () => `${WORDS[Math.floor(Math.random() * 10)]}-${WORDS[Math.floor(Math.random() * 10)]}-${WORDS[Math.floor(Math.random() * 10)]}-${rnd(4).toLowerCase()}.trycloudflare.com`;
   let uid = 10;
-  const TOOLS = ['read_file', 'list_files', 'search', 'edit_file', 'write_file', 'run_command', 'web_fetch', 'web_search'];
+  const CATS = [
+    ['Files', ['list', 'read', 'search', 'edit', 'write']],
+    ['Commands', ['exec', 'poll', 'wait', 'cancel', 'jobs']],
+    ['Web', ['web_search', 'web_fetch']],
+    ['Agents', ['agent', 'agent_send', 'agent_status']],
+    ['History', ['history_chapters', 'history_search', 'history_read']],
+    ['Other', ['js', 'question', 'todo', 'reload', 'environments', 'tool_search', 'call_tool']],
+  ];
+  const TOOLS = CATS.flatMap((c) => c[1]);
+  /* One category per MCP server that is running, with the tools that are on. */
+  function mcpCats(servers) {
+    return servers.filter((v) => v.tools.some((t) => t[1])).map((v) => ({ name: v.name, mcp: true, ids: v.tools.filter((t) => t[1]).map((t) => v.name + '/' + t[0]) }));
+  }
+  function mkTl() {
+    const mcp = mcpCats(mkServers().filter((v) => v.on && !v.error && (v.kind !== 'url' || v.auth !== 'oauth' || v.o === 'in'))).flatMap((c) => c.ids);
+    const ro = ['list', 'read', 'search', 'wait', 'jobs', 'web_search', 'web_fetch', 'agent_status', 'history_chapters', 'history_search', 'history_read', 'js', 'question', 'todo', 'reload', 'environments', 'tool_search', 'call_tool'];
+    return {
+      edit: null, main: 'all',
+      sets: [
+        { id: 'read-only', name: 'read-only', builtin: true, tools: ro },
+        { id: 'all', name: 'all', builtin: true, all: true, tools: [] },
+        { id: 'no-web', name: 'no-web', builtin: false, tools: TOOLS.filter((t) => !t.startsWith('web_')).concat(mcp) },
+      ],
+      appr: { list: 'allow', read: 'allow', search: 'allow', edit: 'ask', write: 'ask', exec: 'ask', poll: 'allow', wait: 'allow', cancel: 'ask', jobs: 'allow', web_search: 'allow', web_fetch: 'deny', agent: 'ask', agent_send: 'ask', agent_status: 'allow', history_chapters: 'allow', history_search: 'allow', history_read: 'allow', js: 'ask', question: 'allow', todo: 'allow', reload: 'ask', environments: 'allow', tool_search: 'allow', call_tool: 'ask' },
+    };
+  }
 
   const M = {
     pref: H.theme || 'light', turn: 'closed', login: false, startTray: false, keepTray: true, toast: H.toast === '1', hostAuto: true, hostKeep: H.keep !== '0', autoShare: true, chats: H.chats !== undefined ? +H.chats : 2, tmenu: true,
@@ -55,13 +80,7 @@
     dlg: null, add: { step: 1 }, addDone: false, back: 'phone',
     pview: H.pview === 'chat' ? 'chat' : 'list', sheet: H.sheet === '1', sw: H.sw !== '0', pop: H.pop !== '0', dsel: { h: H.dsel || 'local' }, expR: new Set(), lastProj: 'garden-api', ppick: H.ppick === '1', active: H.active || 'h1',
     fail2: false,
-    tl: { edit: null, main: 'all',
-      sets: [
-        { id: 'read-only', name: 'read-only', builtin: true, tools: ['read_file', 'list_files', 'search'] },
-        { id: 'all', name: 'all', builtin: true, tools: TOOLS.slice() },
-        { id: 'no-web', name: 'no-web', builtin: false, tools: TOOLS.filter((t) => !t.startsWith('web_')) },
-      ],
-      appr: { read_file: 'allow', list_files: 'allow', search: 'allow', edit_file: 'ask', write_file: 'ask', run_command: 'ask', web_fetch: 'deny', web_search: 'allow' } },
+    tl: mkTl(), edClosed: new Set(), apOpen: new Set(),
     srvOpen: new Set(), srvTry: false, envs: [], view: '',
     servers: mkServers(), toks: [{ n: '', m: 'value', v: '' }], hdrs: [],
     skillsNone: false,
@@ -168,22 +187,45 @@
     if (M.tl.sets.some((x) => x !== cur && x.name === v)) return `A toolset named ${v} already exists.`;
     return '';
   }
-  const chk = (on, label, act, arg, dis) => `<button class="chk" role="checkbox" aria-checked="${on}" ${dis ? 'disabled' : A(act, arg)}><span class="box">${on ? ic('check', 14) : ''}</span><span class="mono">${label}</span></button>`;
-  const apprSeg = (t) => `<div class="seg" role="group" aria-label="Approval for ${t}">${[['ask', 'Ask'], ['allow', 'Allow'], ['deny', 'Deny']].map(([v, l]) => `<button aria-pressed="${M.tl.appr[t] === v}" ${A('appr', t + '|' + v)}>${l}</button>`).join('')}</div>`;
+  const label = (id) => (id.includes('/') ? id.split('/')[1] : id);
+  const cats = () => CATS.map(([name, ids]) => ({ name, mcp: false, ids })).concat(mcpCats(M.servers.filter((v) => srvStatus(v) === 'running')));
+  const allIds = () => cats().flatMap((c) => c.ids);
+  const setTools = (x) => (x.all ? allIds() : x.tools);
+  const apprOf = (id) => M.tl.appr[id] || 'ask';
+  const chk = (on, text, act, arg, dis) => `<button class="chk" role="checkbox" aria-checked="${on}" ${dis ? 'disabled' : A(act, arg)}><span class="box">${on ? ic('check', 14) : ''}</span><span class="mono">${text}</span></button>`;
+  const seg3 = (name, cur, act, key) => `<div class="seg" role="group" aria-label="Approval for ${name}">${[['ask', 'Ask'], ['allow', 'Allow'], ['deny', 'Deny']].map(([v, l]) => `<button aria-pressed="${cur === v}" ${A(act, key + '|' + v)}>${l}</button>`).join('')}</div>`;
+  const catName = (c) => `${c.name}${c.mcp ? ' <span class="mcpt">MCP</span>' : ''}`;
+  const chev = (open, name, act) => `<button class="iconbtn sm" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} ${name}" ${A(act, name)}>${ic(open ? 'chevron-down' : 'chevron-right', 16)}</button>`;
+  function editorCats(x) {
+    const on = new Set(setTools(x));
+    return cats().map((c) => {
+      const n = c.ids.filter((i) => on.has(i)).length, st = n === 0 ? 'false' : n === c.ids.length ? 'true' : 'mixed', open = !M.edClosed.has(c.name);
+      const head = `<div class="cat-h">${chev(open, c.name, 'edTog')}<button class="chk catchk" role="checkbox" aria-checked="${st}" ${x.builtin ? 'disabled' : A('catSet', c.name)}><span class="box">${st === 'true' ? ic('check', 14) : st === 'mixed' ? ic('minus', 14) : ''}</span><span class="cname">${catName(c)}</span></button><span class="cnt">${n} of ${c.ids.length}</span></div>`;
+      const rows = open ? c.ids.map((i) => chk(on.has(i), label(i), 'tsTool', i, x.builtin).replace('class="chk"', 'class="chk sub"')).join('') : '';
+      return `<div class="cat">${head}${rows}</div>`;
+    }).join('');
+  }
+  function approvalGroups() {
+    return cats().map((c) => {
+      const vals = new Set(c.ids.map(apprOf)), mixed = vals.size > 1, open = M.apOpen.has(c.name);
+      const head = `<div class="cat-h ap">${chev(open, c.name, 'apTog')}<span class="cname grow">${catName(c)}</span>${mixed ? '<span class="cnt">Mixed</span>' : ''}${seg3(c.name, mixed ? '' : [...vals][0], 'catAppr', c.name)}</div>`;
+      const rows = open ? c.ids.map((i) => `<div class="rowline sub"><div class="grow mono" style="font-size:13.6px">${label(i)}</div>${seg3(label(i), apprOf(i), 'appr', i)}</div>`).join('') : '';
+      return `<div class="cat">${head}${rows}</div>`;
+    }).join('');
+  }
   function pageTools() {
     if (S.sub === 'toolset') return backRow('Tools') + toolsetEditor();
-    const rows = M.tl.sets.map((x) => `<button class="lrow" ${A('openTs', x.id)}><span class="grow"><div class="t">${x.name}</div><div class="s">${x.tools.length} of ${TOOLS.length} tools</div></span>${x.builtin ? '<span class="tag">Built-in</span>' : ''}${ic('chevron-right', 18)}</button>`).join('');
-    const appr = TOOLS.map((t) => `<div class="rowline"><div class="grow mono" style="font-size:13.6px">${t}</div>${apprSeg(t)}</div>`).join('');
+    const rows = M.tl.sets.map((x) => `<button class="lrow" ${A('openTs', x.id)}><span class="grow"><div class="t">${x.name}</div><div class="s">${setTools(x).length} of ${allIds().length} tools</div></span>${x.builtin ? '<span class="tag">Built-in</span>' : ''}${ic('chevron-right', 18)}</button>`).join('');
     return sec('Toolsets', `<div class="hint" style="margin:-4px 0 6px">The parent agent picks a toolset when it starts a subagent.</div>${rows}`, btn('New toolset', { icon: 'plus', act: 'newTs' })) +
       sec('Main chat uses', `<div class="field" style="margin:0"><label class="sr" for="f-mainSet">Main chat uses</label><select id="f-mainSet" class="input" data-k="mainSet">${M.tl.sets.map((x) => `<option value="${x.id}" ${M.tl.main === x.id ? 'selected' : ''}>${x.name}</option>`).join('')}</select></div>`) +
-      sec('Approvals', appr);
+      sec('Approvals', approvalGroups());
   }
   function toolsetEditor() {
     const x = M.tl.sets.find((v) => v.id === M.tl.edit), err = x.builtin ? '' : tsError();
     const isMain = M.tl.main === x.id;
     const nameField = field('Name', x.builtin ? "Built-in toolsets can't be renamed or deleted." : '', 'tsName', { sans: true, err });
     return (x.builtin ? nameField.replace('<input ', '<input disabled ') : nameField) +
-      sec('Tools', TOOLS.map((t) => chk(x.tools.includes(t), t, 'tsTool', t, x.builtin)).join('')) +
+      sec('Tools', editorCats(x)) +
       (x.builtin ? '' : `<div class="actions">${btn('Delete toolset', { kind: 'danger', icon: 'trash-2', act: 'dlg', arg: 'delTs:' + x.id, disabled: isMain })}${isMain ? '<span class="hint">Main chat uses this toolset. Choose another one first.</span>' : ''}</div>`);
   }
   function ent(n, m, v) { return { n, m, v }; }
@@ -789,7 +831,7 @@
   };
 
   const VIEWS = {
-    tools: [['tools-list', 'Toolsets'], ['tools-editor', 'Toolset editor'], ['tools-builtin', 'Built-in toolset'], ['tools-error', 'Name error']],
+    tools: [['tools-list', 'Toolsets'], ['tools-approvals', 'Approvals'], ['tools-editor', 'Toolset editor'], ['tools-partial', 'Partial category'], ['tools-builtin', 'Built-in toolset'], ['tools-error', 'Name error']],
     mcp: [['mcp-list', 'Server list'], ['mcp-expanded', 'Expanded server'], ['mcp-stopped', 'Stopped server'], ['mcp-error', 'Error server'], ['mcp-waiting', 'Waiting for sign-in'], ['mcp-signedin', 'Signed in'], ['mcp-expired', 'Sign-in expired'], ['mcp-add', 'Add server'], ['mcp-add-error', 'Add server, errors'], ['mcp-edit-cmd', 'Edit, command'], ['mcp-edit-url', 'Edit, URL'], ['mcp-edit-errors', 'Edit, errors'], ['mcp-remove', 'Remove server']],
     skills: [['skills-list', 'Skills'], ['skills-empty', 'None found']],
   };
@@ -797,6 +839,9 @@
   function applyState(v) {
     const pg = v.split('-')[0];
     S.screen = 'settings'; S.page = pg; S.ppage = pg; S.sub = ''; M.dlg = null; M.srvOpen = new Set(); M.skillsNone = false; M.srvTry = false;
+    if (v.startsWith('tools-')) { M.tl = mkTl(); M.edClosed = new Set(); M.apOpen = new Set(); }
+    if (v === 'tools-approvals') ['Files', 'Web', 'github'].forEach((n) => M.apOpen.add(n));
+    if (v === 'tools-partial') { const x = M.tl.sets.find((q) => q.id === 'no-web'); x.tools = x.tools.filter((t) => t !== 'exec' && t !== 'cancel'); cats().forEach((c) => { if (c.name !== 'Commands') M.edClosed.add(c.name); }); ACT.openTs('no-web'); }
     if (v === 'tools-editor') ACT.openTs('no-web');
     if (v === 'tools-builtin') ACT.openTs('read-only');
     if (v === 'tools-error') { ACT.openTs('no-web'); M.f.tsName = 'all'; }
@@ -823,7 +868,11 @@
     view: (v) => applyState(v),
     openTs: (v) => { M.tl.edit = v; M.f.tsName = tsName(v); S.sub = 'toolset'; M.view = ''; },
     newTs: () => { let n = 1; while (M.tl.sets.some((x) => x.name === 'toolset-' + n)) n++; const x = { id: 'ts' + (++uid), name: 'toolset-' + n, builtin: false, tools: [] }; M.tl.sets.push(x); ACT.openTs(x.id); },
-    tsTool: (v) => { const x = M.tl.sets.find((q) => q.id === M.tl.edit); x.tools = TOOLS.filter((t) => (t === v ? !x.tools.includes(t) : x.tools.includes(t))); },
+    tsTool: (v) => { const x = M.tl.sets.find((q) => q.id === M.tl.edit); x.tools = x.tools.includes(v) ? x.tools.filter((t) => t !== v) : x.tools.concat(v); },
+    edTog: (v) => { if (M.edClosed.has(v)) M.edClosed.delete(v); else M.edClosed.add(v); },
+    apTog: (v) => { if (M.apOpen.has(v)) M.apOpen.delete(v); else M.apOpen.add(v); },
+    catSet: (v) => { const x = M.tl.sets.find((q) => q.id === M.tl.edit), ids = cats().find((c) => c.name === v).ids, all = ids.every((i) => x.tools.includes(i)); x.tools = all ? x.tools.filter((t) => !ids.includes(t)) : x.tools.concat(ids.filter((i) => !x.tools.includes(i))); },
+    catAppr: (v) => { const [n, val] = v.split('|'); cats().find((c) => c.name === n).ids.forEach((i) => { M.tl.appr[i] = val; }); },
     doDelTs: () => { const id = M.dlg.id; M.tl.sets = M.tl.sets.filter((x) => x.id !== id); M.dlg = null; S.sub = ''; },
     appr: (v) => { const [t, val] = v.split('|'); M.tl.appr[t] = val; },
     srvOpen: (v) => { if (M.srvOpen.has(v)) M.srvOpen.delete(v); else M.srvOpen.add(v); M.view = ''; },

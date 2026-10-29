@@ -526,3 +526,21 @@ button.wi:hover:not(:disabled) { background: var(--w-hover); }
 .frame.desktop .overlay { padding: 16px; }
 .frame.phone .overlay { padding-top: 16px; }
 .dialog { max-height: 100%; min-height: 0; }
+
+/* Tool categories */
+.cat { border-bottom: 1px solid var(--seam-subtle); }
+.cat:last-child { border-bottom: 0; }
+.cat-h { display: flex; align-items: center; gap: 4px; min-height: 44px; }
+.cat-h.ap { flex-wrap: wrap; row-gap: 4px; padding: 4px 0; }
+.cat-h .grow { flex: 1; min-width: 0; }
+.chk.catchk { flex: 1; min-width: 0; border-bottom: 0; }
+.cname { font-weight: 600; font-size: 14px; font-family: var(--sans); }
+.mcpt { margin-left: 6px; font-size: 11px; font-weight: 400; color: var(--faint); }
+.cnt { font-size: 12px; color: var(--muted); white-space: nowrap; padding: 0 6px; }
+.chk.sub { padding-left: 38px; }
+.rowline.sub { padding-left: 38px; }
+.chk[aria-checked="mixed"] .box { background: var(--moss); border-color: var(--moss); }
+.phone .cat-h { min-height: 48px; }
+.phone .chk.sub, .phone .rowline.sub { padding-left: 44px; }
+.rowline.sub:last-child { border-bottom: 1px solid var(--seam-subtle); }
+.rowline .grow.mono { overflow-wrap: anywhere; }
