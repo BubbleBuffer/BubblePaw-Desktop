@@ -19,8 +19,7 @@ class _Inner implements AgentBackend {
       controller.stream;
 
   @override
-  Future<ChatPage> listChats({String? cursor, String? query}) =>
-      error == null
+  Future<ChatPage> listChats({String? cursor, String? query}) => error == null
       ? Future<ChatPage>.value(ChatPage(chats: const []))
       : Future<ChatPage>.error(error!);
 
@@ -48,14 +47,8 @@ void main() {
 
   test('reports a host exit from a command once, and rethrows it', () async {
     inner.error = const BubblePawHostExited(exitCode: 9, stderrTail: '');
-    await expectLater(
-      guarded.listChats(),
-      throwsA(isA<BubblePawHostExited>()),
-    );
-    await expectLater(
-      guarded.listChats(),
-      throwsA(isA<BubblePawHostExited>()),
-    );
+    await expectLater(guarded.listChats(), throwsA(isA<BubblePawHostExited>()));
+    await expectLater(guarded.listChats(), throwsA(isA<BubblePawHostExited>()));
     await turn();
     expect(failures.map((f) => f.kind), [HostFailureKind.exited]);
     expect(failures.single.message, contains('code 9'));
@@ -88,14 +81,17 @@ void main() {
     expect(failures.single.kind, HostFailureKind.exited);
   });
 
-  test('a stream that ends while the app is closing is not a failure', () async {
-    guarded.events('c', after: 0).listen((_) {});
-    guarded.closing();
-    await inner.controller.close();
-    await turn();
-    await turn();
-    expect(failures, isEmpty);
-  });
+  test(
+    'a stream that ends while the app is closing is not a failure',
+    () async {
+      guarded.events('c', after: 0).listen((_) {});
+      guarded.closing();
+      await inner.controller.close();
+      await turn();
+      await turn();
+      expect(failures, isEmpty);
+    },
+  );
 
   test('maps a protocol mismatch', () {
     final failure = HostFailure.from(

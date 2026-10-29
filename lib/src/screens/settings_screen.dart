@@ -92,10 +92,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SettingsHeading('Settings', primary: true),
-                Text(
-                  intro,
-                  style: ts(theme.typeScale.body, theme.muted),
-                ),
+                Text(intro, style: ts(theme.typeScale.body, theme.muted)),
                 const SizedBox(height: 16),
                 const SettingsHeading('BubblePaw host'),
                 SettingsRow(

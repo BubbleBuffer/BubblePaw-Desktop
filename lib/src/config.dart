@@ -67,7 +67,8 @@ class AppConfig {
       other.dataDirectory == dataDirectory;
 
   @override
-  int get hashCode => Object.hash(binaryPath, workspaceDirectory, dataDirectory);
+  int get hashCode =>
+      Object.hash(binaryPath, workspaceDirectory, dataDirectory);
 }
 
 /// The directory that holds `config.json` and, by default, the host's data.
@@ -99,7 +100,8 @@ class ConfigStore {
 
   final Directory directory;
 
-  File get file => File('${directory.path}${Platform.pathSeparator}config.json');
+  File get file =>
+      File('${directory.path}${Platform.pathSeparator}config.json');
 
   /// What the settings screen offers before anything is saved: no binary, and
   /// directories inside the app's own folder, so no other host's data is used.

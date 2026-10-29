@@ -38,13 +38,18 @@ class Notice extends StatelessWidget {
                     style: ts(theme.typeScale.h2, theme.ink, weight: 600),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    message,
-                    style: ts(theme.typeScale.body, theme.muted),
-                  ),
+                  Text(message, style: ts(theme.typeScale.body, theme.muted)),
                   if (actions.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    Wrap(spacing: 8, runSpacing: 8, children: actions),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var i = 0; i < actions.length; i++) ...[
+                          if (i > 0) const SizedBox(width: 8),
+                          actions[i],
+                        ],
+                      ],
+                    ),
                   ],
                 ],
               ),
