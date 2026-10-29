@@ -543,9 +543,9 @@ class _ChatCheck extends StatelessWidget {
               padding: const EdgeInsets.only(top: 1),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: value ? theme.constructive : theme.canvas,
+                  color: value ? theme.constructiveInk : theme.canvas,
                   border: Border.all(
-                    color: value ? theme.constructive : theme.threadStrong,
+                    color: value ? theme.constructiveInk : theme.threadStrong,
                   ),
                   borderRadius: BorderRadius.circular(3),
                 ),
