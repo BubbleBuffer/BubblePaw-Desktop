@@ -541,3 +541,21 @@ body.still .step.run .ic, body.still .spin .ic { animation: none; }
 .phone .kvc .kv .k { display: block; }
 .phone .bhead .bh { display: none; }
 .phone .bhead { justify-content: flex-start; }
+
+/* Browser pane revision: no header, actions in the tabs row, view-only until Take over */
+.bwin.max { grid-template-columns: 1fr; }
+.bwin.max .main { display: none; }
+.bwin.max .bpane { border-left: 0; }
+.pact { display: flex; gap: 0; align-items: center; margin-right: 4px; flex: none; }
+.pact .iconbtn { width: 28px; height: 28px; }
+.phone .pact .iconbtn { width: 44px; height: 44px; }
+.btabs { padding-bottom: 0; align-items: flex-end; }
+.btabs .pact { align-self: center; padding-bottom: 2px; }
+.btool .ctl { margin-left: 6px; flex: none; }
+.actnow { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; font-size: 12.5px; font-weight: 600; color: var(--attn-ink); white-space: nowrap; flex: none; }
+.actnow.idle { color: var(--muted); margin-left: 0; }
+.ctlbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 6px 12px; border-bottom: 1px solid var(--seam-subtle); }
+.ctlbar .actnow { margin-left: 0; font-size: 14px; }
+.vp:not(.ctrl) .vp-page { pointer-events: none; }
+.vp.ctrl { box-shadow: inset 0 0 0 2px var(--accent); }
+.bpane.ctrl .btool .baddr { border-color: var(--accent); }

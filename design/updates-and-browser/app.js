@@ -27,6 +27,7 @@
       tabs: [{ t: 'Changelog', u: 'docs.example.com/changelog' }, { t: 'Install guide', u: 'docs.example.com/install' }, { t: 'Issue 482', u: 'github.com/example/app/issues/482' }] },
   };
   if (H.tab) M.br.tab = +H.tab;
+  M.br.ctrl = H.ctrl === '1'; M.br.max = H.max === '1';
   if (H.tabs === '1') M.br.tabs = [M.br.tabs[1]];
 
   const VER = {
@@ -188,42 +189,41 @@
     if (st === 'downloading') return `<div class="vp msg"><span class="big">${ic('download', 28)}</span><div class="t">Downloading the browser</div><div style="width:100%;max-width:320px">${bar_(b.dl, 'Browser download')}<div class="progline"><span>${MB(b.dl, 100)}</span><span class="muted">${b.dl}%</span></div></div>${btn('Cancel', { act: 'brState', arg: 'nobrowser' })}</div>`;
     if (!hasTabs) return `<div class="vp msg"><span class="big">${ic('globe', 28)}</span><div class="t">No pages are open</div><p>The agent opens pages here when it needs the web. You can also open one yourself.</p></div>`;
     const page = PAGES[b.tab] !== undefined && b.tabs.length === 3 ? PAGES[b.tab] : PAGES[1];
-    return `<div class="vp"><div class="vp-page">${page}</div></div>`;
+    return `<div class="vp ${M.br.ctrl ? 'ctrl' : ''}"><div class="vp-page">${page}</div></div>`;
   }
   function browserPane(phone) {
     const b = M.br, st = b.st;
     const dead = st === 'stopped' || st === 'nobrowser' || st === 'downloading';
-    const view = st === 'viewonly', acting = st === 'acting', user = st === 'user';
-    const lock = acting || view || dead;
+    const ctrl = b.ctrl && !dead;
+    const acting = st === 'acting' && !ctrl;
+    const lock = !ctrl;
     const hasTabs = b.tabs.length > 0 && !dead;
-    const host = st === 'stopped' ? `<span class="dot off"></span> Stopped` : dead ? `<span class="dot off"></span> No browser` : `${dotOn} Running`;
-    const tabs = hasTabs ? b.tabs.map((t, i) => `<div class="btab ${i === b.tab ? 'on' : ''}"><button class="bt" ${A('btab', i)} ${view ? '' : ''}>${t.t}</button><button class="iconbtn sm" aria-label="Close ${t.t}" ${view ? 'disabled' : A('bclose', i)}>${ic('x', 14)}</button></div>`).join('') : '';
+    const tabs = hasTabs ? b.tabs.map((t, i) => `<div class="btab ${i === b.tab ? 'on' : ''}"><button class="bt" role="tab" aria-selected="${i === b.tab}" ${A('btab', i)}>${t.t}</button><button class="iconbtn sm" aria-label="Close ${t.t}" ${lock ? 'disabled' : A('bclose', i)}>${ic('x', 14)}</button></div>`).join('') : '';
     const addr = hasTabs ? b.tabs[b.tab].u : '';
-    let banner = '';
-    if (acting) banner = `<div class="agentbar act" role="status"><span class="spin">${ic('loader', 16)}</span><div class="grow"><b>Agent is acting</b><span class="sub">Scrolling to step 3 on docs.example.com/install</span></div>${btn('Take over', { icon: 'hand', act: 'takeover' })}</div>`;
-    else if (user) banner = `<div class="agentbar" role="status">${ic('hand', 16)}<div class="grow"><b>You are in control</b><span class="sub">The agent waits until you hand the browser back.</span></div>${btn('Hand back to the agent', { act: 'handback' })}</div>`;
-    else if (view) banner = `<div class="agentbar view" role="status"><span class="spin">${ic('eye', 16)}</span><div class="grow"><b>View only</b><span class="sub">The agent is acting. This device can watch but not control the browser.</span></div></div>`;
+    const acts = `<div class="pact">${phone ? '' : iconBtn(b.max ? 'minimize-2' : 'maximize-2', b.max ? 'Restore the browser' : 'Maximize the browser', 'bmax')}${iconBtn('panel-right-close', 'Hide the browser', phone ? 'pv' : 'pane', phone ? 'chat' : undefined)}</div>`;
+    const activity = acting ? `<span class="actnow" role="status"><span class="spin">${ic('loader', 14)}</span>Agent is acting</span>` : '';
+    const control = dead ? '' : (ctrl ? btn('Hand back', { icon: 'bot', act: 'handback', cls: 'ctl' }) : btn('Take over', { icon: 'hand', act: 'takeover', cls: 'ctl' }));
     const bsz = phone ? 20 : 16;
     const tool = `<div class="btool"><button class="iconbtn" aria-label="Back" ${lock ? 'disabled' : A('noop')}>${ic('arrow-left', bsz)}</button><button class="iconbtn" aria-label="Forward" ${lock ? 'disabled' : A('noop')}>${ic('arrow-right', bsz)}</button><button class="iconbtn" aria-label="Reload" ${lock ? 'disabled' : A('noop')}>${ic('refresh-cw', bsz)}</button>
-      <input class="input baddr" aria-label="Address" value="${addr}" placeholder="${dead ? '' : 'Search or enter an address'}" ${lock || !!dead ? 'disabled' : ''} ${!hasTabs && !dead ? '' : ''}>${hasTabs ? `<span class="spacer"></span>` : ''}</div>`;
-    return `<div class="bpane"><div class="bhead"><span class="bh">Browser</span><span class="bst">${host} on Studio PC</span></div>
-      ${dead ? '' : `<div class="btabs" role="tablist">${tabs}${iconBtn('plus', 'New tab', 'bnew', undefined, view || acting)}</div>`}${dead ? '' : tool}${banner}${viewport()}</div>`;
+      <input class="input baddr" aria-label="Address" value="${addr}" placeholder="${lock ? '' : 'Search or enter an address'}" ${lock ? 'disabled' : ''}>${phone ? '' : activity + control}</div>`;
+    const ctlbar = phone ? `<div class="ctlbar">${activity || '<span class="actnow idle">' + (ctrl ? 'You are in control' : 'View only') + '</span>'}${control}</div>` : '';
+    return `<div class="bpane ${ctrl ? 'ctrl' : ''}"><div class="btabs" role="tablist">${acts}${tabs}${dead ? '' : iconBtn('plus', 'New tab', 'bnew', undefined, lock)}</div>${dead ? '' : tool}${dead ? '' : ctlbar}${viewport()}</div>`;
   }
   function chatBody(phone) {
     const st = M.br.st;
-    const live = st === 'acting' || st === 'viewonly';
+    const live = st === 'acting' && !M.br.ctrl;
     return `<div class="col"><div class="umsg">Open the install guide and check step 3.</div><div class="amsg">Opening the install guide in the browser.</div>
       <div class="step">${ic('globe', 15)}<span>Browser · Open docs.example.com/install</span></div>
       <div class="step">${ic('globe', 15)}<span>Browser · Read the page</span></div>
       ${live ? `<div class="step run">${ic('loader', 15)}<span>Browser · Scroll to step 3</span></div>` : ''}
-      ${st === 'user' ? `<div class="step">${ic('hand', 15)}<span>You took over the browser. The agent is paused.</span></div>` : ''}</div>`;
+      ${M.br.ctrl && st !== 'stopped' && st !== 'nobrowser' && st !== 'downloading' ? `<div class="step">${ic('hand', 15)}<span>You took over the browser. The agent is paused.</span></div>` : ''}</div>`;
   }
   function composer(p) {
     return `<div class="composer"><div class="ph">${p ? 'Message Studio PC' : 'Steer the agent…'}</div><div class="bar2"><span>deepseek-v4.1-flash ▾</span><span class="grow"></span>${btn('Stop')}${btn('Send', { kind: 'primary', icon: 'arrow-up' })}</div>${p ? '<div class="homebar"></div>' : ''}</div>`;
   }
   function browserDesktop() {
     const open = M.br.pane;
-    return `<div class="bwin ${open ? '' : 'closed'}"><div class="main"><div class="topbar"><span class="ct">Check the install steps</span><span class="tag mono">bubblepaw-base</span><span class="grow" style="flex:1"></span><button class="iconbtn ${open ? 'on' : ''}" aria-label="Browser pane" aria-pressed="${open}" title="Browser pane" ${A('pane')}>${ic('panel-right', 18)}</button></div>
+    return `<div class="bwin ${open ? '' : 'closed'} ${open && M.br.max ? 'max' : ''}"><div class="main"><div class="topbar"><span class="ct">Check the install steps</span><span class="tag mono">bubblepaw-base</span><span class="grow" style="flex:1"></span><button class="iconbtn ${open ? 'on' : ''}" aria-label="Browser pane" aria-pressed="${open}" title="Browser pane" ${A('pane')}>${ic('panel-right', 18)}</button></div>
       <div class="stream">${chatBody(false)}</div>${composer(false)}</div>${open ? browserPane(false) : ''}</div>`;
   }
   function browserPhone() {
@@ -252,7 +252,7 @@
       sims.push(grp('Host', [chip('simrun', 1, 'A host is already running', M.run && !M.att, M.att)]));
     }
     if (S.screen === 'browser') {
-      sims.push(grp('State', [['acting', 'Agent acting'], ['empty', 'Empty'], ['nobrowser', 'No browser'], ['stopped', 'Stopped when idle'], ['viewonly', 'Read-only device']].map(([v, l]) => chip('brState', v, l, M.br.st === v))));
+      sims.push(grp('State', [['acting', 'Agent acting'], ['ready', 'Agent idle'], ['empty', 'Empty'], ['nobrowser', 'No browser'], ['stopped', 'Stopped when idle']].map(([v, l]) => chip('brState', v, l, M.br.st === v))));
     }
     return `<div class="bar-row"><div class="tabs" role="tablist" aria-label="Screens">${scr}</div><span class="grow"></span>
       ${grp('Theme', [['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => chip('pref', v, l, M.pref === v)))}
@@ -304,7 +304,7 @@
 
   /* ---------- actions ---------- */
   const ACT = {
-    screen: (v) => { S.screen = v; S.pv = ''; if (v === 'popup' && M.pu === 'closed') M.pu = 'available'; if (v === 'browser' && !M.br.tabs.length && M.br.st === 'acting') M.br.st = 'empty'; },
+    screen: (v) => { S.screen = v; S.pv = ''; if (v === 'popup' && M.pu === 'closed') M.pu = 'available'; if (v === 'browser' && !M.br.tabs.length && (M.br.st === 'acting' || M.br.st === 'ready')) M.br.st = 'empty'; },
     pref: (v) => { M.pref = v; },
     size: (v) => { S.size = v; S.pv = ''; },
     pv: (v) => { S.pv = v; },
@@ -325,9 +325,10 @@
     browse: () => { M.f.binary = '/usr/local/bin/bubblepaw'; },
     save: () => { M.saved = 'Host restarted with the saved settings.'; },
     cancel: () => { M.coreMode = 'bundled'; M.saved = ''; },
-    brState: (v) => { M.br.st = v; if (v === 'downloading') M.br.dl = 0; if (v === 'acting' || v === 'viewonly') { if (!M.br.tabs.length) M.br.tabs = [{ t: 'Changelog', u: 'docs.example.com/changelog' }, { t: 'Install guide', u: 'docs.example.com/install' }, { t: 'Issue 482', u: 'github.com/example/app/issues/482' }]; M.br.tab = 1; } },
-    takeover: () => { M.br.st = 'user'; },
-    handback: () => { M.br.st = 'acting'; },
+    brState: (v) => { M.br.st = v; if (v === 'downloading') M.br.dl = 0; M.br.ctrl = false; if (v === 'acting' || v === 'ready') { if (!M.br.tabs.length) M.br.tabs = [{ t: 'Changelog', u: 'docs.example.com/changelog' }, { t: 'Install guide', u: 'docs.example.com/install' }, { t: 'Issue 482', u: 'github.com/example/app/issues/482' }]; M.br.tab = 1; } },
+    takeover: () => { M.br.ctrl = true; },
+    handback: () => { M.br.ctrl = false; },
+    bmax: () => { M.br.max = !M.br.max; },
     btab: (v) => { M.br.tab = +v; },
     bclose: (v) => { M.br.tabs.splice(+v, 1); M.br.tab = Math.max(0, Math.min(M.br.tab, M.br.tabs.length - 1)); if (!M.br.tabs.length) M.br.st = 'empty'; },
     bnew: () => { M.br.tabs.push({ t: 'New tab', u: '' }); M.br.tab = M.br.tabs.length - 1; },
@@ -346,7 +347,7 @@
     const k = ev.target.dataset && ev.target.dataset.k;
     if (k) M.f[k] = ev.target.value;
   });
-  if (M.br.st === 'acting' || M.br.st === 'viewonly' || M.br.st === 'user') M.br.tab = H.tab ? +H.tab : 1;
+  if (M.br.st === 'acting' || M.br.st === 'ready') M.br.tab = H.tab ? +H.tab : 1;
   if (M.br.st === 'empty') M.br.tabs = [];
   if (M.chk === 'found' || M.chk === 'none') M.chkResult = M.chk;
   render();
