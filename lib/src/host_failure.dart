@@ -4,14 +4,20 @@ import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 
 enum HostFailureKind { binaryMissing, protocolMismatch, exited, startFailed }
 
-/// A cause, a consequence and a next step. Never carries host text: the kit
-/// redacts stderr, and paths other than the configured binary stay out.
+/// A cause, a consequence and a next step. The notice never carries host text
+/// and paths other than the configured binary stay out; [detail] is kept apart
+/// for the feedback diagnostics.
 class HostFailure {
-  const HostFailure._(this.kind, this.title, this.message);
+  const HostFailure._(this.kind, this.title, this.message, {this.detail});
 
   final HostFailureKind kind;
   final String title;
   final String message;
+
+  /// The host's stderr tail, when the exit carried one. Never shown in a
+  /// notice; it goes to the feedback diagnostics, redacted, as what Desktop
+  /// observed.
+  final String? detail;
 
   factory HostFailure.binaryMissing(String path) => HostFailure._(
     HostFailureKind.binaryMissing,
@@ -39,12 +45,13 @@ class HostFailure {
         'settings.',
   );
 
-  factory HostFailure.exited(int? exitCode) => HostFailure._(
+  factory HostFailure.exited(int? exitCode, {String? detail}) => HostFailure._(
     HostFailureKind.exited,
     'BubblePaw stopped',
     '${exitCode == null ? 'The host exited' : 'The host exited with code $exitCode'}. '
         'Chats stop updating until it restarts. Their history stays in the '
         'data directory.',
+    detail: detail,
   );
 
   factory HostFailure.startFailed() => const HostFailure._(
@@ -63,7 +70,9 @@ class HostFailure {
         actual: error.actualVersion,
       );
     }
-    if (error is BubblePawHostExited) return HostFailure.exited(error.exitCode);
+    if (error is BubblePawHostExited) {
+      return HostFailure.exited(error.exitCode, detail: error.stderrTail);
+    }
     return null;
   }
 }

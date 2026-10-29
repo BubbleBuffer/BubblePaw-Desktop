@@ -9,11 +9,14 @@ import 'package:flutter/foundation.dart' show LicenseEntry;
 import 'package:flutter/widgets.dart';
 
 import '../config.dart';
+import '../feedback/feedback_controller.dart';
+import '../feedback/glyphs.dart';
 import '../host_controller.dart';
 import '../platform/releases.dart';
 import '../versions.dart';
 import 'about_page.dart';
 import 'core_page.dart';
+import 'feedback_page.dart';
 import 'general_page.dart';
 import 'licences_page.dart';
 import 'models_page.dart';
@@ -26,6 +29,8 @@ class SettingsShell extends StatefulWidget {
     required this.controller,
     required this.onSave,
     required this.pickBinary,
+    required this.feedback,
+    required this.onSendFeedback,
     this.services = const PlatformServices(),
     this.onClose,
     this.firstRun = false,
@@ -41,6 +46,12 @@ class SettingsShell extends StatefulWidget {
   final Future<String?> Function() pickBinary;
 
   final PlatformServices services;
+
+  /// The saved feedback, for the Feedback page and About.
+  final FeedbackController feedback;
+
+  /// Opens the feedback sheet.
+  final VoidCallback onSendFeedback;
 
   /// Leave settings for the chat. Null when there is no chat to go back to.
   final VoidCallback? onClose;
@@ -64,7 +75,18 @@ class _SettingsShellState extends State<SettingsShell> {
   bool _licences = false;
 
   @override
+  void initState() {
+    super.initState();
+    widget.feedback.addListener(_feedbackChanged);
+  }
+
+  void _feedbackChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    widget.feedback.removeListener(_feedbackChanged);
     _draft.dispose();
     super.dispose();
   }
@@ -78,6 +100,11 @@ class _SettingsShellState extends State<SettingsShell> {
     SettingsSection.general => themeSummary(widget.controller.prefs.theme),
     SettingsSection.core => coreSummary(widget.controller),
     SettingsSection.models => 'Default model and providers',
+    SettingsSection.feedback => switch (widget.feedback.reports.length) {
+      0 => 'No reports saved',
+      1 => '1 report saved',
+      final n => '$n reports saved',
+    },
     SettingsSection.about => 'BubblePaw $appVersion',
   };
 
@@ -85,6 +112,7 @@ class _SettingsShellState extends State<SettingsShell> {
     SettingsSection.general => glyphSliders,
     SettingsSection.core => glyphCpu,
     SettingsSection.models => glyphLayers,
+    SettingsSection.feedback => glyphMessageSquareText,
     SettingsSection.about => glyphInfo,
   };
 
@@ -110,6 +138,12 @@ class _SettingsShellState extends State<SettingsShell> {
         backend: host.phase == HostPhase.running ? host.backend : null,
         onBack: onBack,
       ),
+      SettingsSection.feedback => FeedbackPage(
+        key: const ValueKey('page-feedback'),
+        feedback: widget.feedback,
+        onSend: widget.onSendFeedback,
+        onBack: onBack,
+      ),
       SettingsSection.about =>
         _licences
             ? LicencesPage(
@@ -120,7 +154,10 @@ class _SettingsShellState extends State<SettingsShell> {
             : AboutPage(
                 key: const ValueKey('page-about'),
                 controller: host,
+                feedback: widget.feedback,
                 services: widget.services,
+                onSendFeedback: widget.onSendFeedback,
+                onViewFeedback: () => _select(SettingsSection.feedback),
                 onLicences: () => setState(() => _licences = true),
                 onBack: onBack,
               ),

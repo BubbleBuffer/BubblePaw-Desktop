@@ -134,6 +134,9 @@ message.
     newer (nothing is downloaded). There is no app update row: the check covers Core
     releases only. **Licences** lists `LicenseRegistry` entries (packages, the font licences from
     `assets/fonts/licenses`, Lucide), grouped, searchable and expandable.
+  - **Feedback**: the saved reports with Open folder, Copy as Markdown and Delete, and a
+    way to write a new one. **About** gains a Help section (Send feedback, Saved feedback).
+    See [feedback.md](feedback.md).
 - **Tray and background** (`lib/src/platform/`): `DesktopIntegration` talks to three
   adapters (`TrayAdapter`, `WindowAdapter`, `StartupAdapter`), implemented with
   `tray_manager`, `window_manager` and `launch_at_startup`, so the logic runs headless.
@@ -185,7 +188,8 @@ dark setting, and the form factor is always desktop.
 | `test/workspace_switch_test.dart` | Recent workspaces (order, repeats, cap of 8, JSON), the rail menu, switching restarts the host with the same data directory, Open folder, a cancelled picker |
 | `test/settings_test.dart` | General switches and theme, Core (bundled, custom, Browse, save, Restart, host off), Models, About (versions, update states, Licences search and expand), the tray notice, version constants |
 | `test/tray_test.dart` | The tray menu model, icon file choice, and the integration against fake tray, window and login adapters (close-to-tray, quit, waiting count, login entry) |
-| `test/golden_test.dart` | Main screen, first-run Core, General, Core (custom and bundled), Models, About, Licences, a failure notice, plan, question, crew (with Cancel) and the context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
+| `test/golden_test.dart` | Main screen, first-run Core, General, Core (custom and bundled), Models, About, Licences, Feedback (page, sheet, chat attached, saved), a failure notice, plan, question, crew (with Cancel) and the context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
+| `test/feedback_test.dart`, `test/feedback_ui_test.dart` | Local feedback: redaction, report and chat files, storage, the sheet and the Feedback page (see [feedback.md](feedback.md)) |
 | `test/live_test.dart` | Opt-in (`BP_TEST_BIN`): the real host with the offline demo provider |
 
 Goldens are rendered on Linux with the bundled fonts and the Flutter version CI
@@ -196,6 +200,7 @@ pins; renders from another platform will not match.
 - **Core v0.3.1 host controls need a v0.3.1 host.** A host that advertises `session.list.pagination`, `providers.list`, `roles.set_main` and `child.cancel` gets rail paging ("Show older sessions"), the Models page in Settings, the composer's default-model pick and Cancel on a running child. A v0.3.0 host advertises none of them and shows none; the adapter turns each on by its own feature.
 - **The model pick is host-wide.** `roles.set_main` saves one default model for every chat; there is no per-chat model. The pick is titled "Default model", and a run in progress keeps its own. There is no new-chat sheet: `session.open` takes only a title, and agent profiles exist only in JS.
 - **Provider setup stays in the host config.** Settings > Models lists providers, whether the host found each key (never the key) and Make default. Adding a provider or setting a key is done in the host configuration: the host reads `$BUBBLEPAW_CONFIG`, else `~/.bubblepaw/config.toml` and `<workspace>/.bubblepaw/config.toml`, and keys come from environment variables the config names. The app never handles keys.
+- **No host log.** The diagnostics' host block is what Desktop observed (start, attach, stop, exit codes, stderr tails). A real host log tail needs an agent-kit API.
 - Chat search filters the loaded pages only; the host's `session.list` has no query.
 - Jobs: the stdio host reports none. Cancel is offered in the crew ledger (expanded width), not in the crew strip.
 - Worktrees, crew and the Context pane show only what the stdio backend reports. With BubblePaw-Core v0.3.0 that includes the context (pane, summaries, history ranges) and child questions; it still reports no jobs. Compaction needs a real model, so the demo provider shows an empty structure.

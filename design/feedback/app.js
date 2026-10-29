@@ -51,7 +51,7 @@
       'Desktop        0.1.0 (Stable)', 'OS             Windows 11 10.0.26300', 'Core           0.3.2 (Downloaded)', 'Host           started, running', 'Project        garden-api', 'Chat           c_8f2a41', '',
       'Errors, last 20', ...errs, '',
       'Desktop log, last 200 lines', ...lines(dsk, 200, 3), '',
-      'Host log, last 200 lines', ...lines(hst, 200, 11),
+      'Host (as seen by Desktop), last 200 lines', ...lines(hst, 200, 11),
     ].join('\n');
   }
   /* chat.md: the last 20 messages of the open chat, redacted like the diagnostics */
@@ -87,7 +87,7 @@
   const DIAG_LINES = DIAG.split('\n').length;
   const DIAG_RD = (DIAG.match(/\[redacted\]/g) || []).length;
   const diagHtml = () => DIAG.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\[redacted\]/g, '<span class="rd">[redacted]</span>')
-    .replace(/^(Errors, last 20|Desktop log, last 200 lines|Host log, last 200 lines)$/gm, '<b>$1</b>');
+    .replace(/^(Errors, last 20|Desktop log, last 200 lines|Host (as seen by Desktop), last 200 lines)$/gm, '<b>$1</b>');
 
   /* ---------- helpers ---------- */
   const ph = () => (FIXED[S.screen] || S.size) === 'phone';

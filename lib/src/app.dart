@@ -10,8 +10,11 @@ import 'package:agent_kit_core/agent_kit_core.dart'
 import 'package:bb_ui/bb_ui.dart'
     show AppColors, Ico, PrimaryButton, SecondaryButton;
 import 'package:flutter/foundation.dart' show LicenseEntry;
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 
+import 'feedback/feedback_controller.dart';
+import 'feedback/feedback_sheet.dart';
 import 'guarded_backend.dart';
 import 'host_controller.dart';
 import 'pick_folder.dart' as picker;
@@ -19,6 +22,7 @@ import 'platform/releases.dart';
 import 'preferences.dart';
 import 'screens/diff_review.dart';
 import 'screens/notice.dart';
+import 'screens/saved_notice.dart';
 import 'screens/tray_notice.dart';
 import 'screens/workspace_menu.dart';
 import 'settings/licences_page.dart';
@@ -29,6 +33,7 @@ class BubblePawApp extends StatefulWidget {
   const BubblePawApp({
     super.key,
     required this.controller,
+    required this.feedback,
     this.brightness,
     this.pickFolder = picker.pickFolder,
     this.pickBinary = picker.pickBinary,
@@ -37,6 +42,9 @@ class BubblePawApp extends StatefulWidget {
   });
 
   final HostController controller;
+
+  /// Saved feedback, and what the feedback sheet writes to.
+  final FeedbackController feedback;
 
   /// Asks for a folder (the native picker); tests pass their own.
   final Future<String?> Function() pickFolder;
@@ -103,6 +111,7 @@ class _BubblePawAppState extends State<BubblePawApp> {
     ),
     home: AppShell(
       controller: widget.controller,
+      feedback: widget.feedback,
       pickFolder: widget.pickFolder,
       pickBinary: widget.pickBinary,
       services: widget.services,
@@ -112,10 +121,12 @@ class _BubblePawAppState extends State<BubblePawApp> {
 }
 
 /// Draws the state of [controller]: settings, a notice, or the workbench.
-class AppShell extends StatelessWidget {
+/// Ctrl+Shift+F opens the feedback sheet over any of them.
+class AppShell extends StatefulWidget {
   const AppShell({
     super.key,
     required this.controller,
+    required this.feedback,
     this.pickFolder = picker.pickFolder,
     this.pickBinary = picker.pickBinary,
     this.services = const PlatformServices(),
@@ -123,28 +134,79 @@ class AppShell extends StatelessWidget {
   });
 
   final HostController controller;
+  final FeedbackController feedback;
   final Future<String?> Function() pickFolder;
   final Future<String?> Function() pickBinary;
   final PlatformServices services;
   final Stream<LicenseEntry> Function() licenceSource;
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: controller,
-    builder: (context, _) => Stack(
-      children: [
-        Positioned.fill(child: _screen(context)),
-        if (controller.trayNoticePending)
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: TrayNotice(onDismiss: controller.dismissTrayNotice),
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  // The root the screenshot is taken from.
+  final _root = GlobalKey();
+
+  HostController get controller => widget.controller;
+  FeedbackController get feedback => widget.feedback;
+
+  /// Takes the screenshot of the window as it is, then opens the sheet.
+  Future<void> _sendFeedback() async {
+    if (feedback.sheetOpen) return;
+    final shot = await captureWindow(_root)
+        .timeout(const Duration(seconds: 3), onTimeout: () => null);
+    if (!mounted) return;
+    await showFeedbackSheet(context, controller: feedback, shot: shot);
+  }
+
+  @override
+  Widget build(BuildContext context) => CallbackShortcuts(
+    bindings: {
+      const SingleActivator(
+        LogicalKeyboardKey.keyF,
+        control: true,
+        shift: true,
+      ): () =>
+          unawaited(_sendFeedback()),
+    },
+    child: Focus(
+      autofocus: true,
+      child: RepaintBoundary(
+        key: _root,
+        child: ListenableBuilder(
+          listenable: Listenable.merge([controller, feedback]),
+          builder: (context, _) => Stack(
+            children: [
+              Positioned.fill(child: _screen(context)),
+              if (controller.trayNoticePending)
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: TrayNotice(onDismiss: controller.dismissTrayNotice),
+                ),
+              if (feedback.savedId != null)
+                Positioned(
+                  right: 16,
+                  bottom: controller.trayNoticePending ? 72 : 16,
+                  child: SavedNotice(
+                    id: feedback.savedId!,
+                    onOpen: () => unawaited(feedback.open(feedback.savedId)),
+                    onDismiss: feedback.dismissSaved,
+                  ),
+                ),
+            ],
           ),
-      ],
+        ),
+      ),
     ),
   );
 
   Widget _screen(BuildContext context) {
+    final pickFolder = widget.pickFolder;
+    final pickBinary = widget.pickBinary;
+    final services = widget.services;
+    final licenceSource = widget.licenceSource;
     if (controller.settingsOpen) {
       final first = controller.phase == HostPhase.setup;
       return SettingsShell(
@@ -154,6 +216,8 @@ class AppShell extends StatelessWidget {
         firstRun: first && controller.config == null,
         services: services,
         pickBinary: pickBinary,
+        feedback: feedback,
+        onSendFeedback: () => unawaited(_sendFeedback()),
         licenceSource: licenceSource,
         onSave: (config) => unawaited(controller.saveAndStart(config)),
         onClose: first ? null : controller.closeSettings,

@@ -13,6 +13,7 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
 import '../config.dart';
+import '../feedback/feedback_controller.dart';
 import '../host_controller.dart';
 import '../platform/releases.dart';
 import '../versions.dart';
@@ -23,12 +24,18 @@ class AboutPage extends StatefulWidget {
     super.key,
     required this.controller,
     required this.services,
+    required this.feedback,
+    required this.onSendFeedback,
+    required this.onViewFeedback,
     required this.onLicences,
     this.onBack,
   });
 
   final HostController controller;
   final PlatformServices services;
+  final FeedbackController feedback;
+  final VoidCallback onSendFeedback;
+  final VoidCallback onViewFeedback;
   final VoidCallback onLicences;
   final VoidCallback? onBack;
 
@@ -138,6 +145,38 @@ class _AboutPageState extends State<AboutPage> {
             _Version('Core', current ?? 'Not running'),
             _Version('Protocol', BubblePawBackend.protocolVersion),
           ],
+        ),
+        const SettingsHeading('Help', top: 24),
+        SettingsRow(
+          label: 'Send feedback',
+          description:
+              'Saves what you write, a screenshot and diagnostics on this '
+              'computer. Nothing is sent. Shortcut: Ctrl+Shift+F',
+          trailing: PrimaryButton(
+            key: const ValueKey('about-feedback'),
+            label: 'Send feedback',
+            height: 36,
+            onTap: widget.onSendFeedback,
+          ),
+        ),
+        ListenableBuilder(
+          listenable: widget.feedback,
+          builder: (context, _) {
+            final n = widget.feedback.reports.length;
+            return SettingsRow(
+              label: 'Saved feedback',
+              description: n == 0
+                  ? 'No reports saved.'
+                  : n == 1
+                  ? '1 report saved.'
+                  : '$n reports saved.',
+              trailing: OutlineButton(
+                key: const ValueKey('about-feedback-view'),
+                label: 'View',
+                onTap: widget.onViewFeedback,
+              ),
+            );
+          },
         ),
         const SettingsHeading('Licences', top: 24),
         SettingsRow(

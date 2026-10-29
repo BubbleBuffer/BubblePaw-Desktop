@@ -106,6 +106,15 @@ Future<void> openLink(Uri url) async {
   }
 }
 
+/// Opens the folder [path] in the file manager.
+Future<void> openFolder(String path) async {
+  if (Platform.isWindows) {
+    await Process.start('explorer.exe', [path]);
+  } else {
+    await Process.start('xdg-open', [path]);
+  }
+}
+
 /// The platform's side of Settings, replaceable in tests.
 class PlatformServices {
   const PlatformServices({

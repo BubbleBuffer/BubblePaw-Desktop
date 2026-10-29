@@ -6,6 +6,9 @@ import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
+import 'package:bubblepaw_desktop/src/feedback/feedback_controller.dart';
+import 'package:bubblepaw_desktop/src/feedback/feedback_store.dart';
+import 'package:bubblepaw_desktop/src/feedback/report.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/platform/releases.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
@@ -41,6 +44,66 @@ class MemoryConfigStore extends ConfigStore {
   Future<void> savePrefs(AppPrefs next) async => prefs = next;
 }
 
+/// Feedback kept in memory, so no test touches the disk.
+class MemoryFeedbackStorage implements FeedbackStorage {
+  final Map<String, FeedbackDraft> drafts = {};
+
+  @override
+  String get location => '/home/user/.config/bubblepaw-desktop/feedback';
+
+  @override
+  String folder([String? id]) => id == null ? location : '$location/$id';
+
+  @override
+  Future<FeedbackEntry> save(FeedbackDraft draft) async {
+    var id = reportId(draft.time);
+    final base = id;
+    for (var n = 2; drafts.containsKey(id); n++) {
+      id = '$base-$n';
+    }
+    drafts[id] = draft;
+    return _entry(id, draft);
+  }
+
+  FeedbackEntry _entry(String id, FeedbackDraft draft) => FeedbackEntry(
+    id: id,
+    firstLine: firstLineOf(reportText(draft.reportMarkdown)),
+    hasScreenshot: draft.screenshot != null,
+    hasChat: draft.chatMarkdown != null,
+  );
+
+  @override
+  Future<List<FeedbackEntry>> list() async => [
+    for (final id in (drafts.keys.toList()..sort()).reversed)
+      _entry(id, drafts[id]!),
+  ];
+
+  @override
+  Future<String?> readReport(String id) async => drafts[id]?.reportMarkdown;
+
+  @override
+  Future<void> delete(String id) async => drafts.remove(id);
+}
+
+/// A feedback controller on [storage] with a fixed clock; the clipboard and
+/// the file manager are recorded in [copied] and [opened].
+class TestFeedback extends FeedbackController {
+  TestFeedback(
+    HostController host, {
+    FeedbackStorage? storage,
+    DateTime? at,
+    DateTime Function()? clock,
+  }) : super(
+         storage: storage ?? MemoryFeedbackStorage(),
+         host: host,
+         home: '/home/user',
+         operatingSystem: 'linux test',
+         now: clock ?? () => at ?? DateTime(2026, 10, 29, 22, 14, 5),
+         copyText: (_) async {},
+         openFolderAt: (_) async {},
+       );
+}
+
 const sampleConfig = AppConfig(
   binaryPath: '/opt/bubblepaw/bubblepaw',
   workspaceDirectory: '/home/user/project',
@@ -61,6 +124,7 @@ Future<void> pumpApp(
   Future<String?> Function()? pickBinary,
   PlatformServices services = const PlatformServices(),
   Stream<LicenseEntry> Function()? licenceSource,
+  FeedbackController? feedback,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -68,6 +132,7 @@ Future<void> pumpApp(
   await tester.pumpWidget(
     BubblePawApp(
       controller: controller,
+      feedback: feedback ?? TestFeedback(controller),
       brightness: brightness,
       pickFolder: pickFolder ?? (() async => null),
       pickBinary: pickBinary ?? (() async => null),
