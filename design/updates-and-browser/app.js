@@ -209,7 +209,7 @@
   }
   function browserDesktop() {
     const open = M.br.pane;
-    return `<div class="bwin ${open ? '' : 'closed'} ${open && M.br.max ? 'max' : ''}"><div class="main"><div class="topbar"><span class="ct">Check the install steps</span><span class="tag mono">bubblepaw-base</span><span class="grow" style="flex:1"></span><button class="iconbtn ${open ? 'on' : ''}" aria-label="Browser pane" aria-pressed="${open}" title="Browser pane" ${A('pane')}>${ic('panel-right', 18)}</button></div>
+    return `<div class="bwin ${open ? '' : 'closed'} ${open && M.br.max ? 'max' : ''}"><div class="main"><div class="topbar"><span class="ct">Check the install steps</span><span class="tag mono">garden-api</span><span class="grow" style="flex:1"></span><button class="iconbtn ${open ? 'on' : ''}" aria-label="Browser pane" aria-pressed="${open}" title="Browser pane" ${A('pane')}>${ic('panel-right', 18)}</button></div>
       <div class="stream">${chatBody(false)}</div>${composer(false)}</div>${open ? browserPane(false) : ''}</div>`;
   }
   function browserPhone() {
