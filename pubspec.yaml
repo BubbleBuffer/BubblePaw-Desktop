@@ -1,0 +1,53 @@
+name: bubblepaw_desktop
+description: BubblePaw Desktop, the desktop app shell for BubblePaw on the BubbleBuffer agent kit.
+version: 0.1.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  agent_kit:
+    git:
+      url: https://github.com/BubbleBuffer/agent-kit
+      ref: 529837555872a461017fab1536a8274dc62afecd # v0.15.1
+      path: packages/agent_kit
+  agent_kit_core:
+    git:
+      url: https://github.com/BubbleBuffer/agent-kit
+      ref: 529837555872a461017fab1536a8274dc62afecd # v0.15.1
+      path: packages/agent_kit_core
+  agent_kit_bubblepaw:
+    git:
+      url: https://github.com/BubbleBuffer/agent-kit
+      ref: 529837555872a461017fab1536a8274dc62afecd # v0.15.1
+      path: packages/agent_kit_bubblepaw
+  # Same pin as the kit's own, so the primitives come from one place.
+  bb_ui:
+    git:
+      url: https://github.com/BubbleBuffer/bb-ui
+      ref: v0.6.0
+      path: packages/bb_ui
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  fonts:
+    - family: Bricolage Grotesque
+      fonts:
+        - asset: assets/fonts/BricolageGrotesque[opsz,wdth,wght].ttf
+    - family: Atkinson Hyperlegible Next
+      fonts:
+        - asset: assets/fonts/AtkinsonHyperlegibleNext[wght].ttf
+        - asset: assets/fonts/AtkinsonHyperlegibleNext-Italic[wght].ttf
+          style: italic
+    - family: Fragment Mono
+      fonts:
+        - asset: assets/fonts/FragmentMono-Regular.ttf
+        - asset: assets/fonts/FragmentMono-Italic.ttf
+          style: italic

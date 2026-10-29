@@ -1,0 +1,3 @@
+tags:
+  golden:
+    description: Renders screens and compares them with the committed PNGs.
