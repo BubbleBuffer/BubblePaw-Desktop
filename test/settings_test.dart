@@ -8,8 +8,8 @@ import 'package:bubblepaw_desktop/src/platform/releases.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
 import 'package:bubblepaw_desktop/src/settings/licences_page.dart';
 import 'package:bubblepaw_desktop/src/versions.dart';
-import 'package:flutter/foundation.dart' show LicenseEntry;
-import 'package:flutter/services.dart' show LicenseEntryWithLineBreaks;
+import 'package:flutter/foundation.dart'
+    show LicenseEntry, LicenseEntryWithLineBreaks;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -47,13 +47,13 @@ Future<void> _open(WidgetTester tester, String section) async {
 }
 
 Stream<LicenseEntry> _licences() => Stream.fromIterable([
-  const LicenseEntryWithLineBreaks([
+  LicenseEntryWithLineBreaks([
     'alpha_pkg',
   ], 'Permission is hereby granted, free of charge, to any person'),
-  const LicenseEntryWithLineBreaks([
+  LicenseEntryWithLineBreaks([
     'Bricolage Grotesque',
   ], 'This Font Software is licensed under the SIL Open Font License'),
-  const LicenseEntryWithLineBreaks([
+  LicenseEntryWithLineBreaks([
     'lucide_icons_flutter',
   ], 'Permission to use, copy, modify, and/or distribute this software'),
 ]);

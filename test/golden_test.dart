@@ -6,8 +6,8 @@ import 'package:bubblepaw_desktop/src/app.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
-import 'package:flutter/foundation.dart' show LicenseEntry;
-import 'package:flutter/services.dart' show LicenseEntryWithLineBreaks;
+import 'package:flutter/foundation.dart'
+    show LicenseEntry, LicenseEntryWithLineBreaks;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -35,7 +35,7 @@ Future<void> openSettings(WidgetTester tester, String section) async {
 }
 
 /// Fixed licences, so the page does not depend on the packages in the build.
-Stream<LicenseEntry> sampleLicences() => Stream.fromIterable(const [
+Stream<LicenseEntry> sampleLicences() => Stream.fromIterable([
   LicenseEntryWithLineBreaks([
     'agent_kit',
   ], 'Permission is hereby granted, free of charge, to any person'),
