@@ -186,7 +186,7 @@
     const hasTabs = b.tabs.length > 0 && !dead;
     const tabs = hasTabs ? b.tabs.map((t, i) => `<div class="btab ${i === b.tab ? 'on' : ''}"><button class="bt" role="tab" aria-selected="${i === b.tab}" ${A('btab', i)}>${t.t}</button><button class="iconbtn sm" aria-label="Close ${t.t}" ${lock ? 'disabled' : A('bclose', i)}>${ic('x', 14)}</button></div>`).join('') : '';
     const addr = hasTabs ? b.tabs[b.tab].u : '';
-    const acts = `<div class="pact">${phone ? '' : iconBtn(b.max ? 'minimize-2' : 'maximize-2', b.max ? 'Restore the browser' : 'Maximize the browser', 'bmax')}${iconBtn('panel-right-close', 'Hide the browser', phone ? 'pv' : 'pane', phone ? 'chat' : undefined)}</div>`;
+    const acts = phone ? '' : `<div class="pact">${iconBtn(b.max ? 'minimize-2' : 'maximize-2', b.max ? 'Restore the browser' : 'Maximize the browser', 'bmax')}${iconBtn('panel-right-close', 'Hide the browser', 'pane')}</div>`;
     const activity = acting ? `<span class="actnow" role="status"><span class="spin">${ic('loader', 14)}</span>Agent is acting</span>` : '';
     const control = dead ? '' : (ctrl ? btn('Hand back', { icon: 'bot', act: 'handback', cls: 'ctl' }) : btn('Take over', { icon: 'hand', act: 'takeover', cls: 'ctl' }));
     const bsz = phone ? 20 : 16;
@@ -209,7 +209,7 @@
   }
   function browserDesktop() {
     const open = M.br.pane;
-    return `<div class="bwin ${open ? '' : 'closed'} ${open && M.br.max ? 'max' : ''}"><div class="main"><div class="topbar"><span class="ct">Check the install steps</span><span class="tag mono">garden-api</span><span class="grow" style="flex:1"></span><button class="iconbtn ${open ? 'on' : ''}" aria-label="Browser pane" aria-pressed="${open}" title="Browser pane" ${A('pane')}>${ic('panel-right', 18)}</button></div>
+    return `<div class="bwin ${open ? '' : 'closed'} ${open && M.br.max ? 'max' : ''}"><div class="main"><div class="topbar"><span class="ct">Check the install steps</span><span class="tag mono">garden-api</span><span class="grow" style="flex:1"></span>${open ? '' : iconBtn('panel-right', 'Show the browser', 'pane')}</div>
       <div class="stream">${chatBody(false)}</div>${composer(false)}</div>${open ? browserPane(false) : ''}</div>`;
   }
   function browserPhone() {
