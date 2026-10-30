@@ -47,7 +47,7 @@ Desktop's). The feedback diagnostics then say "attached host" instead of "embedd
 Ending an attached session leaves that host running. A protocol version mismatch shows
 "BubblePaw version not supported".
 
-`config.json` keeps `workspaceDirectory`, `dataDirectory` and `recentWorkspaces`. Fields
+`config.json` keeps `workspaceDirectory`, `dataDirectory` (set in Settings > General > Storage) and `recentWorkspaces`. Fields
 from earlier versions (`binarySource`, `binaryPath`, `coreVersion`, `extraArguments`,
 `hostArguments`) are ignored when read and dropped on the next save. There is no Core
 binary to choose and no command line to extend.

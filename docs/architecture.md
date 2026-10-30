@@ -118,6 +118,7 @@ cause (a locked store, a bad config).
     app preferences in `preferences.json` (`AppPrefs`), beside `config.json`, and apply
     at once. No tray on the system: the Keep switch is off and closing quits. The app
     has no turn-layout setting, so none is shown.
+  - **Storage** (on the General page): the data directory, where the chats are stored. "Save and restart" writes `config.json` and opens the host again on the new directory (`HostController.setDataDirectory`); chats already stored in the old directory stay there.
   - **Models**: the host's providers (kind, base URL, whether the host found the key, never
     the key) and their models with the Default mark or Make default (on hover or focus at
     desktop width, always at compact width). The key is an environment variable the host

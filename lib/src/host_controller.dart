@@ -301,6 +301,24 @@ class HostController extends ChangeNotifier {
     await _start();
   }
 
+  /// Moves the chats to [path]: the config is saved with that data directory
+  /// and the host is opened again on it. The chats already stored in the old
+  /// directory stay there. Does nothing for the directory already in use.
+  Future<void> setDataDirectory(String path) async {
+    final config = _config;
+    final target = path.trim();
+    if (config == null || target.isEmpty) return;
+    if (target == config.dataDirectory && _phase == HostPhase.running) return;
+    final next = config.copyWith(dataDirectory: target);
+    try {
+      await store.save(next);
+    } on Object {
+      // A config that cannot be written still applies to this session.
+    }
+    _config = next;
+    await _start();
+  }
+
   /// Starts again with the saved config. A host the person turned off with
   /// the app starts too.
   Future<void> restart() => _start();

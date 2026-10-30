@@ -82,7 +82,10 @@ void main() {
       workspaceDirectory: '${temp.path}/work',
     );
     expect(backend.features, containsAll(['sessions', 'events']));
+    // Quitting must not wait on a timeout.
+    final closing = Stopwatch()..start();
     await backend.dispose();
+    expect(closing.elapsed, lessThan(const Duration(seconds: 2)));
   });
 
   test('a second transport on the same data dir attaches', () async {

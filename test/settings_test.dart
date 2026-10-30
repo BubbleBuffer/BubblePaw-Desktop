@@ -76,6 +76,42 @@ void main() {
       expect(store.prefs.theme, ThemeSetting.dark);
     });
 
+    testWidgets('the data directory is saved and reopens the host there', (
+      tester,
+    ) async {
+      final store = MemoryConfigStore(sampleConfig);
+      final controller = _controller(store: store);
+      await pumpApp(tester, controller);
+      await _open(tester, 'general');
+
+      expect(find.text('Data directory'), findsOneWidget);
+      // No buttons until the text differs from what is stored.
+      expect(find.byKey(const ValueKey('settings-save')), findsNothing);
+
+      await tester.enterText(_field('settings-data'), '/other/data');
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('settings-save')));
+      await settle(tester);
+
+      expect(store.saved!.dataDirectory, '/other/data');
+      expect(controller.config!.dataDirectory, '/other/data');
+      expect(controller.phase, HostPhase.running);
+    });
+
+    testWidgets('an empty data directory is refused', (tester) async {
+      final store = MemoryConfigStore(sampleConfig);
+      await pumpApp(tester, _controller(store: store));
+      await _open(tester, 'general');
+
+      await tester.enterText(_field('settings-data'), '  ');
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('settings-save')));
+      await settle(tester);
+
+      expect(find.byKey(const ValueKey('settings-error')), findsOneWidget);
+      expect(store.saved, sampleConfig);
+    });
+
     testWidgets('Start in the tray needs Open at login', (tester) async {
       final controller = _controller();
       await pumpApp(tester, controller);

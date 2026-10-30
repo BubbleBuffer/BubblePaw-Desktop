@@ -226,12 +226,14 @@ class _HostPipe {
   Future<void> _shutdown() async {
     if (_closing) return;
     _closing = true;
-    await _subscription?.cancel();
     try {
       await host.close();
     } on Object {
       // The host is gone either way.
     }
+    // Not awaited: the generated stream's cancel completes only when the
+    // native side lets go of the sink, which can take until the process ends.
+    unawaited(_subscription?.cancel());
     await _finish(0);
   }
 
