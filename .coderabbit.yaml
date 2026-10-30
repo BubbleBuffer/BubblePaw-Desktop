@@ -8,6 +8,60 @@ reviews:
   path_filters:
     - "!linux/flutter/generated_plugin*"
     - "!windows/flutter/generated_plugin*"
+  path_instructions:
+    - path: "lib/src/{app.dart,settings/**,screens/**}"
+      instructions: >-
+        Compose agent_kit and bb_ui widgets; do not duplicate chat UI.
+        Use the kit's SizeClassBuilder, not app-specific breakpoints.
+        Gate optional host UI on backend capabilities.
+        Settings must never handle provider keys; the host reads them from environment variables.
+    - path: "lib/src/{host_controller.dart,guarded_backend.dart,host_failure.dart,config.dart,preferences.dart,platform/desktop_*.dart,platform/tray_*.dart}"
+      instructions: >-
+        Check the generation guard on asynchronous host results and dispose the previous
+        backend before restart or workspace switch; switching keeps the data directory,
+        and Detach leaves an attached host running.
+        Failure notices never include raw host output or paths.
+        Keep legacy config decoding (bundled reads as downloaded, no source stays custom),
+        preferences separate from host config, and recent workspaces deduplicated,
+        newest first, at most 8.
+        Tray, window and startup calls go through the injectable adapters; without a tray,
+        closing quits, and quit closes the host before destroying the window.
+    - path: "lib/src/{core/**,updates/**,platform/download.dart,semver.dart}"
+      instructions: >-
+        Downloads (Core and app updates) go to a .part file, are renamed only after the
+        SHA-256 matches, and are cleaned up on mismatch, cancel or dropped stream;
+        a Core release without SHA256SUMS is refused.
+        Network access stays behind HttpFetcher so tests run offline.
+        Core compatibility is checked only through coreCompatibleRange.
+        Stop a running downloaded Core before deleting its version.
+        Updates never offer a downgrade; switching channel clears the skipped version.
+        attachToRunningHost is a stub returning null, not working discovery.
+    - path: "lib/src/feedback/**"
+      instructions: >-
+        Feedback is local-only; nothing is sent over the network.
+        User text, diagnostics and chat exports all pass through redact().
+        Chat is attached only after opt-in and is limited to the last 20 messages.
+        Capture the window before opening the sheet.
+        A removed screenshot is not written to disk.
+    - path: "test/**"
+      instructions: >-
+        Reuse fakes.dart and scenes.dart; ordinary tests stay offline.
+        Real-host tests are tagged live, opt-in through BP_TEST_BIN, and use the
+        demo provider.
+        Goldens are rendered on Linux with CI's Flutter version and bundled fonts,
+        light and dark, at 1440 and 480 px wide.
+    - path: "{.github/workflows/{ci,release,nightly}.yml,installer/**}"
+      instructions: >-
+        Keep ci.yml steps independent (if: always()).
+        Release and nightly build all artifacts from one source SHA; stable tags must match
+        pubspec.yaml, and update.json and SHA256SUMS list both platform assets.
+        Only the publish job gets contents: write; release assets are staged completely
+        before nightly is replaced, and nightly stays a prerelease while stable
+        (including suffix versions) stays a full release so releases/latest resolves.
+        The installer stays per-user (PrivilegesRequired=lowest), ships the whole Flutter
+        bundle and leaves user data on uninstall. The alpha installer is intentionally
+        unsigned; do not demand signing, but flag any signing key or secret that is
+        committed or echoed to logs.
 knowledge_base:
   code_guidelines:
     enabled: true
