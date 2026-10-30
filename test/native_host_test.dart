@@ -25,6 +25,20 @@ String _libraryPath() {
   return '${Directory.current.path}/native/target/debug/$file';
 }
 
+/// Why this machine's own configuration could give the host a provider, or
+/// null when it cannot.
+String? _machineProviderConfig() {
+  final env = Platform.environment;
+  for (final name in env.keys) {
+    if (name.startsWith('BUBBLEPAW_')) return 'the environment sets $name';
+  }
+  final home = env['HOME'] ?? env['USERPROFILE'];
+  if (home != null && File('$home/.bubblepaw/config.toml').existsSync()) {
+    return 'the user config $home/.bubblepaw/config.toml exists';
+  }
+  return null;
+}
+
 void main() {
   late Directory temp;
 
@@ -117,34 +131,42 @@ void main() {
     await first.dispose();
   });
 
-  // Needs a machine with no provider in the user config or the environment,
-  // as CI is. The host must start anyway; the send is refused with the typed
-  // error, which the backend maps to KitNeedsSetup.
-  test('a first run with no provider starts and a send needs setup', () async {
-    Directory('${temp.path}/bare-work').createSync(recursive: true);
-    final transport = await FfiBubblePawTransport.open(
-      dataDirectory: '${temp.path}/bare-data',
-      workspaceDirectory: '${temp.path}/bare-work',
-    );
-    final backend = await BubblePawBackend.connect(
-      transport,
-      workspaceDirectory: '${temp.path}/bare-work',
-    );
-    addTearDown(backend.dispose);
-    final chat = await backend.createChat(title: 'first');
-    await expectLater(
-      backend.send(chat.id, 'hello'),
-      throwsA(
-        isA<KitNeedsSetup>().having(
-          (error) => error.message,
-          'message',
-          isNotEmpty,
+  // The host reads the user's config and BUBBLEPAW_* variables, which a test
+  // in this process cannot redirect, so the test runs only where there are
+  // none (CI, a clean account) and says so otherwise. The Rust test of the
+  // same behaviour is hermetic.
+  final machineConfig = _machineProviderConfig();
+  // The host must start anyway; the send is refused with the typed error,
+  // which the backend maps to KitNeedsSetup.
+  test(
+    'a first run with no provider starts and a send needs setup',
+    skip: machineConfig,
+    () async {
+      Directory('${temp.path}/bare-work').createSync(recursive: true);
+      final transport = await FfiBubblePawTransport.open(
+        dataDirectory: '${temp.path}/bare-data',
+        workspaceDirectory: '${temp.path}/bare-work',
+      );
+      final backend = await BubblePawBackend.connect(
+        transport,
+        workspaceDirectory: '${temp.path}/bare-work',
+      );
+      addTearDown(backend.dispose);
+      final chat = await backend.createChat(title: 'first');
+      await expectLater(
+        backend.send(chat.id, 'hello'),
+        throwsA(
+          isA<KitNeedsSetup>().having(
+            (error) => error.message,
+            'message',
+            isNotEmpty,
+          ),
         ),
-      ),
-    );
-    // The host is still up.
-    expect((await backend.listChats()).chats, hasLength(1));
-  });
+      );
+      // The host is still up.
+      expect((await backend.listChats()).chats, hasLength(1));
+    },
+  );
 
   test('notifications stop when the host closes', () async {
     final transport = await open();
