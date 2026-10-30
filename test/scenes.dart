@@ -92,6 +92,8 @@ class Played {
     this.providers,
     this.models = const [],
     this.chatPageSize,
+    this.version,
+    this.attached = false,
   });
 
   final List<ChatScript>? scripts;
@@ -99,6 +101,10 @@ class Played {
   final ProviderSetup? providers;
   final List<KitChoice> models;
   final int? chatPageSize;
+
+  /// The Core version the started host reports; null for none.
+  final String? version;
+  final bool attached;
   Future<Object>? connectionLost;
 
   /// Chats the host creates by itself, as BubblePawBackend does for a rewind.
@@ -121,15 +127,13 @@ class Played {
       now: backend.clock.now(),
       connectionLost: connectionLost,
       createdChats: createdChats,
+      version: version,
+      attached: attached,
     );
   }
 
   HostController controller({AppConfig config = sampleConfig}) =>
-      HostController(
-        store: MemoryConfigStore(config),
-        starter: start,
-        fileExists: (_) => true,
-      );
+      HostController(store: MemoryConfigStore(config), starter: start);
 }
 
 /// What the stdio host offers for child agents: their questions can be

@@ -10,7 +10,6 @@ import 'support.dart';
 const _data = '/home/user/.local/share/bubblepaw-desktop/data';
 
 AppConfig _config({List<String> recent = const []}) => AppConfig(
-  binaryPath: '/opt/bubblepaw/bubblepaw',
   workspaceDirectory: '/home/user/project',
   dataDirectory: _data,
   recentWorkspaces: recent,
@@ -55,11 +54,8 @@ void main() {
       final config = _config().withWorkspace('/w/a');
       expect(AppConfig.fromJson(config.toJson()), config);
       expect(
-        AppConfig.fromJson({
-          'binaryPath': 'b',
-          'workspaceDirectory': 'w',
-          'dataDirectory': 'd',
-        })!.recentWorkspaces,
+        AppConfig.fromJson({'workspaceDirectory': 'w', 'dataDirectory': 'd'})!
+            .recentWorkspaces,
         isEmpty,
       );
     });
@@ -74,11 +70,7 @@ void main() {
       final store = MemoryConfigStore(
         _config(recent: ['/home/user/project', '/home/user/other']),
       );
-      final controller = HostController(
-        store: store,
-        starter: starts.start,
-        fileExists: (_) => true,
-      );
+      final controller = HostController(store: store, starter: starts.start);
       addTearDown(controller.close);
       await pumpApp(tester, controller, pickFolder: pickFolder);
       expect(starts.configs, hasLength(1));

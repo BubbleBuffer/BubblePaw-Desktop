@@ -12,17 +12,17 @@ dependencies:
   agent_kit:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: af5b27f3fb9009aaf23fa5807f28fdc9c74b9174 # v0.16.0
+      ref: 2359ce71341bf5f5c73c5e722a340d26f6fe9019 # v0.16.2
       path: packages/agent_kit
   agent_kit_core:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: af5b27f3fb9009aaf23fa5807f28fdc9c74b9174 # v0.16.0
+      ref: 2359ce71341bf5f5c73c5e722a340d26f6fe9019 # v0.16.2
       path: packages/agent_kit_core
   agent_kit_bubblepaw:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: af5b27f3fb9009aaf23fa5807f28fdc9c74b9174 # v0.16.0
+      ref: 2359ce71341bf5f5c73c5e722a340d26f6fe9019 # v0.16.2
       path: packages/agent_kit_bubblepaw
   # Same pin as the kit's own, so the primitives come from one place.
   bb_ui:
@@ -30,9 +30,13 @@ dependencies:
       url: https://github.com/BubbleBuffer/bb-ui
       ref: v0.6.0
       path: packages/bb_ui
-  # SHA256 of downloaded Core and app updates (dart:io has no hash).
+  # SHA256 of downloaded app updates (dart:io has no hash).
   crypto: ^3.0.6
   file_selector: ^1.1.0
+  # Core, embedded through bubblepaw-sdk (native/), and its Dart bridge.
+  bubblepaw_desktop_native:
+    path: rust_builder
+  flutter_rust_bridge: 2.13.0
   # Tray, window hiding and login start. tray_manager stays on the classic
   # plugin (0.5.x): 0.7+ builds on native assets.
   tray_manager: 0.5.3

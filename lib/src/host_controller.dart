@@ -10,13 +10,11 @@ import 'package:flutter/foundation.dart';
 
 import 'config.dart';
 import 'feedback/log_buffer.dart';
-import 'core/attach.dart';
-import 'core/core_manager.dart';
+import 'core/ffi_transport.dart';
 import 'guarded_backend.dart';
 import 'host_failure.dart';
 import 'preferences.dart';
 import 'scripted.dart';
-import 'semver.dart';
 import 'settings/settings_section.dart';
 import 'updates/update_controller.dart';
 
@@ -56,51 +54,53 @@ class StartedBackend {
 
 typedef BackendStarter = Future<StartedBackend> Function(AppConfig config);
 
-/// Starts the owned BubblePaw child.
+/// Opens the embedded BubblePaw host on the config's data directory, or
+/// attaches to the one already running there.
 Future<StartedBackend> startBubblePaw(
   AppConfig config, {
-  String? binaryPath,
+  NativeHostOpener opener = openNativeHost,
 }) async {
   await Directory(config.workspaceDirectory).create(recursive: true);
   await Directory(config.dataDirectory).create(recursive: true);
-  final backend = await BubblePawBackend.start(
-    binaryPath: binaryPath ?? config.binaryPath,
-    workspaceDirectory: config.workspaceDirectory,
+  final transport = await FfiBubblePawTransport.open(
     dataDirectory: config.dataDirectory,
-    arguments: config.hostArguments,
+    workspaceDirectory: config.workspaceDirectory,
+    opener: opener,
   );
+  final BubblePawBackend backend;
+  try {
+    backend = await BubblePawBackend.connect(
+      transport,
+      workspaceDirectory: config.workspaceDirectory,
+    );
+  } on Object {
+    // connect disposes the transport on a failed handshake.
+    rethrow;
+  }
   return StartedBackend(
     backend,
     backend.dispose,
     createdChats: backend.createdChats,
     connectionLost: backend.connectionLost,
+    attached: transport.attached,
+    version: embeddedCoreVersion(),
   );
 }
 
 /// Where the host stands. `stopped` is a host the person chose not to start
 /// with the app ("Start the host when BubblePaw starts" is off).
-enum HostPhase { setup, starting, running, stopped, failed }
-
-/// Reads the version a `bubblepaw` binary reports; null when it cannot.
-typedef HostVersionReader = Future<String?> Function(String binaryPath);
+enum HostPhase { starting, running, stopped, failed }
 
 class HostController extends ChangeNotifier {
   HostController({
     required this.store,
     this.starter,
     this.scripted = false,
-    bool Function(String path)? fileExists,
-    this.versionReader,
     LogBuffer? log,
-    CoreManager? core,
     UpdateController? updates,
-    this.attacher = attachToRunningHost,
-  }) : _fileExists = fileExists ?? ((path) => File(path).existsSync()),
-       log = log ?? LogBuffer(),
-       core = core ?? CoreManager.unavailable(),
+  }) : log = log ?? LogBuffer(),
        updates = updates ?? UpdateController.unavailable() {
     this.updates.bind(prefs: () => _prefs, save: updatePrefs);
-    this.core.addListener(_notify);
     this.updates.addListener(_notify);
   }
 
@@ -111,21 +111,11 @@ class HostController extends ChangeNotifier {
   /// observes about the host.
   final LogBuffer log;
 
-  /// The Core that BubblePaw downloads and the one installed on this computer.
-  final CoreManager core;
-
   /// Checks for and installs new versions of the app.
   final UpdateController updates;
 
-  /// Connects to a host already running on the data directory.
-  final HostAttacher attacher;
-
-  /// Asks a binary for its version, for Settings. Null: not shown.
-  final HostVersionReader? versionReader;
-
   /// Starts a host from a config. Null starts the real one.
   final BackendStarter? starter;
-  final bool Function(String path) _fileExists;
 
   HostPhase _phase = HostPhase.starting;
   AppConfig? _config;
@@ -142,7 +132,7 @@ class HostController extends ChangeNotifier {
   bool _trayAvailable = true;
   bool _startupFailed = false;
   bool _attached = false;
-  late bool _real = !scripted;
+  late final bool _real = !scripted;
   int _generation = 0;
   bool _disposed = false;
 
@@ -178,31 +168,15 @@ class HostController extends ChangeNotifier {
   /// The app's preferences (theme, tray, login).
   AppPrefs get prefs => _prefs;
 
-  /// The version the running host binary reports, when it could be read.
+  /// The Core version running in the app, or of the attached host.
   String? get hostVersion => _hostVersion;
 
-  /// Whether the running host was already running when BubblePaw connected
-  /// to it. Detach disconnects and leaves it running.
+  /// Whether the running host was already running (another process owns it)
+  /// when BubblePaw connected to it.
   bool get attached => _attached;
 
-  /// The version `bubblepaw --version` reports for the binary at [path].
-  Future<String?> readVersion(String path) async {
-    final reader = versionReader;
-    if (reader == null) return null;
-    try {
-      return await reader(path);
-    } on Object {
-      return null;
-    }
-  }
-
-  /// The config the settings form starts from: the saved one, or the
-  /// defaults, which run downloaded Core.
+  /// The config in use: the saved one, or the defaults.
   AppConfig get formConfig => _config ?? store.defaults;
-
-  /// The downloaded Core version [config] runs, when one is stored.
-  SemVer? coreVersionFor(AppConfig config) =>
-      core.versionToRun(config.coreVersion);
 
   /// Whether a tray icon is showing. False on a system without one.
   bool get trayAvailable => _trayAvailable;
@@ -270,9 +244,10 @@ class HostController extends ChangeNotifier {
   DateTime? get now => _now;
 
   /// Whether the settings screen is drawn over the current state.
-  bool get settingsOpen => _settingsOpen || _phase == HostPhase.setup;
+  bool get settingsOpen => _settingsOpen;
 
-  /// Loads the config and starts the host, or asks for settings.
+  /// Loads the config and starts the host. With no saved config the first
+  /// run saves the defaults, starts the host and opens Settings.
   Future<void> init() async {
     _prefs = await store.loadPrefs();
     _config = await store.load();
@@ -280,50 +255,22 @@ class HostController extends ChangeNotifier {
       await _start();
       return;
     }
-    core.loadStored();
-    if (_config == null && core.downloaded.isNotEmpty) {
-      // Core was downloaded before a config was saved: nothing to ask.
-      _config = formConfig.copyWith(
-        coreVersion: core.downloaded.first.toString(),
-      );
+    final firstRun = _config == null;
+    if (firstRun) {
+      _config = store.defaults;
       try {
         await store.save(_config!);
       } on Object {
         // Starts this session anyway.
       }
+      _settingsOpen = true;
     }
-    if (_config == null || !_config!.isComplete) {
-      _phase = HostPhase.setup;
-      _notify();
-      if (_config == null) unawaited(_firstRunDownload());
-    } else if (!_prefs.startHost) {
+    if (!_prefs.startHost) {
       _phase = HostPhase.stopped;
       _notify();
     } else {
       await _start();
     }
-  }
-
-  /// The first start has no Core: download it, then start with it. A failed
-  /// download leaves Settings open on Core, with Retry.
-  Future<void> _firstRunDownload() async {
-    final version = await core.download();
-    if (version == null || _disposed || _config != null) return;
-    if (_phase != HostPhase.setup) return;
-    await saveAndStart(formConfig.copyWith(coreVersion: version.toString()));
-  }
-
-  /// Saves [config] and starts the host with it.
-  Future<void> saveAndStart(AppConfig config) async {
-    try {
-      await store.save(config);
-    } on Object {
-      // A config that cannot be written still starts this session.
-    }
-    _config = config;
-    _settingsOpen = false;
-    _real = true;
-    await _start();
   }
 
   /// The recent workspaces for the rail menu, newest first. The open one is
@@ -379,63 +326,30 @@ class HostController extends ChangeNotifier {
     _notify();
     final useScripted = !_real;
     final config = formConfig;
-    var binary = '';
     if (!useScripted) {
-      // A host already running on this data directory is used, not doubled.
-      StartedBackend? running;
-      try {
-        running = await attacher(config);
-      } on Object {
-        running = null;
-      }
-      if (ticket != _generation || _disposed) {
-        await running?.dispose();
-        return;
-      }
-      if (running != null) {
-        _adopt(running, ticket);
-        return;
-      }
-      final resolved = await _resolveBinary(config);
-      if (ticket != _generation || _disposed) return;
       log.host(
-        'starting host from ${config.binarySource.name} binary '
-        '${resolved.path ?? 'none'}, workspace ${config.workspaceDirectory}',
+        'starting host, data ${config.dataDirectory}, '
+        'workspace ${config.workspaceDirectory}',
       );
-      final failure = resolved.failure;
-      if (failure != null) {
-        _fail(ticket, failure);
-        return;
-      }
-      binary = resolved.path ?? '';
-      if (binary.isEmpty || !_fileExists(binary)) {
-        _fail(
-          ticket,
-          config.binarySource == BinarySource.custom
-              ? HostFailure.binaryMissing(binary)
-              : HostFailure.coreMissing(),
-        );
-        return;
-      }
     }
     try {
       final BackendStarter start = useScripted
           ? startScripted
-          : (starter ?? (c) => startBubblePaw(c, binaryPath: binary));
+          : (starter ?? startBubblePaw);
       final started = await start(config);
       if (ticket != _generation || _disposed) {
         await started.dispose();
         return;
       }
-      _adopt(started, ticket, binary: binary);
+      _adopt(started, ticket);
     } on Object catch (error) {
-      // Startup errors can carry local paths or provider text: show a fixed
-      // message for anything that is not a known host failure.
+      // Startup errors can carry local paths or provider text: only a start
+      // failure the host itself reported shows its words.
       _fail(ticket, HostFailure.from(error) ?? HostFailure.startFailed());
     }
   }
 
-  void _adopt(StartedBackend started, int ticket, {String? binary}) {
+  void _adopt(StartedBackend started, int ticket) {
     _dispose = started.dispose;
     _createdChats = started.createdChats;
     _now = started.now;
@@ -445,96 +359,7 @@ class HostController extends ChangeNotifier {
     if (lost != null) unawaited(_watchConnection(lost, ticket));
     _phase = HostPhase.running;
     log.host(started.attached ? 'attached to a running host' : 'host attached');
-    _hostVersion = started.attached ? started.version : null;
-    _notify();
-    if (binary != null) unawaited(_readVersion(binary, ticket));
-  }
-
-  /// The executable [config] starts, or why there is none.
-  Future<({String? path, HostFailure? failure})> _resolveBinary(
-    AppConfig config,
-  ) async {
-    switch (config.binarySource) {
-      case BinarySource.custom:
-        return (path: config.binaryPath, failure: null);
-      case BinarySource.downloaded:
-        final version = coreVersionFor(config);
-        final path = version == null ? null : core.binaryPath(version);
-        return path == null
-            ? (path: null, failure: HostFailure.coreMissing())
-            : (path: path, failure: null);
-      case BinarySource.installed:
-        final found = await core.detect();
-        if (found.usable) return (path: found.path, failure: null);
-        return (path: null, failure: HostFailure.coreUnusable(found.problem));
-    }
-  }
-
-  /// Downloads the newest compatible Core. With no config yet, or a config
-  /// that runs downloaded Core, the new version is saved and the host starts
-  /// with it; otherwise it is only stored, for the form to use when saved.
-  Future<void> downloadCore() async {
-    final version = await core.download();
-    if (version == null || _disposed) return;
-    final saved = _config;
-    if (saved == null) {
-      if (_phase == HostPhase.setup) {
-        await saveAndStart(
-          formConfig.copyWith(coreVersion: version.toString()),
-        );
-      }
-      return;
-    }
-    if (saved.binarySource != BinarySource.downloaded) return;
-    final next = saved.copyWith(coreVersion: version.toString());
-    try {
-      await store.save(next);
-    } on Object {
-      // The new version still runs this session.
-    }
-    _config = next;
-    await _start();
-    unawaited(core.prune(version));
-  }
-
-  /// Deletes the stored Core [version]. A host running it is stopped first.
-  Future<void> removeCore(SemVer version) async {
-    final saved = _config;
-    final inUse =
-        saved != null &&
-        saved.binarySource == BinarySource.downloaded &&
-        coreVersionFor(saved) == version;
-    if (inUse && _real) {
-      _generation++;
-      await _stopBackend();
-      _phase = HostPhase.stopped;
-      _notify();
-    }
-    await core.remove(version);
-  }
-
-  /// Disconnects from an attached host and leaves it running.
-  Future<void> detach() async {
-    if (!_attached) return;
-    _generation++;
-    await _stopBackend();
-    _phase = HostPhase.stopped;
-    _notify();
-  }
-
-  Future<void> _readVersion(String binary, int ticket) async {
-    final reader = versionReader;
-    _hostVersion = null;
-    if (reader == null || !_real) return;
-    String? version;
-    try {
-      version = await reader(binary);
-    } on Object {
-      version = null;
-    }
-    if (ticket != _generation || _disposed) return;
-    _hostVersion = version;
-    log.host('host version ${version ?? 'unknown'}');
+    _hostVersion = started.version;
     _notify();
   }
 
@@ -606,7 +431,6 @@ class HostController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    core.removeListener(_notify);
     updates.removeListener(_notify);
     _generation++;
     final dispose = _dispose;

@@ -2,11 +2,11 @@
 
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 
-enum HostFailureKind { binaryMissing, protocolMismatch, exited, startFailed }
+enum HostFailureKind { protocolMismatch, exited, startFailed }
 
-/// A cause, a consequence and a next step. The notice never carries host text
-/// and paths other than the configured binary stay out; [detail] is kept apart
-/// for the feedback diagnostics.
+/// A cause, a consequence and a next step. A notice carries host text only for
+/// a failed start, where the host's own error is the cause; [detail] is kept
+/// apart for the feedback diagnostics.
 class HostFailure {
   const HostFailure._(this.kind, this.title, this.message, {this.detail});
 
@@ -19,27 +19,6 @@ class HostFailure {
   /// observed.
   final String? detail;
 
-  factory HostFailure.binaryMissing(String path) => HostFailure._(
-    HostFailureKind.binaryMissing,
-    'BubblePaw binary not found',
-    'No file exists at $path. Chats are unavailable until the path is '
-        'corrected in settings.',
-  );
-
-  factory HostFailure.coreMissing() => const HostFailure._(
-    HostFailureKind.binaryMissing,
-    'Core is not downloaded',
-    'BubblePaw has no Core to start. Chats are unavailable until Core is '
-        'downloaded in settings, or Installed or Custom is chosen.',
-  );
-
-  factory HostFailure.coreUnusable(String reason) => HostFailure._(
-    HostFailureKind.binaryMissing,
-    'The installed Core cannot be used',
-    '$reason Chats are unavailable until it is fixed outside BubblePaw or '
-        'another Core is chosen in settings.',
-  );
-
   factory HostFailure.protocolMismatch({
     required String expected,
     required String? actual,
@@ -47,8 +26,8 @@ class HostFailure {
     HostFailureKind.protocolMismatch,
     'BubblePaw version not supported',
     'The host speaks protocol ${actual ?? 'unknown'}; this app needs '
-        '$expected. Chats are unavailable until a matching binary is set in '
-        'settings.',
+        '$expected. Chats are unavailable until BubblePaw is updated or the '
+        'other BubblePaw using this data directory is closed.',
   );
 
   factory HostFailure.exited(int? exitCode, {String? detail}) => HostFailure._(
@@ -60,11 +39,15 @@ class HostFailure {
     detail: detail,
   );
 
-  factory HostFailure.startFailed() => const HostFailure._(
+  /// The host did not start. [reason] is the error it reported, when it gave
+  /// one.
+  factory HostFailure.startFailed([String? reason]) => HostFailure._(
     HostFailureKind.startFailed,
     'BubblePaw did not start',
-    'The host could not be started or did not answer. Check the binary, '
-        'workspace and data directory in settings.',
+    reason == null || reason.trim().isEmpty
+        ? 'The host could not be started or did not answer. Chats are '
+              'unavailable until it starts.'
+        : '${reason.trim()} Chats are unavailable until it starts.',
   );
 
   /// Maps what starting or using the host threw. Null when [error] is not a
@@ -75,6 +58,9 @@ class HostFailure {
         expected: error.expectedVersion,
         actual: error.actualVersion,
       );
+    }
+    if (error is BubblePawException && error.code == 'startFailed') {
+      return HostFailure.startFailed(error.message);
     }
     if (error is BubblePawHostExited) {
       return HostFailure.exited(error.exitCode, detail: error.stderrTail);

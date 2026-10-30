@@ -10,13 +10,10 @@ import 'src/app_licences.dart';
 import 'src/config.dart';
 import 'src/feedback/feedback_controller.dart';
 import 'src/feedback/log_buffer.dart';
-import 'src/core/core_manager.dart';
-import 'src/core/detect.dart';
 import 'src/host_controller.dart';
 import 'src/platform/desktop_adapters.dart';
 import 'src/platform/desktop_integration.dart';
 import 'src/platform/download.dart';
-import 'src/platform/releases.dart';
 import 'src/updates/update_controller.dart';
 
 /// `--scripted` runs the kit's scripted backend instead of a BubblePaw host.
@@ -35,16 +32,6 @@ void main(List<String> args) {
   installLogHooks();
   const fetcher = DartHttpFetcher();
   final sep = Platform.pathSeparator;
-  final platform = CorePlatform.current();
-  final core = CoreManager(
-    store: CoreStore(
-      Directory('${directory.path}${sep}core'),
-      binaryName: platform?.binaryName ?? 'bubblepaw',
-    ),
-    releases: GitHubCoreReleases(fetcher),
-    fetcher: fetcher,
-    detector: InstalledCoreDetector.system(),
-  );
   final updates = UpdateController(
     fetcher: fetcher,
     downloads: Directory('${directory.path}${sep}updates'),
@@ -60,14 +47,11 @@ void main(List<String> args) {
     store: ConfigStore(directory),
     log: LogBuffer.instance,
     scripted: scripted,
-    versionReader: readHostVersion,
-    core: core,
     updates: updates,
   );
   unawaited(
     controller.init().then((_) {
       if (scripted) return;
-      unawaited(core.refresh());
       unawaited(updates.checkOnStart());
     }),
   );

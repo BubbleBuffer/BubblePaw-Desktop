@@ -22,11 +22,8 @@ class Scripted {
     return StartedBackend(backend, () async {});
   }
 
-  HostController controller() => HostController(
-    store: MemoryConfigStore(sampleConfig),
-    starter: start,
-    fileExists: (_) => true,
-  );
+  HostController controller() =>
+      HostController(store: MemoryConfigStore(sampleConfig), starter: start);
 }
 
 Finder get composer => find.byType(EditableText);
@@ -128,9 +125,7 @@ void main() {
       expect(find.text('Approve'), findsOneWidget);
     });
 
-    testWidgets('--scripted starts without a config or a binary', (
-      tester,
-    ) async {
+    testWidgets('--scripted starts without a config', (tester) async {
       final controller = HostController(
         store: MemoryConfigStore(),
         scripted: true,
@@ -142,48 +137,36 @@ void main() {
   });
 
   group('settings', () {
-    testWidgets('first run opens Core and starts on save', (tester) async {
-      final store = MemoryConfigStore();
-      final scripted = Scripted();
-      final controller = HostController(
-        store: store,
-        starter: scripted.start,
-        fileExists: (_) => true,
-      );
+    testWidgets(
+      'first run saves the defaults, starts the host and opens Settings',
+      (tester) async {
+        final store = MemoryConfigStore();
+        final scripted = Scripted();
+        final controller = HostController(
+          store: store,
+          starter: scripted.start,
+        );
+        await pumpApp(tester, controller);
+
+        expect(store.saved, store.defaults);
+        expect(scripted.starts, 1);
+        expect(controller.phase, HostPhase.running);
+        expect(controller.settingsOpen, isTrue);
+        expect(find.byKey(const ValueKey('page-general')), findsOneWidget);
+        expect(find.byKey(const ValueKey('page-core')), findsNothing);
+
+        await tester.tap(find.byKey(const ValueKey('settings-back')));
+        await settle(tester);
+        expect(controller.settingsOpen, isFalse);
+        expect(find.text('Needs approval'), findsOneWidget);
+      },
+    );
+
+    testWidgets('a saved config does not open Settings', (tester) async {
+      final controller = Scripted().controller();
       await pumpApp(tester, controller);
-
-      expect(controller.phase, HostPhase.setup);
-      expect(find.byKey(const ValueKey('page-core')), findsOneWidget);
-      expect(find.text('Not set up'), findsWidgets);
-      // Core is downloaded by default; the path field is for a custom binary.
-      expect(find.text('Binary path'), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('binary-custom')));
-      await settle(tester);
-      expect(find.text('Binary path'), findsOneWidget);
-      expect(find.text('Workspace'), findsNothing);
-      expect(find.text('Data directory'), findsOneWidget);
-      // Nothing to go back to before the host has run once.
-      expect(find.byKey(const ValueKey('settings-back')), findsNothing);
-
-      // Saving without a binary says what is missing and starts nothing.
-      await tester.ensureVisible(find.byKey(const ValueKey('settings-save')));
-      await tester.tap(find.byKey(const ValueKey('settings-save')));
-      await settle(tester);
-      expect(find.textContaining('Enter the binary'), findsOneWidget);
-      expect(scripted.starts, 0);
-
-      await tester.enterText(
-        find.byKey(const ValueKey('settings-binary')),
-        '/opt/bubblepaw/bubblepaw',
-      );
-      await tester.ensureVisible(find.byKey(const ValueKey('settings-save')));
-      await tester.tap(find.byKey(const ValueKey('settings-save')));
-      await settle(tester);
-
-      expect(scripted.starts, 1);
-      expect(store.saved?.binaryPath, '/opt/bubblepaw/bubblepaw');
-      expect(controller.phase, HostPhase.running);
-      expect(find.text('Needs approval'), findsOneWidget);
+      expect(controller.settingsOpen, isFalse);
+      expect(find.byKey(const ValueKey('page-general')), findsNothing);
     });
 
     testWidgets('opens from the rail on General and goes back to the chat', (
@@ -194,14 +177,15 @@ void main() {
       await tester.tap(find.text('Settings'));
       await settle(tester);
       expect(find.byKey(const ValueKey('page-general')), findsOneWidget);
-      for (final section in ['general', 'core', 'models', 'about']) {
+      for (final section in ['general', 'models', 'feedback', 'about']) {
         expect(find.byKey(ValueKey('settings-nav-$section')), findsOneWidget);
       }
       expect(find.textContaining('Remote'), findsNothing);
 
-      await tester.tap(find.byKey(const ValueKey('settings-nav-core')));
+      expect(find.byKey(const ValueKey('settings-nav-core')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('settings-nav-about')));
       await settle(tester);
-      expect(find.byKey(const ValueKey('page-core')), findsOneWidget);
+      expect(find.byKey(const ValueKey('page-about')), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('settings-back')));
       await settle(tester);
@@ -226,25 +210,65 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('settings-page-back')));
       await settle(tester);
       expect(find.byKey(const ValueKey('page-about')), findsNothing);
-      expect(find.byKey(const ValueKey('settings-nav-core')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('settings-nav-general')),
+        findsOneWidget,
+      );
     });
   });
 
   group('failure notices', () {
-    testWidgets('a missing binary names the path and offers Restart', (
+    testWidgets(
+      "a failed start shows the host's own error and offers Restart",
+      (tester) async {
+        final controller = HostController(
+          store: MemoryConfigStore(sampleConfig),
+          starter: (_) => Future<StartedBackend>.error(
+            const BubblePawException(
+              'startFailed',
+              'The data directory is locked by another BubblePaw.',
+            ),
+          ),
+        );
+        await pumpApp(tester, controller);
+
+        expect(controller.phase, HostPhase.failed);
+        expect(find.text('BubblePaw did not start'), findsOneWidget);
+        expect(
+          find.textContaining(
+            'The data directory is locked by another BubblePaw.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('notice-restart')), findsOneWidget);
+        expect(find.byKey(const ValueKey('notice-settings')), findsOneWidget);
+      },
+    );
+
+    testWidgets('Restart after a failed start runs the starter again', (
       tester,
     ) async {
+      var starts = 0;
+      final scripted = Scripted();
       final controller = HostController(
         store: MemoryConfigStore(sampleConfig),
-        starter: Scripted().start,
-        fileExists: (_) => false,
+        starter: (config) {
+          starts++;
+          if (starts == 1) {
+            return Future<StartedBackend>.error(
+              const BubblePawException('startFailed', 'Store is locked.'),
+            );
+          }
+          return scripted.start(config);
+        },
       );
       await pumpApp(tester, controller);
+      expect(find.textContaining('Store is locked.'), findsOneWidget);
 
-      expect(find.text('BubblePaw binary not found'), findsOneWidget);
-      expect(find.textContaining('/opt/bubblepaw/bubblepaw'), findsOneWidget);
-      expect(find.byKey(const ValueKey('notice-restart')), findsOneWidget);
-      expect(find.byKey(const ValueKey('notice-settings')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('notice-restart')));
+      await settle(tester);
+      expect(starts, 2);
+      expect(controller.phase, HostPhase.running);
     });
 
     testWidgets('a protocol mismatch names both versions', (tester) async {
@@ -256,7 +280,6 @@ void main() {
             actualVersion: '0.2',
           ),
         ),
-        fileExists: (_) => true,
       );
       await pumpApp(tester, controller);
 
@@ -273,7 +296,6 @@ void main() {
         starter: (_) => Future<StartedBackend>.error(
           Exception('secret path /home/user/key'),
         ),
-        fileExists: (_) => true,
       );
       await pumpApp(tester, controller);
 
@@ -293,7 +315,6 @@ void main() {
           if (starts == 1) return StartedBackend(ExitedBackend(), () async {});
           return scripted.start(config);
         },
-        fileExists: (_) => true,
       );
       await pumpApp(tester, controller);
 
@@ -313,18 +334,19 @@ void main() {
     ) async {
       final controller = HostController(
         store: MemoryConfigStore(sampleConfig),
-        starter: Scripted().start,
-        fileExists: (_) => false,
+        starter: (_) => Future<StartedBackend>.error(
+          const BubblePawException('startFailed', 'Store is locked.'),
+        ),
       );
       await pumpApp(tester, controller);
 
       await tester.tap(find.byKey(const ValueKey('notice-settings')));
       await settle(tester);
-      expect(find.byKey(const ValueKey('page-core')), findsOneWidget);
+      expect(find.byKey(const ValueKey('page-general')), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('settings-back')));
       await settle(tester);
-      expect(find.text('BubblePaw binary not found'), findsOneWidget);
+      expect(find.text('BubblePaw did not start'), findsOneWidget);
     });
   });
 }

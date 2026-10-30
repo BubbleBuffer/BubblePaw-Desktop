@@ -75,23 +75,22 @@ void main() {
     });
   });
 
-  group('Core range', () {
+  group('VersionRange', () {
+    const range = VersionRange(SemVer(0, 3, 1), SemVer(0, 5, 0));
+
     test('is >=0.3.1 and <0.5.0', () {
-      expect(coreCompatibleRange.contains(v('0.3.1')), isTrue);
-      expect(coreCompatibleRange.contains(v('0.4.9')), isTrue);
-      expect(coreCompatibleRange.contains(v('0.3.0')), isFalse);
-      expect(coreCompatibleRange.contains(v('0.5.0')), isFalse);
-      expect(coreCompatibleRange.contains(v('1.0.0')), isFalse);
+      expect(range.contains(v('0.3.1')), isTrue);
+      expect(range.contains(v('0.4.9')), isTrue);
+      expect(range.contains(v('0.3.0')), isFalse);
+      expect(range.contains(v('0.5.0')), isFalse);
+      expect(range.contains(v('1.0.0')), isFalse);
     });
 
     test('says why a version is outside', () {
-      expect(coreCompatibleRange.reasonOutside(v('0.2.4')), contains('older'));
-      expect(coreCompatibleRange.reasonOutside(v('0.5.1')), contains('0.5.0'));
-      expect(coreCompatibleRange.reasonOutside(v('0.4.0')), isNull);
-      expect(
-        coreCompatibleRange.describe(),
-        '0.3.1 or newer, older than 0.5.0',
-      );
+      expect(range.reasonOutside(v('0.2.4')), contains('older'));
+      expect(range.reasonOutside(v('0.5.1')), contains('0.5.0'));
+      expect(range.reasonOutside(v('0.4.0')), isNull);
+      expect(range.describe(), '0.3.1 or newer, older than 0.5.0');
     });
   });
 }

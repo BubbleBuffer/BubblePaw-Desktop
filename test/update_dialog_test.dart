@@ -43,7 +43,6 @@ _Rig _rig({bool canInstall = true}) {
   final host = HostController(
     store: store,
     starter: Played().start,
-    fileExists: (_) => true,
     updates: updates,
   );
   return (host: host, updates: updates, installer: installer, store: store);

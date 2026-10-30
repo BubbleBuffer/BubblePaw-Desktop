@@ -2,7 +2,6 @@
 
 enum SettingsSection {
   general('General'),
-  core('Core'),
   models('Models'),
   feedback('Feedback'),
   about('About');

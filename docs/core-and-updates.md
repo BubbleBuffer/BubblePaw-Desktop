@@ -1,8 +1,56 @@
 # Core and updates
 
-Desktop does not ship Core. It downloads it, or uses one already on the computer. It
-also checks for new versions of itself. Code: `lib/src/core/`, `lib/src/updates/`,
+Core is part of the app. `native/` is a Rust crate (`bubblepaw_desktop_native`) that
+depends on `bubblepaw-sdk` at Core tag `v0.4.0`; flutter_rust_bridge exposes it to Dart.
+The app also checks for new versions of itself. Code: `native/`, `rust_builder/`,
+`lib/src/rust/` (generated), `lib/src/core/ffi_transport.dart`, `lib/src/updates/`,
 `lib/src/platform/download.dart`, `lib/src/semver.dart`.
+
+## The native crate
+
+The surface is host-API JSON-RPC and no feature logic (`native/src/api/host.rs`):
+
+- `BubblePawHost.open(dataDir, workspaceDir)` calls the SDK's `Client::open`: it attaches
+  to the host that owns `dataDir` (another process, or this one), and otherwise opens the
+  store and embeds a host that serves it, publishing `host.json` so other clients attach.
+  `host.attached` says which happened.
+- `call(method, paramsJson)` returns the method's `result` as JSON text. A host error is a
+  `HostCallError` of kind `rpc` with `code`, `message` and `dataJson`; `disconnected`,
+  `protocol`, `host`, `closed` and `invalidParams` mean there was no answer.
+- `notifications()` is a stream of JSON-RPC notification text (`event`, `events.gap`).
+- `close()` ends the session; an embedded host also stops and removes `host.json`.
+- `coreVersion()` is the embedded Core release (`CORE_VERSION`).
+
+`native/src/host_setup.rs` is the one place that builds the host (providers, config,
+roles). Today it is a placeholder with a scripted provider only; Core v0.5.0 adds an SDK
+entry point that does the CLI host's startup, and that call replaces the placeholder.
+
+`cargo test` covers `session.list` on a fresh temp data dir, host errors keeping their
+code, a second handle attaching to a host built with `Client::embedded` on the same dir
+and seeing the same sessions, and the notification stream ending on close.
+
+## The FFI transport
+
+`BubblePawBackend` talks to a `BubblePawTransport`. `FfiBubblePawTransport`
+(`lib/src/core/ffi_transport.dart`) implements it over a `NativeHost`. To keep protocol
+parsing, timeouts and error classification in the kit, it hands the kit's own
+`StdioBubblePawTransport` a pipe: each request line becomes one native `call`, and each
+reply, error or notification becomes one line back. `shutdown` closes the native host. A
+session that ends unasked looks like a host exit, so the app shows its "BubblePaw
+stopped" notice. A failed open becomes `BubblePawException('startFailed', <text>)`, and
+`HostFailure.startFailed` shows that text with Restart.
+
+## Attach to a running host
+
+`open` attaches when a host already runs on the data directory (the CLI's, or another
+Desktop's). The feedback diagnostics then say "attached host" instead of "embedded".
+Ending an attached session leaves that host running. A protocol version mismatch shows
+"BubblePaw version not supported".
+
+`config.json` keeps `workspaceDirectory`, `dataDirectory` and `recentWorkspaces`. Fields
+from earlier versions (`binarySource`, `binaryPath`, `coreVersion`, `extraArguments`,
+`hostArguments`) are ignored when read and dropped on the next save. There is no Core
+binary to choose and no command line to extend.
 
 ## Versions
 
@@ -12,48 +60,9 @@ compare one by one (numbers as numbers), build metadata is ignored. A nightly lo
 `0.1.0-nightly.20261029+abc1234`, so it is older than `0.1.0` and newer than the
 previous nightly.
 
-`coreCompatibleRange` is the one place that says which Core versions this Desktop works
-with: `>=0.3.1 <0.5.0`. Change it when Desktop moves to a new Core.
-
-## Core binary
-
-`AppConfig.binarySource` is `downloaded` (default), `installed` or `custom`.
-`AppConfig.coreVersion` names the downloaded version to run. A config saved as
-`"bundled"` reads as `downloaded`; one with no source stays `custom`. The bundled-Core
-lookup (`bundledBinaryPath`) is removed, not kept as a dev fallback.
-
-- **Downloaded.** `CoreManager` reads the releases of the public
-  `BubbleBuffer/BubblePaw-Core` repository (`GitHubCoreReleases`), keeps the ones inside
-  the range that have an archive for this system (`bubblepaw-<tag>-<triple>.<tar.gz|zip>`),
-  and offers the newest. A download streams to `<name>.part`, hashes as it goes, and is
-  renamed only when the SHA256 equals the entry in the release's `SHA256SUMS`
-  (`downloadVerified`). A release with no `SHA256SUMS` is refused. Extraction uses the
-  system `tar` (`ArchiveTools`); the binary gets `chmod +x` on Linux. Each version lives
-  in `<app support>/core/<version>/`. A mismatch, a dropped connection or being offline
-  stores nothing and shows a failure with Retry. Update downloads the newer version,
-  restarts the host on it, then deletes the older stored ones; Remove deletes a stored version (stopping the
-  host first if it runs from it).
-- **Installed.** `InstalledCoreDetector` looks for `bubblepaw` (`bubblepaw.exe`) in PATH
-  and then the standard install folders, runs `--version` and checks the range. A copy in
-  range beats an older one found first. The page shows the path and version, or why the
-  copy cannot be used (too old, too new, no version, none found with the folders
-  searched). PATH and the file system are injected, so tests use a fake PATH.
-- **Custom.** A path and Browse; the page shows the version the binary reports.
-
-About's Core row: downloaded shows the version and Update when a newer compatible
-release exists; Installed and Custom show the version and "Updated outside BubblePaw".
-
-## Attach to a running host
-
-`HostController._start` first calls its `attacher` for the data directory. A host
-already running there is used, not doubled: the status row shows "Attached" with one
-button, Detach, which disconnects and leaves that host running. A host Desktop started
-shows Restart (or Start host).
-
-Core's stdio transport has no discovery file or endpoint yet, so
-`attachToRunningHost` (`lib/src/core/attach.dart`) returns null and Desktop always
-starts its own host. It is one function with a TODO; the controller logic around it
-(adopt, Detach, no second start) is tested with a fake attacher.
+Moving to a new Core means changing the `tag` in `native/Cargo.toml` and `CORE_VERSION`
+together, regenerating nothing unless the API changed, and releasing the app. Settings >
+About shows the embedded version.
 
 ## App updates
 
@@ -72,7 +81,7 @@ are injected (`HttpFetcher`, a download folder, `UpdateInstaller`).
   check is over 24 hours old; it opens the dialog for a new version and stays quiet
   about a skipped one. Check now always shows what it finds. Switching channel clears
   the skip and the offer; it never downgrades.
-- **Download.** Verified against the manifest's SHA256 the same way as Core. A mismatch
+- **Download.** Verified against the manifest's SHA256. A mismatch
   deletes the file and the dialog shows the expected and received hashes with Retry.
 - **Install.** Windows: "Install and restart" runs the Inno installer with `/VERYSILENT
   /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS` from a small `.cmd` that starts the
@@ -84,14 +93,14 @@ are injected (`HttpFetcher`, a download folder, `UpdateInstaller`).
 
 ## Tests
 
-`test/semver_test.dart`, `test/core_test.dart` (release list, verified download,
-checksum mismatch, detection with a fake PATH, attach versus start, first run, config),
-`test/updates_test.dart` (manifest, checks, skip, 24 h gate, download, install),
-`test/update_dialog_test.dart`, and the Core and About parts of
-`test/settings_test.dart`. Fakes are in `test/fakes.dart`; no test reaches the network.
-Goldens cover the Core page states, About's Updates and each dialog state.
+`test/semver_test.dart`, `test/updates_test.dart` (manifest, checks, skip, 24 h gate,
+download, install), `test/download_test.dart` (verified download, checksum mismatch),
+`test/update_dialog_test.dart`, `test/ffi_transport_test.dart` (a fake `NativeHost`),
+`test/native_host_test.dart` (tag `native`: the transport against the built crate),
+`test/host_controller_test.dart` and the About part of `test/settings_test.dart`. Fakes
+are in `test/fakes.dart`; no test reaches the network. Goldens cover About's Updates and
+each dialog state.
 
 ## Not verified
 
-A real GitHub download, a real Inno installer run and the relaunch script, the Windows
-`zip` layout, and attaching to a real host.
+A real GitHub download, a real Inno installer run and the relaunch script.

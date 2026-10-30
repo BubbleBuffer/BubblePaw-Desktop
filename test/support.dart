@@ -26,8 +26,6 @@ class MemoryConfigStore extends ConfigStore {
 
   @override
   AppConfig get defaults => const AppConfig(
-    binarySource: BinarySource.downloaded,
-    binaryPath: '',
     workspaceDirectory: '/home/user/.local/share/bubblepaw-desktop/workspace',
     dataDirectory: '/home/user/.local/share/bubblepaw-desktop/data',
   );
@@ -106,7 +104,6 @@ class TestFeedback extends FeedbackController {
 }
 
 const sampleConfig = AppConfig(
-  binaryPath: '/opt/bubblepaw/bubblepaw',
   workspaceDirectory: '/home/user/project',
   dataDirectory: '/home/user/.local/share/bubblepaw-desktop/data',
 );
@@ -122,7 +119,6 @@ Future<void> pumpApp(
   Brightness brightness = Brightness.light,
   bool init = true,
   Future<String?> Function()? pickFolder,
-  Future<String?> Function()? pickBinary,
   PlatformServices services = const PlatformServices(),
   Stream<LicenseEntry> Function()? licenceSource,
   FeedbackController? feedback,
@@ -136,7 +132,6 @@ Future<void> pumpApp(
       feedback: feedback ?? TestFeedback(controller),
       brightness: brightness,
       pickFolder: pickFolder ?? (() async => null),
-      pickBinary: pickBinary ?? (() async => null),
       services: services,
       licenceSource: licenceSource ?? (() => const Stream.empty()),
     ),
