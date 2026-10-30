@@ -3,8 +3,21 @@
 name: ci
 
 on:
+  # Docs, mockups and licence text cannot change the build, the tests or the goldens.
   push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'design/**'
+      - 'LICENSE*'
+      - 'NOTICE*'
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'design/**'
+      - 'LICENSE*'
+      - 'NOTICE*'
   workflow_dispatch:
 
 permissions:
