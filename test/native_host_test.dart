@@ -33,8 +33,7 @@ String? _machineProviderConfig() {
     if (name.startsWith('BUBBLEPAW_')) return 'the environment sets $name';
   }
   final home = env['HOME'] ?? env['USERPROFILE'];
-  if (home != null &&
-      File('$home/.bubblepaw/config.toml').existsSync()) {
+  if (home != null && File('$home/.bubblepaw/config.toml').existsSync()) {
     return 'the user config $home/.bubblepaw/config.toml exists';
   }
   return null;
