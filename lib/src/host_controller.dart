@@ -129,6 +129,7 @@ class HostController extends ChangeNotifier {
   AppPrefs _prefs = const AppPrefs();
   String? _hostVersion;
   bool _trayNoticePending = false;
+  bool _needsSetupPending = false;
   bool _trayAvailable = true;
   bool _startupFailed = false;
   bool _attached = false;
@@ -192,6 +193,29 @@ class HostController extends ChangeNotifier {
     if (_startupFailed == value) return;
     _startupFailed = value;
     _notify();
+  }
+
+  /// A send was refused because no model provider is set up; the notice that
+  /// points to Settings > Models is showing.
+  bool get needsSetupPending => _needsSetupPending;
+
+  void _needsSetup(KitNeedsSetup error) {
+    if (_disposed || _needsSetupPending) return;
+    log.desktop('send refused: no model provider is set up');
+    _needsSetupPending = true;
+    _notify();
+  }
+
+  void dismissNeedsSetup() {
+    if (!_needsSetupPending) return;
+    _needsSetupPending = false;
+    _notify();
+  }
+
+  /// Opens Settings > Models from the no-provider notice.
+  void openModelsFromNotice() {
+    _needsSetupPending = false;
+    openSettings(SettingsSection.models);
   }
 
   /// The "still running in the tray" notice is waiting to be dismissed.
@@ -372,7 +396,11 @@ class HostController extends ChangeNotifier {
     _createdChats = started.createdChats;
     _now = started.now;
     _attached = started.attached;
-    _backend = GuardedBackend(started.backend, onFailure: _hostFailed);
+    _backend = GuardedBackend(
+      started.backend,
+      onFailure: _hostFailed,
+      onNeedsSetup: _needsSetup,
+    );
     final lost = started.connectionLost;
     if (lost != null) unawaited(_watchConnection(lost, ticket));
     _phase = HostPhase.running;

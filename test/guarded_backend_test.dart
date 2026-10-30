@@ -23,6 +23,19 @@ class _Inner implements AgentBackend {
       ? Future<ChatPage>.value(ChatPage(chats: const []))
       : Future<ChatPage>.error(error!);
 
+  Object? sendError;
+
+  @override
+  Future<SendResult> send(
+    String chatId,
+    String text, {
+    List<KitRef> refs = const [],
+  }) => sendError == null
+      ? Future<SendResult>.value(
+          const SendResult(delivery: SendDelivery.started, runId: 'r1'),
+        )
+      : Future<SendResult>.error(sendError!);
+
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
@@ -32,12 +45,18 @@ Future<void> turn() => Future<void>.delayed(Duration.zero);
 void main() {
   late _Inner inner;
   late List<HostFailure> failures;
+  late List<KitNeedsSetup> needsSetup;
   late GuardedBackend guarded;
 
   setUp(() {
     inner = _Inner();
     failures = [];
-    guarded = GuardedBackend(inner, onFailure: failures.add);
+    needsSetup = [];
+    guarded = GuardedBackend(
+      inner,
+      onFailure: failures.add,
+      onNeedsSetup: needsSetup.add,
+    );
   });
 
   test('passes calls through', () async {
@@ -59,6 +78,26 @@ void main() {
     await expectLater(guarded.listChats(), throwsA(isA<KitBusy>()));
     await turn();
     expect(failures, isEmpty);
+  });
+
+  test(
+    'a send that needs setup is reported, rethrown, not a failure',
+    () async {
+      inner.sendError = const KitNeedsSetup('No provider is configured.');
+      await expectLater(
+        guarded.send('c', 'hello'),
+        throwsA(isA<KitNeedsSetup>()),
+      );
+      await turn();
+      expect(needsSetup.single.message, 'No provider is configured.');
+      expect(failures, isEmpty);
+    },
+  );
+
+  test('other send errors do not report needs-setup', () async {
+    inner.sendError = const KitBusy();
+    await expectLater(guarded.send('c', 'hello'), throwsA(isA<KitBusy>()));
+    expect(needsSetup, isEmpty);
   });
 
   test('reports an exit that arrives on an event stream', () async {

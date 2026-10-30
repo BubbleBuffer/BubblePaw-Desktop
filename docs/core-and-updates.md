@@ -1,7 +1,7 @@
 # Core and updates
 
 Core is part of the app. `native/` is a Rust crate (`bubblepaw_desktop_native`) that
-depends on `bubblepaw-sdk` at Core tag `v0.5.0`; flutter_rust_bridge exposes it to Dart.
+depends on `bubblepaw-sdk` at Core tag `v0.5.1`; flutter_rust_bridge exposes it to Dart.
 The app also checks for new versions of itself. Code: `native/`, `rust_builder/`,
 `lib/src/rust/` (generated), `lib/src/core/ffi_transport.dart`, `lib/src/updates/`,
 `lib/src/platform/download.dart`, `lib/src/semver.dart`.
@@ -13,7 +13,7 @@ The surface is host-API JSON-RPC and no feature logic (`native/src/api/host.rs`)
 - `BubblePawHost.open(dataDir, workspaceDir)` calls the SDK's `Client::open`: it attaches
   to the host that owns `dataDir` (another process, or this one), and otherwise opens the
   store and embeds a host that serves it, publishing `host.json` so other clients attach.
-  `host.attached` says which happened.
+  `host.attached` says which happened (the SDK's `Client::is_attached()`).
 - `call(method, paramsJson)` returns the method's `result` as JSON text. A host error is a
   `HostCallError` of kind `rpc` with `code`, `message` and `dataJson`; `disconnected`,
   `protocol`, `host`, `closed` and `invalidParams` mean there was no answer.
@@ -25,14 +25,17 @@ The surface is host-API JSON-RPC and no feature logic (`native/src/api/host.rs`)
 Desktop's data directory and workspace, then `Client::open_configured`. The rest of the
 configuration comes from the same layers as the `bubblepaw` CLI (the user config in the
 home directory, `<workspace>/.bubblepaw/config.toml`, `BUBBLEPAW_*` environment), so
-providers and models are set there. A `ConfigError` (an unreadable file, a bad key, no
-provider credentials) becomes a `startFailed` error whose text the failure notice shows.
-`attached` compares the pid in `host.json` with this process's, because the SDK client does
-not say whether it attached.
+providers and models are set there. A `ConfigError` (an unreadable file, a bad key) becomes a
+`startFailed` error whose text the failure notice shows. No provider is not a config error:
+since Core v0.5.1 the host starts without one, and a run that needs a model returns the typed
+error `no_provider_configured` (code -32004). `HostCallError` passes it on as an `rpc` error
+with that code; agent-kit 0.16.3 maps it to `KitNeedsSetup`, and `GuardedBackend` reports it
+so the app shows the notice that opens Settings > Models.
 
 `cargo test` covers `session.list` on a fresh temp data dir, host errors keeping their
-code, a second handle attaching to a host built with `Client::embedded` on the same dir
-and seeing the same sessions, and the notification stream ending on close.
+code, a host with no provider starting and refusing a send with -32004, a second handle
+attaching (`attached` true; the `Client::embedded` owner's `is_attached()` false) to a host on
+the same dir and seeing the same sessions, and the notification stream ending on close.
 
 ## The FFI transport
 
