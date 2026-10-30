@@ -8,6 +8,7 @@
 import 'dart:async';
 
 import 'package:agent_kit_core/agent_kit_core.dart';
+import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 
 import 'host_failure.dart';
 
@@ -18,6 +19,13 @@ class GuardedBackend implements AgentBackend, BackendConstraintsProvider {
 
   /// Called once, with the first host failure seen.
   final void Function(HostFailure failure) onFailure;
+
+  final ValueNotifier<String?> _currentChat = ValueNotifier<String?>(null);
+
+  /// The chat the person has open, as far as the backend can tell: the last
+  /// one loaded or created. Null before any. Read-only; the feedback sheet
+  /// reads it to offer the chat's messages.
+  ValueListenable<String?> get currentChat => _currentChat;
 
   bool _reported = false;
   bool _closing = false;
@@ -51,8 +59,10 @@ class GuardedBackend implements AgentBackend, BackendConstraintsProvider {
       _guard(_inner.listChats(cursor: cursor, query: query));
 
   @override
-  Future<ChatSnapshot> loadChat(String chatId) =>
-      _guard(_inner.loadChat(chatId));
+  Future<ChatSnapshot> loadChat(String chatId) {
+    _currentChat.value = chatId;
+    return _guard(_inner.loadChat(chatId));
+  }
 
   @override
   Stream<KitEvent> events(String chatId, {required int after}) => _inner
@@ -86,8 +96,13 @@ class GuardedBackend implements AgentBackend, BackendConstraintsProvider {
       _guard(_inner.loadSummary(chatId, summaryId));
 
   @override
-  Future<ChatSummary> createChat({String? title, String? workspace}) =>
-      _guard(_inner.createChat(title: title, workspace: workspace));
+  Future<ChatSummary> createChat({String? title, String? workspace}) async {
+    final chat = await _guard(
+      _inner.createChat(title: title, workspace: workspace),
+    );
+    _currentChat.value = chat.id;
+    return chat;
+  }
 
   @override
   Future<SendResult> send(

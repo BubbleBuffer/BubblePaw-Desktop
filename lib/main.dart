@@ -8,6 +8,8 @@ import 'package:flutter/widgets.dart';
 import 'src/app.dart';
 import 'src/app_licences.dart';
 import 'src/config.dart';
+import 'src/feedback/feedback_controller.dart';
+import 'src/feedback/log_buffer.dart';
 import 'src/core/core_manager.dart';
 import 'src/core/detect.dart';
 import 'src/host_controller.dart';
@@ -30,6 +32,7 @@ void main(List<String> args) {
   final directory = at >= 0 && at + 1 < args.length
       ? Directory(args[at + 1])
       : appSupportDirectory(Platform.environment);
+  installLogHooks();
   const fetcher = DartHttpFetcher();
   final sep = Platform.pathSeparator;
   final platform = CorePlatform.current();
@@ -55,6 +58,7 @@ void main(List<String> args) {
   );
   final controller = HostController(
     store: ConfigStore(directory),
+    log: LogBuffer.instance,
     scripted: scripted,
     versionReader: readHostVersion,
     core: core,
@@ -67,7 +71,13 @@ void main(List<String> args) {
       unawaited(updates.checkOnStart());
     }),
   );
-  runApp(BubblePawApp(controller: controller));
+  final feedback = FeedbackController.inside(
+    directory,
+    host: controller,
+    log: LogBuffer.instance,
+  );
+  unawaited(feedback.load());
+  runApp(BubblePawApp(controller: controller, feedback: feedback));
   unawaited(_attachDesktop(controller, hidden: hidden));
 }
 

@@ -1,11 +1,17 @@
 @Tags(['golden'])
 library;
 
+import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'dart:io';
 
 import 'package:agent_kit_core/fake.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
+import 'package:bubblepaw_desktop/src/feedback/feedback_controller.dart';
+import 'package:bubblepaw_desktop/src/feedback/feedback_sheet.dart';
+import 'package:bubblepaw_desktop/src/feedback/log_buffer.dart';
 import 'package:bubblepaw_desktop/src/core/core_manager.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/platform/download.dart';
@@ -56,6 +62,149 @@ Stream<LicenseEntry> sampleLicences() => Stream.fromIterable([
     'lucide_icons_flutter',
   ], 'Permission to use, copy, modify, and/or distribute this software'),
 ]);
+
+/// A fixed picture standing for the window behind the sheet, so the sheet's
+/// golden does not depend on a capture.
+Future<WindowShot> _sampleShot(WidgetTester tester, Size window) async {
+  final bytes = await tester.runAsync(() async {
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, 320, 200),
+      ui.Paint()..color = const Color(0xFFEDE8DE),
+    );
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, 96, 200),
+      ui.Paint()..color = const Color(0xFFD9D2C3),
+    );
+    canvas.drawRect(
+      const Rect.fromLTWH(120, 150, 180, 28),
+      ui.Paint()..color = const Color(0xFFFFFFFF),
+    );
+    final image = await recorder.endRecording().toImage(320, 200);
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    return data!.buffer.asUint8List();
+  });
+  return WindowShot(bytes!, window);
+}
+
+/// The feedback screens: the sheet (empty, written, with a chat attached),
+/// the saved confirmation and the Feedback page (with reports, and empty).
+void _feedbackGoldens(Map<String, Size> sizes, Map<String, Brightness> themes) {
+  const written =
+      'The quota bar resets when the socket reconnects. I expected it to '
+      'keep the last value.';
+  final scenes =
+      <String, Future<void> Function(WidgetTester, FeedbackController)>{
+        'feedback_sheet': (tester, feedback) async {
+          await _openSheet(tester, feedback);
+        },
+        'feedback_sheet_written': (tester, feedback) async {
+          await _openSheet(tester, feedback);
+          await tester.enterText(
+            find.byKey(const ValueKey('feedback-text')),
+            written,
+          );
+          await tester.pump();
+          FocusManager.instance.primaryFocus?.unfocus();
+          await tester.tap(find.byKey(const ValueKey('feedback-diag-toggle')));
+          await settle(tester);
+        },
+        'feedback_sheet_chat': (tester, feedback) async {
+          await _openSheet(tester, feedback);
+          await tester.enterText(
+            find.byKey(const ValueKey('feedback-text')),
+            written,
+          );
+          await tester.pump();
+          FocusManager.instance.primaryFocus?.unfocus();
+          await tester.ensureVisible(
+            find.byKey(const ValueKey('feedback-chat-check')),
+          );
+          await tester.tap(find.byKey(const ValueKey('feedback-chat-check')));
+          await settle(tester);
+          await tester.ensureVisible(
+            find.byKey(const ValueKey('feedback-chat-toggle')),
+          );
+          await tester.tap(find.byKey(const ValueKey('feedback-chat-toggle')));
+          await settle(tester);
+        },
+        'feedback_saved': (tester, feedback) async {
+          await tester.runAsync(
+            () => feedback.save(text: written, diagnostics: 'Desktop 0.1.0'),
+          );
+          await settle(tester);
+        },
+        'settings_feedback': (tester, feedback) async {
+          await tester.runAsync(() async {
+            await feedback.save(text: written, diagnostics: 'Desktop 0.1.0');
+            await feedback.save(
+              text: 'The tray menu lists a chat twice.',
+              diagnostics: 'Desktop 0.1.0',
+              screenshot: Uint8List.fromList([1]),
+              chat: const FeedbackChat(id: 'c_1', title: 'T', lines: []),
+            );
+          });
+          feedback.dismissSaved();
+          await openSettings(tester, 'feedback');
+        },
+        'settings_feedback_empty': (tester, feedback) async {
+          await openSettings(tester, 'feedback');
+        },
+      };
+  for (final scene in scenes.entries) {
+    for (final size in sizes.entries) {
+      for (final theme in themes.entries) {
+        final name = '${scene.key}_${size.key}_${theme.key}';
+        testWidgets(name, (tester) async {
+          // A fixed clock, so the log lines in the diagnostics do not change.
+          final controller = HostController(
+            store: MemoryConfigStore(sampleConfig),
+            starter: Played().start,
+            fileExists: (_) => true,
+            log: LogBuffer(now: () => DateTime(2026, 10, 29, 22, 13)),
+          );
+          var clock = DateTime(2026, 10, 29, 22, 14, 5);
+          final storage = MemoryFeedbackStorage();
+          final feedback = TestFeedback(
+            controller,
+            storage: storage,
+            // Each save in a scene gets its own minute.
+            clock: () => clock = clock.add(const Duration(minutes: 1)),
+          );
+          await pumpApp(
+            tester,
+            controller,
+            size: size.value,
+            brightness: theme.value,
+            licenceSource: sampleLicences,
+            feedback: feedback,
+          );
+          await scene.value(tester, feedback);
+          await expectLater(
+            find.byType(BubblePawApp),
+            matchesGoldenFile('goldens/$name.png'),
+          );
+        });
+      }
+    }
+  }
+}
+
+Future<void> _openSheet(
+  WidgetTester tester,
+  FeedbackController feedback,
+) async {
+  final shot = await _sampleShot(tester, tester.view.physicalSize);
+  unawaited(
+    showFeedbackSheet(
+      tester.element(find.byType(AppShell)),
+      controller: feedback,
+      shot: shot,
+    ),
+  );
+  await settle(tester);
+}
 
 const downloadedConfig = AppConfig(
   binarySource: BinarySource.downloaded,
@@ -388,6 +537,9 @@ void main() {
       controller: () => Played().controller(),
       after: (tester) async {
         await openSettings(tester, 'about');
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('about-licences')),
+        );
         await tester.tap(find.byKey(const ValueKey('about-licences')));
         await settle(tester);
         await tester.tap(find.byKey(const ValueKey('licence-agent_kit')));
@@ -431,4 +583,6 @@ void main() {
       }
     }
   }
+
+  _feedbackGoldens(sizes, themes);
 }

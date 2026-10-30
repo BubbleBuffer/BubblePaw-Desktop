@@ -7,8 +7,6 @@ import 'dart:async';
 
 import 'package:agent_kit_core/agent_kit_core.dart' show ChatStatus;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart'
-    show Brightness, WidgetsBinding, WidgetsBindingObserver;
 
 import '../host_controller.dart';
 import '../preferences.dart';
@@ -16,7 +14,7 @@ import 'desktop_adapters.dart';
 import 'tray_icon.dart';
 import 'tray_menu.dart';
 
-class DesktopIntegration with WidgetsBindingObserver {
+class DesktopIntegration {
   DesktopIntegration({
     required this.host,
     required this.tray,
@@ -24,7 +22,6 @@ class DesktopIntegration with WidgetsBindingObserver {
     required this.startup,
     this.pollInterval = const Duration(seconds: 20),
     this.windowsIcons,
-    this.taskbarBrightness,
   });
 
   final HostController host;
@@ -39,25 +36,10 @@ class DesktopIntegration with WidgetsBindingObserver {
   /// Picks the Windows icon (true) or the Linux one; the platform when null.
   final bool? windowsIcons;
 
-  /// The taskbar's brightness, which picks the milk or charcoal glyph. The
-  /// system theme when null: the tray plugin cannot ask the taskbar itself.
-  final Brightness Function()? taskbarBrightness;
-
   bool get _windows =>
       windowsIcons ?? defaultTargetPlatform == TargetPlatform.windows;
 
-  String get _icon => trayIconAsset(
-    windows: _windows,
-    lightTaskbar:
-        (taskbarBrightness?.call() ??
-            WidgetsBinding.instance.platformDispatcher.platformBrightness) ==
-        Brightness.light,
-  );
-
-  @override
-  void didChangePlatformBrightness() {
-    if (_trayShown && !_disposed) unawaited(tray.setIcon(_icon));
-  }
+  String get _icon => trayIconAsset(windows: _windows);
 
   Timer? _timer;
   bool _trayShown = false;
@@ -86,7 +68,6 @@ class DesktopIntegration with WidgetsBindingObserver {
     if (_disposed) return;
     host.trayAvailable = _trayShown;
     host.addListener(_hostChanged);
-    WidgetsBinding.instance.addObserver(this);
     await _apply(force: true);
     if (pollInterval != null) {
       _timer = Timer.periodic(
@@ -202,7 +183,6 @@ class DesktopIntegration with WidgetsBindingObserver {
     _disposed = true;
     _timer?.cancel();
     host.removeListener(_hostChanged);
-    WidgetsBinding.instance.removeObserver(this);
     window.onCloseRequested = null;
     await tray.dispose();
   }

@@ -9,6 +9,7 @@ import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:flutter/foundation.dart';
 
 import 'config.dart';
+import 'feedback/log_buffer.dart';
 import 'core/attach.dart';
 import 'core/core_manager.dart';
 import 'guarded_backend.dart';
@@ -90,10 +91,12 @@ class HostController extends ChangeNotifier {
     this.scripted = false,
     bool Function(String path)? fileExists,
     this.versionReader,
+    LogBuffer? log,
     CoreManager? core,
     UpdateController? updates,
     this.attacher = attachToRunningHost,
   }) : _fileExists = fileExists ?? ((path) => File(path).existsSync()),
+       log = log ?? LogBuffer(),
        core = core ?? CoreManager.unavailable(),
        updates = updates ?? UpdateController.unavailable() {
     this.updates.bind(prefs: () => _prefs, save: updatePrefs);
@@ -103,6 +106,10 @@ class HostController extends ChangeNotifier {
 
   final ConfigStore store;
   final bool scripted;
+
+  /// What Desktop remembers for a feedback report: its own events and what it
+  /// observes about the host.
+  final LogBuffer log;
 
   /// The Core that BubblePaw downloads and the one installed on this computer.
   final CoreManager core;
@@ -249,6 +256,14 @@ class HostController extends ChangeNotifier {
 
   HostFailure? get failure => _failure;
   GuardedBackend? get backend => _backend;
+
+  /// The chat the person has open, when one is known.
+  String? get currentChatId => _backend?.currentChat.value;
+
+  /// The chat [chatId] as the host has it, for the feedback excerpt. Null
+  /// when no host is running; a host error is thrown.
+  Future<ChatSnapshot?> loadChatForFeedback(String chatId) async =>
+      _backend?.loadChat(chatId);
   Stream<ChatSummary>? get createdChats => _createdChats;
 
   /// Replaces the wall clock for ages; null for a real host.
@@ -344,12 +359,14 @@ class HostController extends ChangeNotifier {
   Future<void> restart() => _start();
 
   void openSettings([SettingsSection? section]) {
+    log.desktop('settings opened${section == null ? '' : ': ${section.name}'}');
     _settingsOpen = true;
     _settingsSection = section;
     _notify();
   }
 
   void closeSettings() {
+    log.desktop('settings closed');
     _settingsOpen = false;
     _notify();
   }
@@ -381,6 +398,10 @@ class HostController extends ChangeNotifier {
       }
       final resolved = await _resolveBinary(config);
       if (ticket != _generation || _disposed) return;
+      log.host(
+        'starting host from ${config.binarySource.name} binary '
+        '${resolved.path ?? 'none'}, workspace ${config.workspaceDirectory}',
+      );
       final failure = resolved.failure;
       if (failure != null) {
         _fail(ticket, failure);
@@ -423,6 +444,7 @@ class HostController extends ChangeNotifier {
     final lost = started.connectionLost;
     if (lost != null) unawaited(_watchConnection(lost, ticket));
     _phase = HostPhase.running;
+    log.host(started.attached ? 'attached to a running host' : 'host attached');
     _hostVersion = started.attached ? started.version : null;
     _notify();
     if (binary != null) unawaited(_readVersion(binary, ticket));
@@ -512,6 +534,7 @@ class HostController extends ChangeNotifier {
     }
     if (ticket != _generation || _disposed) return;
     _hostVersion = version;
+    log.host('host version ${version ?? 'unknown'}');
     _notify();
   }
 
@@ -526,6 +549,7 @@ class HostController extends ChangeNotifier {
 
   void _hostFailed(HostFailure failure) {
     if (_disposed || _phase != HostPhase.running) return;
+    _logFailure(failure);
     _failure = failure;
     _phase = HostPhase.failed;
     final dispose = _dispose;
@@ -537,13 +561,22 @@ class HostController extends ChangeNotifier {
 
   void _fail(int ticket, HostFailure failure) {
     if (ticket != _generation || _disposed) return;
+    _logFailure(failure);
     _failure = failure;
     _phase = HostPhase.failed;
     _notify();
   }
 
+  /// What happened to the host, and the stderr tail an exit carried.
+  void _logFailure(HostFailure failure) {
+    log.host('${failure.title}: ${failure.message}');
+    final detail = failure.detail?.trim() ?? '';
+    if (detail.isNotEmpty) log.host('stderr tail:\n$detail');
+  }
+
   Future<void> _stopBackend() async {
     final dispose = _dispose;
+    if (dispose != null) log.host('host stopped');
     _backend?.closing();
     _backend = null;
     _createdChats = null;

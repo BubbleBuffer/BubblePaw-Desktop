@@ -485,6 +485,7 @@ void main() {
     ) async {
       await pumpApp(tester, _controller(), licenceSource: _licences);
       await _open(tester, 'about');
+      await tester.ensureVisible(find.byKey(const ValueKey('about-licences')));
       await tester.tap(find.byKey(const ValueKey('about-licences')));
       await settle(tester);
 

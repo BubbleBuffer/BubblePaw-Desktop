@@ -19,7 +19,7 @@
   const FILLED = 'Approving a command in the chat does nothing the first time I tap Approve. The second tap works.';
   const REPORTS = [
     { id: '2026-10-29_0912', text: 'The quota bar resets to zero for a moment when the socket reconnects.\nIt happens after the computer wakes from sleep.', shot: true },
-    { id: '2026-10-27_1830', text: 'Approving a command from the phone did not clear the waiting badge on the desktop.', shot: true },
+    { id: '2026-10-27_1830', text: 'Approving a command from the phone did not clear the waiting badge on the desktop.', shot: true, chat: true },
     { id: '2026-10-24_1105', text: 'The Core download stalls at 6 MB on a metered connection.', shot: false },
     { id: '2026-10-21_2049', text: 'The tray icon stays green after the host stops.', shot: true },
   ];
@@ -29,6 +29,7 @@
     shot: H.shot !== '0', diag: H.diag === '1',
     reports: H.rows === 'none' ? [] : REPORTS.slice(),
     saved: H.saved === '1' ? '2026-10-29_2214' : '',
+    chatOpen: H.nochat !== '1', chat: H.chat === '1', chatPrev: H.chatprev === '1',
     copied: '', del: H.del === '1' && H.rows !== 'none' ? REPORTS[1].id : '', minute: 14,
   };
   const ROOT = '~/.local/share/bubblepaw-desktop/feedback';
@@ -50,14 +51,43 @@
       'Desktop        0.1.0 (Stable)', 'OS             Windows 11 10.0.26300', 'Core           0.3.2 (Downloaded)', 'Host           started, running', 'Project        garden-api', 'Chat           c_8f2a41', '',
       'Errors, last 20', ...errs, '',
       'Desktop log, last 200 lines', ...lines(dsk, 200, 3), '',
-      'Host log, last 200 lines', ...lines(hst, 200, 11),
+      'Host (as seen by Desktop), last 200 lines', ...lines(hst, 200, 11),
     ].join('\n');
   }
+  /* chat.md: the last 20 messages of the open chat, redacted like the diagnostics */
+  function chatText() {
+    const m = [
+      ['user', '21:31', 'Why does the quota bar reset when the socket reconnects?'],
+      ['tool', '21:31', 'read_file lib/quota/bar.dart, ok'],
+      ['tool', '21:31', 'read_file lib/quota/connection.dart, ok'],
+      ['assistant', '21:32', 'The bar keeps its value in the connection object, and a reconnect creates a new one.'],
+      ['user', '21:33', 'Can you check how the host reports the reconnect?'],
+      ['tool', '21:33', 'run_command curl -s -H "Authorization: Bearer ' + RD + '" http://127.0.0.1:7421/v1/quota, ok'],
+      ['assistant', '21:33', 'The host sends the quota again right after the socket opens, so the bar can start from that.'],
+      ['user', '21:34', 'Keep the last value in the chat state instead.'],
+      ['tool', '21:34', 'grep "QuotaBar" lib, 6 matches'],
+      ['tool', '21:35', 'edit_file lib/quota/bar.dart, waiting for approval'],
+      ['assistant', '21:35', 'This needs to edit two files. Approve to continue.'],
+      ['user', '21:36', 'Approving did nothing the first time.'],
+      ['tool', '21:36', 'edit_file lib/quota/bar.dart, approved, ok'],
+      ['tool', '21:36', 'edit_file lib/quota/state.dart, ok'],
+      ['assistant', '21:37', 'Both files are changed. The bar now keeps its last value across a reconnect.'],
+      ['user', '21:38', 'Run the quota tests.'],
+      ['tool', '21:38', 'run_command flutter test test/quota_test.dart, 14 passed'],
+      ['assistant', '21:39', 'All 14 quota tests pass.'],
+      ['user', '21:40', 'It still resets after the computer wakes from sleep.'],
+      ['assistant', '21:41', 'Sleep closes the socket without a reconnect event. I will look at the wake path next.'],
+    ];
+    return ['Chat  Quota bar resets on reconnect (c_8f2a41)', 'Last 20 messages, oldest first', ''].concat(m.map(([r, t, x]) => `${r.padEnd(10)} ${t}  ${x}`)).join('\n');
+  }
+  const CHAT = chatText();
+  const CHAT_RD = (CHAT.match(/\[redacted\]/g) || []).length;
+  const chatHtml = () => CHAT.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\[redacted\]/g, '<span class="rd">[redacted]</span>');
   const DIAG = diagText();
   const DIAG_LINES = DIAG.split('\n').length;
   const DIAG_RD = (DIAG.match(/\[redacted\]/g) || []).length;
   const diagHtml = () => DIAG.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\[redacted\]/g, '<span class="rd">[redacted]</span>')
-    .replace(/^(Errors, last 20|Desktop log, last 200 lines|Host log, last 200 lines)$/gm, '<b>$1</b>');
+    .replace(/^(Errors, last 20|Desktop log, last 200 lines|Host (as seen by Desktop), last 200 lines)$/gm, '<b>$1</b>');
 
   /* ---------- helpers ---------- */
   const ph = () => (FIXED[S.screen] || S.size) === 'phone';
@@ -120,7 +150,7 @@
       const acts = p
         ? `${btn('Open folder', { kind: 'quiet', icon: 'folder-open', act: 'openDir', arg: r.id })}${btn(cp ? 'Copied' : 'Copy as Markdown', { kind: 'quiet', icon: cp ? 'check' : 'copy', act: 'copyMd', arg: r.id })}${btn('Delete', { kind: 'quiet', icon: 'trash-2', act: 'delAsk', arg: r.id })}`
         : `${iconBtn('folder-open', 'Open folder', 'openDir', r.id)}${iconBtn(cp ? 'check' : 'copy', cp ? 'Copied' : 'Copy as Markdown', 'copyMd', r.id)}${iconBtn('trash-2', 'Delete', 'delAsk', r.id)}`;
-      return `<div class="fb-row"><div class="fb-main"><div class="fb-meta"><span class="mono">${dateOf(r.id)}</span>${r.shot ? `<span class="fb-ind">${ic('image', 14)}Screenshot</span>` : ''}${cp ? '<span role="status">Copied as Markdown</span>' : ''}</div><div class="fb-first">${firstLine(r.text)}</div></div><div class="fb-acts">${acts}</div></div>`;
+      return `<div class="fb-row"><div class="fb-main"><div class="fb-meta"><span class="mono">${dateOf(r.id)}</span>${r.shot ? `<span class="fb-ind">${ic('image', 14)}Screenshot</span>` : ''}${r.chat ? `<span class="fb-ind">${ic('messages-square', 14)}Chat</span>` : ''}${cp ? '<span role="status">Copied as Markdown</span>' : ''}</div><div class="fb-first">${firstLine(r.text)}</div></div><div class="fb-acts">${acts}</div></div>`;
     }).join('');
   }
   function listBody() {
@@ -154,6 +184,13 @@
   const underSettings = () => (ph() ? phoneSettings() : S.from === 'list' ? listDesktop() : aboutDesktop());
   const under = () => (S.from === 'chat' ? chat() : underSettings());
 
+  function chatBlock() {
+    const box = `<button class="fb-check" role="checkbox" aria-checked="${M.chat}" ${A('chat')}><span class="bx">${M.chat ? ic('check', 14) : ''}</span><span class="grow"><span class="t">Attach the last 20 messages of this chat</span><span class="s">Saved as chat.md beside report.md. Tool calls show as one line each.</span></span></button>`;
+    if (!M.chat) return box;
+    return box + `<button class="fb-dtog" style="margin-top:8px" aria-expanded="${M.chatPrev}" aria-controls="fb-chat" ${A('chatPrev')}>${ic(M.chatPrev ? 'chevron-up' : 'chevron-down', 16)}<span class="t">Chat messages</span><span class="s">20 messages, ${CHAT_RD} value${CHAT_RD === 1 ? '' : 's'} redacted</span></button>
+      ${M.chatPrev ? `<pre class="fb-diag" id="fb-chat" tabindex="0" aria-label="Chat text that will be saved">${chatHtml()}</pre><p class="hint" style="margin:8px 0 0">This is the exact text saved in chat.md. Tokens, keys and passwords are replaced with [redacted], and your home folder shows as ~.</p>` : ''}`;
+  }
+
   function sheet() {
     const p = ph(), empty = !M.text.trim();
     const shot = M.shot
@@ -165,7 +202,8 @@
       <div class="dbody"><div class="field" style="margin-bottom:16px"><label for="f-text">What happened?</label><div class="hint">Include what you expected instead.</div><textarea id="f-text" class="input sans fb-textarea" data-k="text" rows="5">${M.text.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</textarea></div>
         <div class="fb-block"><div class="lab">Screenshot</div>${shot}</div>
         <div class="fb-block">${diag}</div>
-        <p class="hint" style="margin:0 0 12px">Saved on this ${p ? 'device' : 'computer'} in the feedback folder. Nothing is sent.</p></div>
+        ${M.chatOpen ? `<div class="fb-block">${chatBlock()}</div>` : ''}
+        <p class="hint" style="margin:0 0 12px">Saved on this ${p ? 'device' : 'computer'} in the feedback folder${M.chat && M.chatOpen ? ', with chat.md' : ''}. Nothing is sent.</p></div>
       <footer><span class="grow" id="fb-need">${empty ? 'Describe what happened to save.' : ''}</span>${btn('Cancel', { act: 'close' })}${btn('Save', { kind: 'primary', icon: 'save', act: 'save', id: 'fb-save', disabled: empty })}</footer></div></div>`;
   }
 
@@ -174,7 +212,7 @@
     const r = M.reports.find((x) => x.id === M.del);
     if (!r) return '';
     return `<div class="overlay"><div class="dialog fbs" role="alertdialog" aria-modal="true" aria-labelledby="del-t" aria-describedby="del-d"><header>${ic('trash-2', 22)}<h2 id="del-t">Delete this feedback?</h2></header>
-      <div class="dbody" id="del-d"><p style="margin:0 0 8px"><span class="mono">${r.id}</span><br>${firstLine(r.text)}</p><p class="hint" style="margin:0 0 12px">report.md${r.shot ? ' and screenshot.png are' : ' is'} deleted from this ${ph() ? 'device' : 'computer'}. This can’t be undone.</p></div>
+      <div class="dbody" id="del-d"><p style="margin:0 0 8px"><span class="mono">${r.id}</span><br>${firstLine(r.text)}</p><p class="hint" style="margin:0 0 12px">${['report.md'].concat(r.shot ? ['screenshot.png'] : [], r.chat ? ['chat.md'] : []).join(', ').replace(/, ([^,]*)$/, ' and $1')} ${r.shot || r.chat ? 'are' : 'is'} deleted from this ${ph() ? 'device' : 'computer'}. This can’t be undone.</p></div>
       <footer>${btn('Cancel', { act: 'delNo' })}${btn('Delete', { kind: 'danger', icon: 'trash-2', act: 'delYes' })}</footer></div></div>`;
   }
   const toast = () => (M.saved && S.screen !== 'sheet' && S.screen !== 'tray'
@@ -184,7 +222,7 @@
   function trayScreen() {
     const mi = (label, o = {}) => `<button class="wi ${o.bold ? 'bold' : ''} ${o.status ? 'status' : ''}" role="menuitem" ${o.act ? A(o.act, o.arg) : ''} ${o.dis ? 'disabled' : ''}><span class="wck"></span><span class="wl">${label}</span></button>`;
     const sep = '<div class="wsep" role="separator"></div>';
-    const menu = S.tmenu ? `<div class="winmenu" role="menu" aria-label="BubblePaw">${mi('Open BubblePaw', { bold: true, act: 'screen', arg: 'chat' })}${sep}${mi('Host running', { status: true, dis: true })}${mi('2 chats waiting for you', { act: 'screen', arg: 'chat' })}${sep}${mi('Restart host', { act: 'noop' })}${mi('Send feedback', { act: 'trayFb' })}${sep}${mi('Quit BubblePaw', { act: 'noop' })}</div>` : '';
+    const menu = S.tmenu ? `<div class="winmenu" role="menu" aria-label="BubblePaw">${mi('Open BubblePaw', { bold: true, act: 'screen', arg: 'chat' })}${sep}${mi('Host running', { status: true, dis: true })}${mi('2 chats waiting for you', { act: 'screen', arg: 'chat' })}${sep}${mi('Restart host', { act: 'noop' })}${sep}${mi('Quit BubblePaw', { act: 'noop' })}</div>` : '';
     return `<div class="tray-scr win">${menu}<div class="taskbar"><span class="grow"></span><span class="tbi">${ic('chevron-up', 16)}</span><button class="tbi tray-btn" aria-label="BubblePaw" aria-expanded="${S.tmenu}" aria-haspopup="menu" ${A('tmenu')}><img class="appmini" src="bubblepaw-tray.svg" width="20" height="20" alt=""></button><span class="clock"><div>22:14</div><div>29/10/2026</div></span></div></div>`;
   }
 
@@ -198,6 +236,8 @@
     if (S.screen === 'sheet') {
       sims.push(grp('Text', [['', 'Empty'], ['1', 'Filled']].map(([v, l]) => chip('textT', v, l, (v === '1') === !!M.text.trim()))));
       sims.push(grp('Screenshot', [['1', 'Attached'], ['0', 'Removed']].map(([v, l]) => chip('shot', v, l, M.shot === (v === '1')))));
+      sims.push(grp('Chat messages', [['none', 'No chat open'], ['off', 'Off'], ['on', 'On']].map(([v, l]) => chip('chatT', v, l, v === 'none' ? !M.chatOpen : M.chatOpen && M.chat === (v === 'on')))));
+      sims.push(grp('Chat preview', [['0', 'Collapsed'], ['1', 'Expanded']].map(([v, l]) => chip('chatPrevT', v, l, M.chatPrev === (v === '1'), !(M.chatOpen && M.chat)))));
       sims.push(grp('Diagnostics', [['0', 'Collapsed'], ['1', 'Expanded']].map(([v, l]) => chip('diagT', v, l, M.diag === (v === '1')))));
     }
     if (S.screen === 'chat') sims.push(grp('After saving', [['', 'No message'], ['1', 'Saved confirmation']].map(([v, l]) => chip('savedT', v, l, !!M.saved === (v === '1')))));
@@ -205,7 +245,6 @@
       sims.push(grp('Reports', [['some', 'Several'], ['none', 'None']].map(([v, l]) => chip('rowsT', v, l, (M.reports.length === 0) === (v === 'none')))));
       sims.push(grp('Delete', [['', 'No dialog'], ['1', 'Confirm']].map(([v, l]) => chip('delT', v, l, !!M.del === (v === '1'), !M.reports.length))));
     }
-    if (S.screen === 'tray') sims.push('<span class="note">Send feedback shows the window with the sheet open; the screenshot is taken after the window is shown.</span>');
     return `<div class="bar-row"><div class="tabs" role="tablist" aria-label="Screens">${scr}</div><span class="grow"></span>
       ${grp('Theme', [['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => chip('pref', v, l, M.pref === v)))}
       ${grp('Frame', [['desktop', 'Desktop 1280×800'], ['phone', 'Phone 390×844']].map(([v, l]) => chip('size', v, l, (fixed || S.size) === v, !!fixed)))}</div>
@@ -258,17 +297,18 @@
     pref: (v) => { M.pref = v; },
     size: (v) => { S.size = v; S.pv = ''; if (S.screen === 'about') S.pv = 'about'; if (S.screen === 'list') S.pv = 'feedback'; },
     open: openSheet,
-    trayFb: () => { S.tmenu = false; openSheet(); },
     tmenu: () => { S.tmenu = !S.tmenu; },
     close: () => { S.screen = S.from; if (ph() && (S.from === 'about' || S.from === 'list')) S.pv = S.from === 'list' ? 'feedback' : 'about'; },
     save: () => {
       if (!M.text.trim()) return;
       const id = `2026-10-29_22${String(M.minute++).padStart(2, '0')}`;
-      M.reports.unshift({ id, text: M.text.trim(), shot: M.shot });
-      M.saved = id; M.text = ''; M.shot = true; M.diag = false;
+      M.reports.unshift({ id, text: M.text.trim(), shot: M.shot, chat: M.chat && M.chatOpen });
+      M.saved = id; M.text = ''; M.shot = true; M.diag = false; M.chat = false; M.chatPrev = false;
       S.screen = S.from; if (ph() && (S.from === 'about' || S.from === 'list')) S.pv = S.from === 'list' ? 'feedback' : 'about';
     },
     shot: (v) => { M.shot = v === '1'; },
+    chat: () => { M.chat = !M.chat; if (!M.chat) M.chatPrev = false; }, chatPrev: () => { M.chatPrev = !M.chatPrev; },
+    chatT: (v) => { M.chatOpen = v !== 'none'; M.chat = v === 'on'; if (!M.chat) M.chatPrev = false; }, chatPrevT: (v) => { M.chatPrev = v === '1'; },
     diag: () => { M.diag = !M.diag; }, diagT: (v) => { M.diag = v === '1'; },
     textT: (v) => { M.text = v ? FILLED : ''; },
     savedT: (v) => { M.saved = v ? '2026-10-29_2214' : ''; },
