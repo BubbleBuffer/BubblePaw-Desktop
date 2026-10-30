@@ -26,12 +26,18 @@ class HostFailure {
         'corrected in settings.',
   );
 
-  factory HostFailure.bundledMissing() => const HostFailure._(
+  factory HostFailure.coreMissing() => const HostFailure._(
     HostFailureKind.binaryMissing,
-    'BubblePaw binary not found',
-    'The bubblepaw binary that ships with the app is missing. Chats are '
-        'unavailable until a custom binary is chosen in settings or the app '
-        'is reinstalled.',
+    'Core is not downloaded',
+    'BubblePaw has no Core to start. Chats are unavailable until Core is '
+        'downloaded in settings, or Installed or Custom is chosen.',
+  );
+
+  factory HostFailure.coreUnusable(String reason) => HostFailure._(
+    HostFailureKind.binaryMissing,
+    'The installed Core cannot be used',
+    '$reason Chats are unavailable until it is fixed outside BubblePaw or '
+        'another Core is chosen in settings.',
   );
 
   factory HostFailure.protocolMismatch({

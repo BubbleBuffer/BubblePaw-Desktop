@@ -10,7 +10,8 @@ import 'package:agent_kit_core/agent_kit_core.dart'
 import 'package:bb_ui/bb_ui.dart'
     show AppColors, Ico, PrimaryButton, SecondaryButton;
 import 'package:flutter/foundation.dart' show LicenseEntry;
-import 'package:flutter/services.dart' show LogicalKeyboardKey;
+import 'package:flutter/services.dart'
+    show HardwareKeyboard, KeyDownEvent, KeyEvent, LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 
 import 'feedback/feedback_controller.dart';
@@ -24,6 +25,7 @@ import 'screens/diff_review.dart';
 import 'screens/notice.dart';
 import 'screens/saved_notice.dart';
 import 'screens/tray_notice.dart';
+import 'screens/update_dialog.dart';
 import 'screens/workspace_menu.dart';
 import 'settings/licences_page.dart';
 import 'settings/settings_section.dart';
@@ -161,43 +163,62 @@ class _AppShellState extends State<AppShell> {
   }
 
   @override
-  Widget build(BuildContext context) => CallbackShortcuts(
-    bindings: {
-      const SingleActivator(
-        LogicalKeyboardKey.keyF,
-        control: true,
-        shift: true,
-      ): () =>
-          unawaited(_sendFeedback()),
-    },
-    child: Focus(
-      autofocus: true,
-      child: RepaintBoundary(
-        key: _root,
-        child: ListenableBuilder(
-          listenable: Listenable.merge([controller, feedback]),
-          builder: (context, _) => Stack(
-            children: [
-              Positioned.fill(child: _screen(context)),
-              if (controller.trayNoticePending)
-                Positioned(
-                  right: 16,
-                  bottom: 16,
-                  child: TrayNotice(onDismiss: controller.dismissTrayNotice),
-                ),
-              if (feedback.savedId != null)
-                Positioned(
-                  right: 16,
-                  bottom: controller.trayNoticePending ? 72 : 16,
-                  child: SavedNotice(
-                    id: feedback.savedId!,
-                    onOpen: () => unawaited(feedback.open(feedback.savedId)),
-                    onDismiss: feedback.dismissSaved,
-                  ),
-                ),
-            ],
-          ),
-        ),
+  void initState() {
+    super.initState();
+    // Not a focus shortcut: it must work whatever has the focus, and the
+    // update dialog and the sheet take the focus for their own Escape.
+    HardwareKeyboard.instance.addHandler(_onKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    super.dispose();
+  }
+
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.keyF ||
+        !HardwareKeyboard.instance.isControlPressed ||
+        !HardwareKeyboard.instance.isShiftPressed) {
+      return false;
+    }
+    unawaited(_sendFeedback());
+    return true;
+  }
+
+  @override
+  Widget build(BuildContext context) => RepaintBoundary(
+    key: _root,
+    child: ListenableBuilder(
+      listenable: Listenable.merge([controller, feedback]),
+      builder: (context, _) => Stack(
+        children: [
+          Positioned.fill(child: _screen(context)),
+          if (controller.trayNoticePending)
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: TrayNotice(onDismiss: controller.dismissTrayNotice),
+            ),
+          if (feedback.savedId != null)
+            Positioned(
+              right: 16,
+              bottom: controller.trayNoticePending ? 72 : 16,
+              child: SavedNotice(
+                id: feedback.savedId!,
+                onOpen: () => unawaited(feedback.open(feedback.savedId)),
+                onDismiss: feedback.dismissSaved,
+              ),
+            ),
+          if (controller.updates.dialogOpen)
+            Positioned.fill(
+              child: UpdateDialog(
+                updates: controller.updates,
+                services: widget.services,
+              ),
+            ),
+        ],
       ),
     ),
   );

@@ -135,7 +135,8 @@ class FeedbackController extends ChangeNotifier {
     final version = host.hostVersion ?? 'unknown';
     final source = host.config?.binarySource;
     return switch (source) {
-      BinarySource.bundled => '$version (Bundled)',
+      BinarySource.downloaded => '$version (Downloaded)',
+      BinarySource.installed => '$version (Installed)',
       BinarySource.custom => '$version (Custom)',
       null => version,
     };

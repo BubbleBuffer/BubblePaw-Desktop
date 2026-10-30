@@ -52,6 +52,7 @@ void main() {
     final store = ConfigStore(Directory('/x/app'));
     expect(store.defaults.dataDirectory, startsWith('/x/app'));
     expect(store.defaults.binaryPath, isEmpty);
-    expect(store.defaults.isComplete, isFalse);
+    // Core is downloaded unless the person picks another binary.
+    expect(store.defaults.binarySource, BinarySource.downloaded);
   });
 }

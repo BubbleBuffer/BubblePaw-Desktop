@@ -33,11 +33,14 @@ class GitHub:
                 raw = response.read()
                 return json.loads(raw) if raw else None
         except HTTPError as error:
-            if missing_ok and error.code == 404:
+            detail = error.read().decode(errors='replace')
+            # Deleting an absent ref answers 422 "Reference does not exist", not 404.
+            if missing_ok and (error.code == 404 or
+                               (error.code == 422 and "Reference does not exist" in detail)):
                 return None
             # GitHub's response identifies permission/ruleset failures without exposing tokens.
             raise RuntimeError(f"GitHub {method} {path}: HTTP {error.code}: "
-                               f"{error.read().decode(errors='replace')}") from error
+                               f"{detail}") from error
 
     def tag_commit(self, tag):
         reference = self.request("GET", f"git/ref/tags/{quote(tag, safe='')}", missing_ok=True)

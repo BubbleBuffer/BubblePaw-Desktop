@@ -26,6 +26,7 @@ class MemoryConfigStore extends ConfigStore {
 
   @override
   AppConfig get defaults => const AppConfig(
+    binarySource: BinarySource.downloaded,
     binaryPath: '',
     workspaceDirectory: '/home/user/.local/share/bubblepaw-desktop/workspace',
     dataDirectory: '/home/user/.local/share/bubblepaw-desktop/data',
