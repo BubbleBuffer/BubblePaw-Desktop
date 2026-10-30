@@ -121,6 +121,7 @@ void main() {
   // as CI is. The host must start anyway; the send is refused with the typed
   // error, which the backend maps to KitNeedsSetup.
   test('a first run with no provider starts and a send needs setup', () async {
+    Directory('${temp.path}/bare-work').createSync(recursive: true);
     final transport = await FfiBubblePawTransport.open(
       dataDirectory: '${temp.path}/bare-data',
       workspaceDirectory: '${temp.path}/bare-work',
