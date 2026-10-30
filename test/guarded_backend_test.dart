@@ -80,16 +80,19 @@ void main() {
     expect(failures, isEmpty);
   });
 
-  test('a send that needs setup is reported, rethrown, not a failure', () async {
-    inner.sendError = const KitNeedsSetup('No provider is configured.');
-    await expectLater(
-      guarded.send('c', 'hello'),
-      throwsA(isA<KitNeedsSetup>()),
-    );
-    await turn();
-    expect(needsSetup.single.message, 'No provider is configured.');
-    expect(failures, isEmpty);
-  });
+  test(
+    'a send that needs setup is reported, rethrown, not a failure',
+    () async {
+      inner.sendError = const KitNeedsSetup('No provider is configured.');
+      await expectLater(
+        guarded.send('c', 'hello'),
+        throwsA(isA<KitNeedsSetup>()),
+      );
+      await turn();
+      expect(needsSetup.single.message, 'No provider is configured.');
+      expect(failures, isEmpty);
+    },
+  );
 
   test('other send errors do not report needs-setup', () async {
     inner.sendError = const KitBusy();
