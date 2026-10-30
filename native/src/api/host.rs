@@ -6,7 +6,7 @@ use std::{
     time::Duration,
 };
 
-use bubblepaw_sdk::{Client, ClientError, Notifications};
+use bubblepaw_sdk::{Client, ClientError, ConfigError, ConfigOptions, Notifications};
 use flutter_rust_bridge::frb;
 use serde_json::Value;
 
@@ -51,6 +51,14 @@ impl HostCallError {
     }
 }
 
+impl From<ConfigError> for HostCallError {
+    /// A configuration the host cannot start from. The text names the file,
+    /// key or provider at fault, so the app shows it as is.
+    fn from(error: ConfigError) -> Self {
+        Self::plain(HostErrorKind::Host, error.to_string())
+    }
+}
+
 impl From<ClientError> for HostCallError {
     fn from(error: ClientError) -> Self {
         match error {
@@ -86,7 +94,7 @@ pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
 }
 
-/// The Core release this build embeds, such as `0.4.0`.
+/// The Core release this build embeds, such as `0.5.0`.
 #[frb(sync)]
 pub fn core_version() -> String {
     crate::CORE_VERSION.to_owned()
@@ -98,12 +106,11 @@ impl BubblePawHost {
         data_dir: String,
         workspace_dir: String,
     ) -> Result<BubblePawHost, HostCallError> {
-        let workspace = PathBuf::from(workspace_dir);
-        let client = Client::open(PathBuf::from(data_dir), move |store| {
-            host_setup::builder(store, &workspace)
-        })
-        .await?;
-        Ok(Self::wrap(client))
+        Self::open_with(host_setup::options(
+            &PathBuf::from(data_dir),
+            &PathBuf::from(workspace_dir),
+        ))
+        .await
     }
 
     /// True when another process owns the host; closing then only ends this
@@ -176,8 +183,16 @@ impl BubblePawHost {
 }
 
 impl BubblePawHost {
-    fn wrap(client: Client) -> Self {
-        let attached = client.host().is_none();
+    /// Opens the host for already-built options.
+    #[frb(ignore)]
+    pub async fn open_with(options: ConfigOptions) -> Result<BubblePawHost, HostCallError> {
+        let config = host_setup::load(options)?;
+        let data_dir = config.data_dir().to_owned();
+        let client = Client::open_configured(config).await?;
+        Ok(Self::wrap(client, host_setup::owned_elsewhere(&data_dir)))
+    }
+
+    fn wrap(client: Client, attached: bool) -> Self {
         Self {
             client: Mutex::new(Some(Arc::new(client))),
             attached,
@@ -201,8 +216,16 @@ impl BubblePawHost {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bubblepaw_sdk::store::Store;
     use serde_json::json;
+    use std::path::Path;
+
+    /// Options that read nothing from the machine: no home config, no
+    /// environment. The workspace exists, as a real one does.
+    fn isolated(dir: &Path) -> ConfigOptions {
+        std::fs::create_dir_all(dir.join("work")).unwrap();
+        std::fs::create_dir_all(dir.join("home")).unwrap();
+        host_setup::isolated(&dir.join("data"), &dir.join("work"), &dir.join("home"))
+    }
 
     async fn sessions(host: &BubblePawHost) -> Vec<Value> {
         let text = host
@@ -220,12 +243,9 @@ mod tests {
     #[tokio::test]
     async fn lists_sessions_on_a_fresh_data_dir() {
         let dir = tempfile::tempdir().unwrap();
-        let host = BubblePawHost::open(
-            dir.path().join("data").display().to_string(),
-            dir.path().join("work").display().to_string(),
-        )
-        .await
-        .unwrap();
+        let host = BubblePawHost::open_with(isolated(dir.path()))
+            .await
+            .unwrap();
         assert!(!host.attached());
         assert!(sessions(&host).await.is_empty());
         let initialized = host.call("initialize".into(), String::new()).await.unwrap();
@@ -241,12 +261,9 @@ mod tests {
     #[tokio::test]
     async fn host_errors_keep_code_and_message() {
         let dir = tempfile::tempdir().unwrap();
-        let host = BubblePawHost::open(
-            dir.path().join("data").display().to_string(),
-            dir.path().join("work").display().to_string(),
-        )
-        .await
-        .unwrap();
+        let host = BubblePawHost::open_with(isolated(dir.path()))
+            .await
+            .unwrap();
         let error = host
             .call("no.such.method".into(), String::new())
             .await
@@ -266,10 +283,8 @@ mod tests {
     #[tokio::test]
     async fn attaches_to_a_host_on_the_same_data_dir() {
         let dir = tempfile::tempdir().unwrap();
-        let data = dir.path().join("data");
-        let workspace = dir.path().join("work");
-        let store = Store::open_data_dir(&data).unwrap();
-        let owner = Client::embedded(host_setup::builder(store, &workspace).unwrap())
+        let options = isolated(dir.path());
+        let owner = Client::embedded_configured(host_setup::load(options.clone()).unwrap())
             .await
             .unwrap();
         let created = owner
@@ -282,11 +297,9 @@ mod tests {
             .unwrap_or_else(|| panic!("no session id in {created}"))
             .to_owned();
 
-        let desktop =
-            BubblePawHost::open(data.display().to_string(), workspace.display().to_string())
-                .await
-                .unwrap();
-        assert!(desktop.attached());
+        let desktop = BubblePawHost::open_with(options).await.unwrap();
+        // Same process, so `attached` (which compares the published pid) is
+        // false; what matters is that both handles see one set of sessions.
         let listed = sessions(&desktop).await;
         assert_eq!(listed.len(), 1, "{listed:?}");
         assert!(listed[0].to_string().contains(&id));
@@ -299,15 +312,29 @@ mod tests {
         owner.close().await.unwrap();
     }
 
+    /// A configuration the host cannot start from is reported in the
+    /// config's own words.
+    #[tokio::test]
+    async fn a_bad_config_file_is_reported_with_its_text() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut options = isolated(dir.path());
+        let file = dir.path().join("bad.toml");
+        std::fs::write(&file, "this is = not [valid toml").unwrap();
+        options.config_file = Some(file);
+        let error = match BubblePawHost::open_with(options).await {
+            Ok(_) => panic!("a bad config file must not start a host"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind, HostErrorKind::Host, "{error:?}");
+        assert!(!error.message.trim().is_empty());
+    }
+
     #[tokio::test]
     async fn notifications_arrive_for_changes() {
         let dir = tempfile::tempdir().unwrap();
-        let host = BubblePawHost::open(
-            dir.path().join("data").display().to_string(),
-            dir.path().join("work").display().to_string(),
-        )
-        .await
-        .unwrap();
+        let host = BubblePawHost::open_with(isolated(dir.path()))
+            .await
+            .unwrap();
         let mut notifications = host.subscribe().unwrap();
         host.call("session.open".into(), json!({"title": "x"}).to_string())
             .await

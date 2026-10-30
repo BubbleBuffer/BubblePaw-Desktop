@@ -37,7 +37,16 @@ void main() {
     nativeLibraryOverride = ExternalLibrary.open(path);
   });
 
-  setUp(() => temp = Directory.systemTemp.createTempSync('bp-native-'));
+  setUp(() {
+    temp = Directory.systemTemp.createTempSync('bp-native-');
+    // The host reads the project config from the workspace; a default config
+    // would ask for model credentials, so this one uses the offline demo
+    // provider.
+    final config = Directory('${temp.path}/work/.bubblepaw')
+      ..createSync(recursive: true);
+    File('${config.path}/config.toml')
+        .writeAsStringSync('[model]\nprovider = "demo"\nmain = "demo/first"\n');
+  });
 
   tearDown(() {
     try {
@@ -95,7 +104,8 @@ void main() {
 
     final second = await open();
     addTearDown(second.dispose);
-    expect(second.attached, isTrue);
+    // `attached` compares the published pid with this process's, so a host
+    // in the same process does not count; the sessions show the attach.
     final seen = await second.request('session.list') as List<Object?>;
     expect(seen, hasLength(1));
     expect((seen.single as Map<String, Object?>)['title'], 'shared');

@@ -245,7 +245,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-core"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.4.0#1189da26f1cbd2d7848a5221ad677461bc91a095"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.5.0#bc0974b45e949bd0212f6656c7bafa1a3a95f164"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -266,7 +266,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-mcp"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.4.0#1189da26f1cbd2d7848a5221ad677461bc91a095"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.5.0#bc0974b45e949bd0212f6656c7bafa1a3a95f164"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -283,7 +283,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-process"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.4.0#1189da26f1cbd2d7848a5221ad677461bc91a095"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.5.0#bc0974b45e949bd0212f6656c7bafa1a3a95f164"
 dependencies = [
  "libc",
  "tokio",
@@ -293,7 +293,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-runner"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.4.0#1189da26f1cbd2d7848a5221ad677461bc91a095"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.5.0#bc0974b45e949bd0212f6656c7bafa1a3a95f164"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -330,7 +330,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-sdk"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.4.0#1189da26f1cbd2d7848a5221ad677461bc91a095"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.5.0#bc0974b45e949bd0212f6656c7bafa1a3a95f164"
 dependencies = [
  "anyhow",
  "bubblepaw-core",

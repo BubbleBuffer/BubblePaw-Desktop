@@ -11,7 +11,7 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 anyhow = "1"
 flutter_rust_bridge = "=2.13.0"
 # The Core release Desktop embeds. Keep CORE_VERSION in src/lib.rs in step.
-bubblepaw-sdk = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.4.0" }
+bubblepaw-sdk = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.5.0" }
 serde_json = "1"
 tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
 

@@ -1,7 +1,7 @@
 # Core and updates
 
 Core is part of the app. `native/` is a Rust crate (`bubblepaw_desktop_native`) that
-depends on `bubblepaw-sdk` at Core tag `v0.4.0`; flutter_rust_bridge exposes it to Dart.
+depends on `bubblepaw-sdk` at Core tag `v0.5.0`; flutter_rust_bridge exposes it to Dart.
 The app also checks for new versions of itself. Code: `native/`, `rust_builder/`,
 `lib/src/rust/` (generated), `lib/src/core/ffi_transport.dart`, `lib/src/updates/`,
 `lib/src/platform/download.dart`, `lib/src/semver.dart`.
@@ -21,9 +21,14 @@ The surface is host-API JSON-RPC and no feature logic (`native/src/api/host.rs`)
 - `close()` ends the session; an embedded host also stops and removes `host.json`.
 - `coreVersion()` is the embedded Core release (`CORE_VERSION`).
 
-`native/src/host_setup.rs` is the one place that builds the host (providers, config,
-roles). Today it is a placeholder with a scripted provider only; Core v0.5.0 adds an SDK
-entry point that does the CLI host's startup, and that call replaces the placeholder.
+`native/src/host_setup.rs` is the one place that configures the host: `HostConfig::load` with
+Desktop's data directory and workspace, then `Client::open_configured`. The rest of the
+configuration comes from the same layers as the `bubblepaw` CLI (the user config in the
+home directory, `<workspace>/.bubblepaw/config.toml`, `BUBBLEPAW_*` environment), so
+providers and models are set there. A `ConfigError` (an unreadable file, a bad key, no
+provider credentials) becomes a `startFailed` error whose text the failure notice shows.
+`attached` compares the pid in `host.json` with this process's, because the SDK client does
+not say whether it attached.
 
 `cargo test` covers `session.list` on a fresh temp data dir, host errors keeping their
 code, a second handle attaching to a host built with `Client::embedded` on the same dir

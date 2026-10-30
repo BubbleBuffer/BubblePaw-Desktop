@@ -204,5 +204,5 @@ pins; renders from another platform will not match.
 - Worktrees, crew and the Context pane show only what the stdio backend reports. With BubblePaw-Core v0.3.0 that includes the context (pane, summaries, history ranges) and child questions; it still reports no jobs. Compaction needs a real model, so the demo provider shows an empty structure.
 - The header shows a branch only when the backend reports one; the
   stdio host reports none, so none is shown.
-- **The embedded host has no configured models yet.** `native/src/host_setup.rs` builds the host with a scripted provider only; Core v0.5.0 adds the SDK entry point that applies the host config (providers, roles), and that call replaces it.
+- **A first run needs a configured provider.** The embedded host loads the CLI's configuration layers; with none, Core's default provider asks for credentials and the start fails with that text ("choose --auth-file for Codex credentials"). Providers are set in the host config, not in the app.
 - The Windows build of the native crate is checked in CI only.
