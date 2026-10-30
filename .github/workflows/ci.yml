@@ -23,13 +23,9 @@ on:
 permissions:
   contents: read
 
-env:
-  # The BubblePaw-Core release the live check runs against.
-  BP_VERSION: v0.3.1
-
 jobs:
   checks:
-    name: format, analyze, test, goldens, live host
+    name: format, analyze, test, goldens, native host
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -40,6 +36,8 @@ jobs:
         with:
           channel: stable
           flutter-version: 3.47.7
+      - name: rust toolchain
+        run: rustup toolchain install stable --profile minimal -c rustfmt,clippy && rustup default stable
       - run: flutter pub get
       - name: dart format
         if: always()
@@ -49,7 +47,7 @@ jobs:
         run: flutter analyze
       - name: flutter test
         if: always()
-        run: flutter test --exclude-tags golden
+        run: flutter test --exclude-tags "golden || native"
       # Goldens are rendered on Linux with the bundled fonts. To accept new
       # renders, run this workflow by hand (workflow_dispatch): the last step
       # formats the code, re-renders the goldens and uploads the result as
@@ -64,20 +62,19 @@ jobs:
           name: golden-failures
           path: test/failures
           if-no-files-found: ignore
-      # Scripted provider only: no model is called.
-      - name: live host (scripted provider)
+      - name: native crate (fmt, clippy, tests)
         if: always()
         run: |
-          set -euo pipefail
-          dir="$RUNNER_TEMP/bubblepaw-$BP_VERSION"
-          rm -rf "$dir" && mkdir -p "$dir"
-          base="https://github.com/BubbleBuffer/BubblePaw-Core/releases/download/$BP_VERSION"
-          archive="bubblepaw-$BP_VERSION-x86_64-unknown-linux-gnu.tar.gz"
-          curl -sSfL -o "$dir/SHA256SUMS" "$base/SHA256SUMS"
-          curl -sSfL -o "$dir/$archive" "$base/$archive"
-          (cd "$dir" && grep " $archive\$" SHA256SUMS | sha256sum -c - && tar xzf "$archive")
-          BP_TEST_BIN="$dir/bubblepaw-$BP_VERSION-x86_64-unknown-linux-gnu/bubblepaw" \
-            flutter test --tags live test/live_test.dart
+          cargo fmt --manifest-path native/Cargo.toml --check
+          cargo clippy --manifest-path native/Cargo.toml --all-targets -- -D warnings
+          cargo test --manifest-path native/Cargo.toml
+      # Scripted provider only: no model is called. The Dart FFI transport
+      # runs against the crate built here.
+      - name: native host (FFI transport, real crate)
+        if: always()
+        run: |
+          cargo build --manifest-path native/Cargo.toml
+          flutter test --tags native test/native_host_test.dart
       # Catches native breakage: the plugin registrants, the tray's
       # libayatana-appindicator and the runner changes.
       - name: linux build (debug)
@@ -112,3 +109,30 @@ jobs:
           name: fix-patch
           path: fix.patch
           if-no-files-found: ignore
+
+  windows:
+    name: windows build, native host
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+      - name: rust toolchain
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - run: flutter pub get
+      - name: native crate tests
+        if: always()
+        run: cargo test --manifest-path native/Cargo.toml
+      - name: native host (FFI transport, real crate)
+        if: always()
+        run: |
+          cargo build --manifest-path native/Cargo.toml
+          flutter test --tags native test/native_host_test.dart
+      - name: windows build (debug)
+        if: always()
+        run: flutter build windows --debug

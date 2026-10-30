@@ -94,11 +94,7 @@ class _Rig {
        tray = tray ?? FakeTray(),
        startup = startup ?? FakeStartup() {
     final p = played ?? Played();
-    host = HostController(
-      store: store,
-      starter: p.start,
-      fileExists: (_) => true,
-    );
+    host = HostController(store: store, starter: p.start);
     desktop = DesktopIntegration(
       host: host,
       tray: this.tray,
@@ -169,13 +165,14 @@ void main() {
       expect(hostStatusLine(HostPhase.starting), 'Host starting');
       expect(hostStatusLine(HostPhase.failed), 'Host stopped');
       expect(hostStatusLine(HostPhase.stopped), 'Host not started');
-      expect(hostStatusLine(HostPhase.setup), 'Host not set up');
     });
 
-    test('Restart is off before the host is set up', () {
-      final restart = trayMenu(phase: HostPhase.setup)
-          .firstWhere((i) => i.key == 'restart');
-      expect(restart.enabled, isFalse);
+    test('Restart is on in every phase', () {
+      for (final phase in HostPhase.values) {
+        final restart = trayMenu(phase: phase)
+            .firstWhere((i) => i.key == 'restart');
+        expect(restart.enabled, isTrue, reason: phase.name);
+      }
     });
   });
 
@@ -211,7 +208,6 @@ void main() {
             starts++;
             return Played().start(c);
           },
-          fileExists: (_) => true,
         );
         final tray = FakeTray();
         final window = FakeWindow();

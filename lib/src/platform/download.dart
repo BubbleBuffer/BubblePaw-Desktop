@@ -1,5 +1,5 @@
 // Network access for downloads, behind a small interface so tests pass fakes,
-// and the verified download both Core and app updates use: bytes go to a
+// and the verified download app updates use: bytes go to a
 // partial file, their SHA256 is checked, and only a match is kept.
 
 import 'dart:async';
@@ -167,18 +167,6 @@ class _DigestSink implements Sink<crypto.Digest> {
 
 /// The lower-case hex SHA256 of [bytes].
 String sha256Hex(List<int> bytes) => crypto.sha256.convert(bytes).toString();
-
-/// The checksums in a `SHA256SUMS` file: `<hex>  <name>` per line. A `*`
-/// before the name (binary mode) is dropped.
-Map<String, String> parseSha256Sums(String text) {
-  final sums = <String, String>{};
-  final line = RegExp(r'^([0-9A-Fa-f]{64})\s+\*?(.+?)\s*$');
-  for (final row in const LineSplitter().convert(text)) {
-    final match = line.firstMatch(row);
-    if (match != null) sums[match.group(2)!] = match.group(1)!.toLowerCase();
-  }
-  return sums;
-}
 
 /// Downloads [url] to [destination] and keeps it only when its SHA256 is
 /// [expectedSha256]. Writes to `<destination>.part` first, so a stopped or

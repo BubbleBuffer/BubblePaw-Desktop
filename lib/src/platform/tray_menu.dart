@@ -52,7 +52,7 @@ List<TrayItem> trayMenu({required HostPhase phase, int waitingChats = 0}) => [
           : '$waitingChats chats waiting for you',
     ),
   const TrayItem.separator(),
-  TrayItem(TrayItem.restart, 'Restart host', enabled: phase != HostPhase.setup),
+  const TrayItem(TrayItem.restart, 'Restart host'),
   const TrayItem.separator(),
   const TrayItem(TrayItem.quit, 'Quit BubblePaw'),
 ];
@@ -61,7 +61,6 @@ List<TrayItem> trayMenu({required HostPhase phase, int waitingChats = 0}) => [
 String hostStatusLine(HostPhase phase) => switch (phase) {
   HostPhase.running => 'Host running',
   HostPhase.starting => 'Host starting',
-  HostPhase.setup => 'Host not set up',
   HostPhase.stopped => 'Host not started',
   HostPhase.failed => 'Host stopped',
 };

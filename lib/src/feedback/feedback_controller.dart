@@ -9,7 +9,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 
-import '../config.dart';
 import '../host_controller.dart';
 import '../platform/releases.dart' show openFolder;
 import '../versions.dart';
@@ -133,13 +132,7 @@ class FeedbackController extends ChangeNotifier {
   String _core() {
     if (host.usingScripted) return 'scripted backend';
     final version = host.hostVersion ?? 'unknown';
-    final source = host.config?.binarySource;
-    return switch (source) {
-      BinarySource.downloaded => '$version (Downloaded)',
-      BinarySource.installed => '$version (Installed)',
-      BinarySource.custom => '$version (Custom)',
-      null => version,
-    };
+    return host.attached ? '$version (attached host)' : '$version (embedded)';
   }
 
   /// The open chat, with its messages; null when none is open or the host
@@ -251,7 +244,6 @@ Future<void> _copyToClipboard(String text) =>
 String hostStatus(HostController host) => switch (host.phase) {
   HostPhase.running => 'started, running',
   HostPhase.starting => 'starting',
-  HostPhase.setup => 'not set up',
   HostPhase.stopped => 'not started',
   HostPhase.failed => 'stopped',
 };

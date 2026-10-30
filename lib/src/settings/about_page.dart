@@ -1,5 +1,6 @@
-// About: updates for BubblePaw (channel, automatic check, Check now) and for
-// Core, the versions in use and the way to the open source licences.
+// About: updates for BubblePaw (channel, automatic check, Check now), the
+// versions in use (Core is embedded in the app) and the way to the open source
+// licences.
 
 import 'dart:async';
 
@@ -9,12 +10,8 @@ import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart'
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
-import '../config.dart';
 import '../feedback/feedback_controller.dart';
-import '../core/core_manager.dart';
-import '../core/detect.dart';
 import '../host_controller.dart';
-import '../platform/download.dart';
 import '../platform/releases.dart';
 import '../preferences.dart';
 import '../updates/update_controller.dart';
@@ -66,15 +63,11 @@ class AboutPage extends StatefulWidget {
 class _AboutPageState extends State<AboutPage> {
   HostController get _host => widget.controller;
   UpdateController get _updates => _host.updates;
-  CoreManager get _core => _host.core;
 
   @override
   void initState() {
     super.initState();
     _host.addListener(_changed);
-    scheduleMicrotask(() {
-      if (mounted && !_core.checked) unawaited(_core.refresh());
-    });
   }
 
   @override
@@ -198,13 +191,12 @@ class _AboutPageState extends State<AboutPage> {
           ),
         ),
         const SizedBox(height: 4),
-        _coreRow(theme),
         const SettingsHeading('Versions', top: 24),
         GroupCard(
           children: [
             _Version('BubblePaw', buildVersion),
             _Version('Agent kit', kitVersion),
-            _Version('Core', _coreVersion() ?? 'Not running'),
+            _Version('Core', _host.hostVersion ?? 'Not running'),
             _Version('Protocol', BubblePawBackend.protocolVersion),
           ],
         ),
@@ -252,172 +244,6 @@ class _AboutPageState extends State<AboutPage> {
           ),
         ),
       ],
-    );
-  }
-
-  /// The version of the Core in use: what the host reported, else what is
-  /// stored or found for the chosen binary.
-  String? _coreVersion() {
-    final reported = _host.hostVersion;
-    if (reported != null) return reported;
-    final config = _host.config;
-    if (config == null) return null;
-    return switch (config.binarySource) {
-      BinarySource.downloaded => _host.coreVersionFor(config)?.toString(),
-      BinarySource.installed => _core.detected?.version?.toString(),
-      BinarySource.custom => null,
-    };
-  }
-
-  Widget _coreRow(BbTheme theme) {
-    final config = _host.config;
-    final source = config?.binarySource ?? BinarySource.downloaded;
-    final version = _coreVersion();
-    final state = _core.state;
-    const outside = 'Updated outside BubblePaw.';
-    final releases = LinkButton(
-      key: const ValueKey('core-releases-link'),
-      label: 'Core releases',
-      onTap: () => unawaited(widget.services.open(coreReleasesPage)),
-    );
-
-    if (_host.attached) {
-      return _CoreRow(
-        title: 'Core ${version ?? ''} · attached host'.replaceAll('  ', ' '),
-        line: outside,
-        action: releases,
-      );
-    }
-    switch (source) {
-      case BinarySource.downloaded:
-        final stored = config == null
-            ? _core.versionToRun('')
-            : _host.coreVersionFor(config);
-        if (state is CoreDownloading) {
-          return _CoreRow(
-            title: 'Core · downloading',
-            line:
-                'Downloading ${state.version}'
-                '${state.fraction == null ? '' : ', ${(state.fraction! * 100).round()}%'}',
-            below: ProgressLine(value: state.fraction, label: 'Core download'),
-          );
-        }
-        if (stored == null) {
-          final failed = state is CoreFailed;
-          final offline =
-              (state is CoreFailed && state.offline) ||
-              (!failed && _core.lookupError?.kind == FetchFailure.offline);
-          return _CoreRow(
-            title: 'Core · Not downloaded',
-            line: failed || offline
-                ? (offline
-                      ? 'Core could not be downloaded because this computer is '
-                            'offline.'
-                      : 'The Core download failed.')
-                : 'Core is not downloaded.',
-            action: ActionButton(
-              key: const ValueKey('about-core-download'),
-              label: 'Download',
-              kind: ActionKind.primary,
-              glyph: glyphDownload,
-              onTap: () => unawaited(_host.downloadCore()),
-            ),
-          );
-        }
-        final update = _core.updateAvailable(stored);
-        return _CoreRow(
-          title: 'Core $stored · downloaded',
-          line: update
-              ? 'Update available: ${_core.latest!.version}'
-              : 'Up to date.',
-          action: update
-              ? ActionButton(
-                  key: const ValueKey('about-core-update'),
-                  label: 'Update',
-                  kind: ActionKind.primary,
-                  glyph: glyphDownload,
-                  onTap: () => unawaited(_host.downloadCore()),
-                )
-              : null,
-        );
-      case BinarySource.installed:
-        final found = _core.detected;
-        return _CoreRow(
-          title: found == null || found.status == DetectStatus.notFound
-              ? 'Core · Not found'
-              : 'Core ${found.version ?? ''} · installed at ${found.path}'
-                    .replaceAll('  ', ' '),
-          line: outside,
-          action: releases,
-        );
-      case BinarySource.custom:
-        return _CoreRow(
-          title:
-              'Core${version == null ? '' : ' $version'} · Custom binary '
-              'at ${config?.binaryPath ?? ''}',
-          line: outside,
-          action: releases,
-        );
-    }
-  }
-}
-
-/// The Core line of the Updates group: what runs, its status and one action.
-class _CoreRow extends StatelessWidget {
-  const _CoreRow({
-    required this.title,
-    required this.line,
-    this.action,
-    this.below,
-  });
-
-  final String title;
-  final String line;
-  final Widget? action;
-  final Widget? below;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.bb;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.surface2,
-          border: Border.all(color: theme.seam),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            key: const ValueKey('about-core'),
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  glyphIcon(glyphCpu, size: 20, color: theme.muted),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      title,
-                      key: const ValueKey('about-core-title'),
-                      style: ts(theme.typeScale.ui, theme.ink, weight: 600),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                line,
-                key: const ValueKey('about-core-line'),
-                style: ts(theme.typeScale.uiSmall, theme.muted),
-              ),
-              if (below != null) ...[const SizedBox(height: 8), below!],
-              if (action != null) ...[const SizedBox(height: 8), action!],
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

@@ -5,3 +5,5 @@ analyzer:
     - build/**
     - windows/**
     - linux/**
+    - rust_builder/**
+    - native/**

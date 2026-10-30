@@ -1,11 +1,10 @@
-// The settings pages: General, Core, Models and About with Licences.
+// The settings pages: General, Models, Feedback and About with Licences.
 
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
-import 'package:bubblepaw_desktop/src/core/core_manager.dart';
 import 'package:bubblepaw_desktop/src/platform/download.dart';
 import 'package:bubblepaw_desktop/src/semver.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
@@ -23,19 +22,16 @@ import 'support.dart';
 
 HostController _controller({
   MemoryConfigStore? store,
-  CoreManager? core,
   UpdateController? updates,
-  HostVersionReader? versionReader,
+  String? version,
+  bool attached = false,
   AppConfig? config = sampleConfig,
 }) {
   return HostController(
     store: store ?? MemoryConfigStore(config),
     // A fresh scripted host for every start, as a restart gets.
-    starter: (c) => Played().start(c),
-    fileExists: (_) => true,
-    core: core,
+    starter: (c) => Played(version: version, attached: attached).start(c),
     updates: updates,
-    versionReader: versionReader,
   );
 }
 
@@ -78,6 +74,42 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('theme-dark')));
       await settle(tester);
       expect(store.prefs.theme, ThemeSetting.dark);
+    });
+
+    testWidgets('the data directory is saved and reopens the host there', (
+      tester,
+    ) async {
+      final store = MemoryConfigStore(sampleConfig);
+      final controller = _controller(store: store);
+      await pumpApp(tester, controller);
+      await _open(tester, 'general');
+
+      expect(find.text('Data directory'), findsOneWidget);
+      // No buttons until the text differs from what is stored.
+      expect(find.byKey(const ValueKey('settings-save')), findsNothing);
+
+      await tester.enterText(_field('settings-data'), '/other/data');
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('settings-save')));
+      await settle(tester);
+
+      expect(store.saved!.dataDirectory, '/other/data');
+      expect(controller.config!.dataDirectory, '/other/data');
+      expect(controller.phase, HostPhase.running);
+    });
+
+    testWidgets('an empty data directory is refused', (tester) async {
+      final store = MemoryConfigStore(sampleConfig);
+      await pumpApp(tester, _controller(store: store));
+      await _open(tester, 'general');
+
+      await tester.enterText(_field('settings-data'), '  ');
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('settings-save')));
+      await settle(tester);
+
+      expect(find.byKey(const ValueKey('settings-error')), findsOneWidget);
+      expect(store.saved, sampleConfig);
     });
 
     testWidgets('Start in the tray needs Open at login', (tester) async {
@@ -142,152 +174,7 @@ void main() {
     });
   });
 
-  group('Core', () {
-    testWidgets('a first run offline says Core is not downloaded, with Retry', (
-      tester,
-    ) async {
-      final store = MemoryConfigStore();
-      final controller = _controller(store: store, config: null);
-      await pumpApp(tester, controller);
-      expect(controller.phase, HostPhase.setup);
-      expect(find.byKey(const ValueKey('settings-binary')), findsNothing);
-      expect(find.byKey(const ValueKey('core-download-error')), findsOneWidget);
-      expect(find.textContaining('offline'), findsWidgets);
-      expect(find.byKey(const ValueKey('core-retry')), findsOneWidget);
-    });
-
-    testWidgets('a downloaded Core shows its version, Update and Remove', (
-      tester,
-    ) async {
-      final harness = CoreHarness(releases: ['0.4.0']);
-      addTearDown(harness.dispose);
-      harness.storeVersion('0.3.1');
-      final store = MemoryConfigStore(
-        sampleConfig.copyWith(
-          binarySource: BinarySource.downloaded,
-          coreVersion: '0.3.1',
-        ),
-      );
-      await pumpApp(tester, _controller(store: store, core: harness.manager));
-      await tester.runAsync(harness.manager.refresh);
-      await _open(tester, 'core');
-      expect(find.byKey(const ValueKey('settings-binary')), findsNothing);
-      expect(_text(tester, 'core-version'), '0.3.1');
-      expect(find.byKey(const ValueKey('core-update-button')), findsOneWidget);
-      expect(find.byKey(const ValueKey('core-remove')), findsOneWidget);
-      expect(find.byKey(const ValueKey('core-download')), findsNothing);
-    });
-
-    testWidgets('a download in progress shows its progress and Cancel', (
-      tester,
-    ) async {
-      final harness = CoreHarness(releases: ['0.4.0']);
-      addTearDown(harness.dispose);
-      harness.storeVersion('0.3.1');
-      final store = MemoryConfigStore(
-        sampleConfig.copyWith(binarySource: BinarySource.downloaded),
-      );
-      final controller = _controller(store: store, core: harness.manager);
-      await pumpApp(tester, controller);
-      harness.manager.debugSetState(
-        CoreDownloading(SemVer.parse('0.4.0'), 400, 1000),
-      );
-      await _open(tester, 'core');
-      expect(find.byKey(const ValueKey('core-progress')), findsOneWidget);
-      expect(find.byKey(const ValueKey('core-cancel')), findsOneWidget);
-    });
-
-    testWidgets('Installed says when the Core found is not supported', (
-      tester,
-    ) async {
-      final harness = CoreHarness(installed: ['/usr/bin/bubblepaw']);
-      addTearDown(harness.dispose);
-      harness.detectedVersions['/usr/bin/bubblepaw'] = '0.2.4';
-      await pumpApp(tester, _controller(core: harness.manager));
-      await _open(tester, 'core');
-      await tester.tap(find.byKey(const ValueKey('binary-installed')));
-      await settle(tester);
-      expect(find.textContaining('0.2.4'), findsWidgets);
-      expect(find.textContaining('not supported'), findsWidgets);
-    });
-
-    testWidgets('Installed with nothing found lists where it looked', (
-      tester,
-    ) async {
-      await pumpApp(tester, _controller());
-      await _open(tester, 'core');
-      await tester.tap(find.byKey(const ValueKey('binary-installed')));
-      await settle(tester);
-      expect(find.byKey(const ValueKey('core-detect-notice')), findsOneWidget);
-      expect(find.byKey(const ValueKey('core-detect')), findsOneWidget);
-    });
-
-    testWidgets('Custom binary shows the path and Browse fills it', (
-      tester,
-    ) async {
-      final harness = CoreHarness();
-      addTearDown(harness.dispose);
-      harness.storeVersion('0.3.1');
-      final store = MemoryConfigStore(
-        sampleConfig.copyWith(binarySource: BinarySource.downloaded),
-      );
-      await pumpApp(
-        tester,
-        _controller(store: store, core: harness.manager),
-        pickBinary: () async => '/home/user/bin/bubblepaw',
-      );
-      await _open(tester, 'core');
-      expect(find.byKey(const ValueKey('settings-binary')), findsNothing);
-
-      await tester.tap(find.byKey(const ValueKey('binary-custom')));
-      await settle(tester);
-      await tester.tap(find.byKey(const ValueKey('settings-browse')));
-      await settle(tester);
-      final field = tester.widget<EditableText>(_field('settings-binary'));
-      expect(field.controller.text, '/home/user/bin/bubblepaw');
-    });
-
-    testWidgets('Save and restart stores the choice and restarts the host', (
-      tester,
-    ) async {
-      final harness = CoreHarness();
-      addTearDown(harness.dispose);
-      harness.storeVersion('0.3.1');
-      final store = MemoryConfigStore(sampleConfig);
-      final controller = _controller(store: store, core: harness.manager);
-      await pumpApp(tester, controller);
-      await _open(tester, 'core');
-
-      await tester.tap(find.byKey(const ValueKey('binary-downloaded')));
-      await settle(tester);
-      await tester.ensureVisible(find.byKey(const ValueKey('settings-save')));
-      await tester.tap(find.byKey(const ValueKey('settings-save')));
-      await settle(tester);
-      expect(store.saved?.binarySource, BinarySource.downloaded);
-      // The custom path stays for switching back.
-      expect(store.saved?.binaryPath, sampleConfig.binaryPath);
-      expect(controller.phase, HostPhase.running);
-    });
-
-    testWidgets('Restart restarts the host', (tester) async {
-      var starts = 0;
-      final controller = HostController(
-        store: MemoryConfigStore(sampleConfig),
-        starter: (c) {
-          starts++;
-          return Played().start(c);
-        },
-        fileExists: (_) => true,
-      );
-      await pumpApp(tester, controller);
-      expect(starts, 1);
-      await _open(tester, 'core');
-      expect(find.text('Running'), findsWidgets);
-      await tester.tap(find.byKey(const ValueKey('core-restart')));
-      await settle(tester);
-      expect(starts, 2);
-    });
-
+  group('Host', () {
     testWidgets('Start the host when BubblePaw starts: off leaves it stopped', (
       tester,
     ) async {
@@ -309,7 +196,7 @@ void main() {
       tester,
     ) async {
       await pumpApp(tester, _controller());
-      await _open(tester, 'core');
+      await _open(tester, 'general');
       expect(find.text('Workspace'), findsNothing);
       expect(find.textContaining('Keep the host running'), findsNothing);
     });
@@ -346,61 +233,50 @@ void main() {
 
   group('About', () {
     testWidgets('lists the versions in use', (tester) async {
-      final controller = _controller(versionReader: (_) async => '0.3.1');
+      final controller = _controller(version: '0.4.0');
       await pumpApp(tester, controller);
       await _open(tester, 'about');
       Text value(String name) =>
           tester.widget<Text>(find.byKey(ValueKey('version-$name')));
       expect(value('BubblePaw').data, appVersion);
       expect(value('Agent kit').data, kitVersion);
-      expect(value('Core').data, '0.3.1');
+      expect(value('Core').data, '0.4.0');
       expect(value('Protocol').data, isNotEmpty);
       // The app repository is private: no self-update row.
       expect(find.textContaining('Check for app'), findsNothing);
     });
 
-    testWidgets('the Core row of a downloaded Core offers the update', (
+    testWidgets('Core is embedded: its version row and no download or update', (
       tester,
     ) async {
-      final harness = CoreHarness(releases: ['0.4.0']);
-      addTearDown(harness.dispose);
-      harness.storeVersion('0.3.1');
-      final store = MemoryConfigStore(
-        sampleConfig.copyWith(
-          binarySource: BinarySource.downloaded,
-          coreVersion: '0.3.1',
+      await pumpApp(tester, _controller(version: '0.4.0'));
+      await _open(tester, 'about');
+      expect(find.byKey(const ValueKey('version-Core')), findsOneWidget);
+      expect(find.byKey(const ValueKey('about-core')), findsNothing);
+      expect(find.byKey(const ValueKey('about-core-download')), findsNothing);
+      expect(find.byKey(const ValueKey('about-core-update')), findsNothing);
+      expect(find.byKey(const ValueKey('core-releases-link')), findsNothing);
+      expect(find.textContaining('Updated outside BubblePaw'), findsNothing);
+    });
+
+    testWidgets('the Core row says Not running when no host runs', (
+      tester,
+    ) async {
+      final controller = _controller(
+        store: MemoryConfigStore(
+          sampleConfig,
+          const AppPrefs(startHost: false),
         ),
       );
-      await pumpApp(tester, _controller(store: store, core: harness.manager));
-      await tester.runAsync(harness.manager.refresh);
-      await _open(tester, 'about');
-      expect(_text(tester, 'about-core-title'), contains('0.3.1'));
-      expect(_text(tester, 'about-core-title'), contains('downloaded'));
-      expect(_text(tester, 'about-core-line'), contains('0.4.0'));
-      expect(find.byKey(const ValueKey('about-core-update')), findsOneWidget);
-    });
-
-    testWidgets('an installed Core is updated outside BubblePaw', (
-      tester,
-    ) async {
-      final harness = CoreHarness(installed: ['/usr/bin/bubblepaw']);
-      addTearDown(harness.dispose);
-      harness.detectedVersions['/usr/bin/bubblepaw'] = '0.3.2';
-      final store = MemoryConfigStore(
-        sampleConfig.copyWith(binarySource: BinarySource.installed),
+      await pumpApp(tester, controller);
+      await tester.tap(find.byKey(const ValueKey('notice-settings')));
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('settings-nav-about')));
+      await settle(tester);
+      expect(
+        tester.widget<Text>(find.byKey(const ValueKey('version-Core'))).data,
+        'Not running',
       );
-      await pumpApp(tester, _controller(store: store, core: harness.manager));
-      await tester.runAsync(harness.manager.detect);
-      await _open(tester, 'about');
-      expect(_text(tester, 'about-core-line'), 'Updated outside BubblePaw.');
-      expect(find.byKey(const ValueKey('about-core-update')), findsNothing);
-    });
-
-    testWidgets('a custom Core is updated outside BubblePaw', (tester) async {
-      await pumpApp(tester, _controller());
-      await _open(tester, 'about');
-      expect(_text(tester, 'about-core-title'), contains('Custom binary'));
-      expect(_text(tester, 'about-core-line'), 'Updated outside BubblePaw.');
     });
 
     testWidgets('Check now offers a newer version and Review opens it', (

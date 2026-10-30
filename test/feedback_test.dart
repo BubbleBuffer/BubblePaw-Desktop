@@ -15,6 +15,7 @@ import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/scripted.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'scenes.dart';
 import 'support.dart';
 
 const _hex64 =
@@ -101,6 +102,36 @@ void main() {
   });
 
   group('diagnostics', () {
+    test('the core line says embedded, attached or scripted', () async {
+      Future<String> coreLine(HostController host) async {
+        await host.init();
+        addTearDown(host.dispose);
+        final text = TestFeedback(host).diagnostics();
+        return text.split('\n').firstWhere((l) => l.startsWith('Core'));
+      }
+
+      final embedded = await coreLine(
+        HostController(
+          store: MemoryConfigStore(sampleConfig),
+          starter: Played(version: '0.4.0').start,
+        ),
+      );
+      expect(embedded, contains('0.4.0 (embedded)'));
+
+      final attached = await coreLine(
+        HostController(
+          store: MemoryConfigStore(sampleConfig),
+          starter: Played(version: '0.4.0', attached: true).start,
+        ),
+      );
+      expect(attached, contains('0.4.0 (attached host)'));
+
+      final scripted = await coreLine(
+        HostController(store: MemoryConfigStore(), scripted: true),
+      );
+      expect(scripted, contains('scripted backend'));
+    });
+
     test('lists the facts, the errors and both logs, redacted', () {
       final log = LogBuffer()
         ..desktop('opened /home/user/project?token=abc')
@@ -109,7 +140,7 @@ void main() {
         const DiagnosticsFacts(
           desktop: '0.1.0',
           os: 'linux test',
-          core: '0.3.2 (Bundled)',
+          core: '0.4.0 (embedded)',
           host: 'stopped',
           project: 'project',
           chat: 'c_1',
@@ -373,7 +404,6 @@ void main() {
       final host = HostController(
         store: MemoryConfigStore(sampleConfig),
         starter: (_) async => StartedBackend(ExitedBackend(), () async {}),
-        fileExists: (_) => true,
         log: log,
       );
       await host.init();

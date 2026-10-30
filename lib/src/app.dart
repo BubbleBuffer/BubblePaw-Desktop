@@ -28,7 +28,6 @@ import 'screens/tray_notice.dart';
 import 'screens/update_dialog.dart';
 import 'screens/workspace_menu.dart';
 import 'settings/licences_page.dart';
-import 'settings/settings_section.dart';
 import 'settings/settings_shell.dart';
 
 class BubblePawApp extends StatefulWidget {
@@ -38,7 +37,6 @@ class BubblePawApp extends StatefulWidget {
     required this.feedback,
     this.brightness,
     this.pickFolder = picker.pickFolder,
-    this.pickBinary = picker.pickBinary,
     this.services = const PlatformServices(),
     this.licenceSource = LicencesPage.defaultSource,
   });
@@ -50,9 +48,6 @@ class BubblePawApp extends StatefulWidget {
 
   /// Asks for a folder (the native picker); tests pass their own.
   final Future<String?> Function() pickFolder;
-
-  /// Asks for the custom binary (the native file picker).
-  final Future<String?> Function() pickBinary;
 
   /// The network and the operating system, for About.
   final PlatformServices services;
@@ -115,7 +110,6 @@ class _BubblePawAppState extends State<BubblePawApp> {
       controller: widget.controller,
       feedback: widget.feedback,
       pickFolder: widget.pickFolder,
-      pickBinary: widget.pickBinary,
       services: widget.services,
       licenceSource: widget.licenceSource,
     ),
@@ -130,7 +124,6 @@ class AppShell extends StatefulWidget {
     required this.controller,
     required this.feedback,
     this.pickFolder = picker.pickFolder,
-    this.pickBinary = picker.pickBinary,
     this.services = const PlatformServices(),
     this.licenceSource = LicencesPage.defaultSource,
   });
@@ -138,7 +131,6 @@ class AppShell extends StatefulWidget {
   final HostController controller;
   final FeedbackController feedback;
   final Future<String?> Function() pickFolder;
-  final Future<String?> Function() pickBinary;
   final PlatformServices services;
   final Stream<LicenseEntry> Function() licenceSource;
 
@@ -225,23 +217,18 @@ class _AppShellState extends State<AppShell> {
 
   Widget _screen(BuildContext context) {
     final pickFolder = widget.pickFolder;
-    final pickBinary = widget.pickBinary;
     final services = widget.services;
     final licenceSource = widget.licenceSource;
     if (controller.settingsOpen) {
-      final first = controller.phase == HostPhase.setup;
       return SettingsShell(
-        // A fresh form each time it opens, and after each save.
+        // A fresh page each time it opens.
         key: ValueKey(('settings', controller.config)),
         controller: controller,
-        firstRun: first && controller.config == null,
         services: services,
-        pickBinary: pickBinary,
         feedback: feedback,
         onSendFeedback: () => unawaited(_sendFeedback()),
         licenceSource: licenceSource,
-        onSave: (config) => unawaited(controller.saveAndStart(config)),
-        onClose: first ? null : controller.closeSettings,
+        onClose: controller.closeSettings,
       );
     }
     return switch (controller.phase) {
@@ -262,11 +249,11 @@ class _AppShellState extends State<AppShell> {
             key: const ValueKey('notice-settings'),
             label: 'Settings',
             height: 36,
-            onTap: () => controller.openSettings(SettingsSection.core),
+            onTap: () => controller.openSettings(),
           ),
         ],
       ),
-      HostPhase.setup || HostPhase.starting => Notice(
+      HostPhase.starting => Notice(
         title: controller.usingScripted
             ? 'Starting the scripted backend'
             : 'Starting BubblePaw',
@@ -287,7 +274,7 @@ class _AppShellState extends State<AppShell> {
             key: const ValueKey('notice-settings'),
             label: 'Settings',
             height: 36,
-            onTap: () => controller.openSettings(SettingsSection.core),
+            onTap: () => controller.openSettings(),
           ),
         ],
       ),

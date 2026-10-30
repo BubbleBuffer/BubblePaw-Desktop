@@ -1,4 +1,4 @@
-// Version 0.1: extra host arguments, idle host exit, the avatar's initials and
+// Version 0.1: idle host exit, the avatar's initials and
 // the screens that follow what the backend can do.
 
 import 'dart:async';
@@ -6,117 +6,13 @@ import 'dart:async';
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:agent_kit_core/fake.dart';
-import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'scenes.dart';
 import 'support.dart';
 
 void main() {
-  group('extra host arguments', () {
-    test('split on spaces; quotes group a value and are dropped', () {
-      expect(splitArguments(''), isEmpty);
-      expect(splitArguments('   '), isEmpty);
-      expect(splitArguments('--provider demo'), ['--provider', 'demo']);
-      expect(splitArguments('  --a   b\t--c '), ['--a', 'b', '--c']);
-      expect(splitArguments('--set \'x="native"\''), ['--set', 'x="native"']);
-      expect(splitArguments('--set "x=\'ask\'"'), ['--set', "x='ask'"]);
-      expect(splitArguments('--dir "my folder" -v'), [
-        '--dir',
-        'my folder',
-        '-v',
-      ]);
-      expect(splitArguments('--name ""'), ['--name', '']);
-      expect(splitArguments('--open "unclosed value'), [
-        '--open',
-        'unclosed value',
-      ]);
-    });
-
-    test('are stored in the config and read back; old configs have none', () {
-      const config = AppConfig(
-        binaryPath: '/b',
-        workspaceDirectory: '/w',
-        dataDirectory: '/d',
-        extraArguments: '--provider demo',
-      );
-      final json = config.toJson();
-      expect(json['extraArguments'], '--provider demo');
-      final back = AppConfig.fromJson(json);
-      expect(back, config);
-      expect(back!.hostArguments, ['--provider', 'demo']);
-      expect(config.copyWith(extraArguments: '').hostArguments, isEmpty);
-
-      final old = AppConfig.fromJson({
-        'binaryPath': '/b',
-        'workspaceDirectory': '/w',
-        'dataDirectory': '/d',
-      });
-      expect(old?.extraArguments, isEmpty);
-      expect(old?.toJson().containsKey('extraArguments'), isFalse);
-      expect(
-        AppConfig.fromJson({
-          'binaryPath': '/b',
-          'workspaceDirectory': '/w',
-          'dataDirectory': '/d',
-          'extraArguments': 3,
-        }),
-        isNull,
-      );
-    });
-
-    testWidgets('typed in settings, saved, started with and shown again', (
-      tester,
-    ) async {
-      final store = MemoryConfigStore();
-      final played = Played();
-      final controller = HostController(
-        store: store,
-        starter: played.start,
-        fileExists: (_) => true,
-      );
-      await pumpApp(tester, controller);
-      await tester.tap(find.byKey(const ValueKey('binary-custom')));
-      await settle(tester);
-
-      expect(find.text('Extra arguments'), findsOneWidget);
-      await tester.enterText(
-        find.byKey(const ValueKey('settings-binary')),
-        '/opt/bubblepaw/bubblepaw',
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('settings-arguments')),
-        '--provider demo --set "a=b c"',
-      );
-      await tester.ensureVisible(find.byKey(const ValueKey('settings-save')));
-      await tester.tap(find.byKey(const ValueKey('settings-save')));
-      await settle(tester);
-
-      expect(store.saved?.extraArguments, '--provider demo --set "a=b c"');
-      expect(played.configs.single.hostArguments, [
-        '--provider',
-        'demo',
-        '--set',
-        'a=b c',
-      ]);
-      expect(controller.phase, HostPhase.running);
-
-      await tester.tap(find.text('Settings'));
-      await settle(tester);
-      await tester.tap(find.byKey(const ValueKey('settings-nav-core')));
-      await settle(tester);
-      final field = tester.widget<EditableText>(
-        find.descendant(
-          of: find.byKey(const ValueKey('settings-arguments')),
-          matching: find.byType(EditableText),
-        ),
-      );
-      expect(field.controller.text, '--provider demo --set "a=b c"');
-    });
-  });
-
   group('a host that exits while idle', () {
     testWidgets('shows the failure without any command', (tester) async {
       final lost = Completer<Object>();
@@ -158,7 +54,6 @@ void main() {
           played = Played(connectionLost: starts == 1 ? first.future : null);
           return played.start(config);
         },
-        fileExists: (_) => true,
       );
       await pumpApp(tester, controller);
       await tester.runAsync(controller.restart);
@@ -180,7 +75,7 @@ void main() {
           store: MemoryConfigStore(
             sampleConfig.copyWith(workspaceDirectory: path),
           ),
-          fileExists: (_) => false,
+          starter: Played().start,
         );
         await controller.init();
         addTearDown(controller.dispose);

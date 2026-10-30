@@ -30,29 +30,57 @@ void main() {
     final store = ConfigStore(Directory('${dir.path}/nested'));
     expect(await store.load(), isNull);
 
-    const config = AppConfig(
-      binaryPath: '/b/bubblepaw',
-      workspaceDirectory: '/w',
-      dataDirectory: '/d',
-    );
+    const config = AppConfig(workspaceDirectory: '/w', dataDirectory: '/d');
     await store.save(config);
     expect(await store.load(), config);
-    expect(
-      store.file.readAsStringSync(),
-      contains('"binaryPath": "/b/bubblepaw"'),
-    );
+    expect(store.file.readAsStringSync(), contains('"dataDirectory": "/d"'));
 
     store.file.writeAsStringSync('{ not json');
     expect(await store.load(), isNull);
-    store.file.writeAsStringSync('{"binaryPath": 1}');
+    store.file.writeAsStringSync('{"workspaceDirectory": 1}');
     expect(await store.load(), isNull);
   });
+
+  test(
+    'a config saved by an older version loads with its two directories',
+    () async {
+      final dir = await Directory.systemTemp.createTemp('bpd-config');
+      addTearDown(() => dir.delete(recursive: true));
+      final store = ConfigStore(dir);
+      store.file.writeAsStringSync('''
+{
+  "binarySource": "custom",
+  "binaryPath": "/old/bubblepaw",
+  "coreVersion": "0.3.1",
+  "extraArguments": "--verbose",
+  "workspaceDirectory": "/w",
+  "dataDirectory": "/d",
+  "recentWorkspaces": ["/w", "/other"]
+}
+''');
+      final loaded = await store.load();
+      expect(
+        loaded,
+        const AppConfig(
+          workspaceDirectory: '/w',
+          dataDirectory: '/d',
+          recentWorkspaces: ['/w', '/other'],
+        ),
+      );
+      expect(loaded!.isComplete, isTrue);
+      // Saving drops the old fields.
+      await store.save(loaded);
+      final text = store.file.readAsStringSync();
+      expect(text, isNot(contains('binary')));
+      expect(text, isNot(contains('coreVersion')));
+      expect(text, isNot(contains('extraArguments')));
+    },
+  );
 
   test('defaults keep the data inside the app folder', () {
     final store = ConfigStore(Directory('/x/app'));
     expect(store.defaults.dataDirectory, startsWith('/x/app'));
-    expect(store.defaults.binaryPath, isEmpty);
-    // Core is downloaded unless the person picks another binary.
-    expect(store.defaults.binarySource, BinarySource.downloaded);
+    expect(store.defaults.workspaceDirectory, startsWith('/x/app'));
+    expect(store.defaults.isComplete, isTrue);
   });
 }

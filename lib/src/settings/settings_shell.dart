@@ -1,4 +1,4 @@
-// Settings: General, Core, Models and About. At expanded and medium width a
+// Settings: General, Models, Feedback and About. At expanded and medium width a
 // section list sits on the left and the page beside it; at compact width the
 // list is the first screen and a section is pushed over it.
 // Remote access joins the list with the remote work.
@@ -8,14 +8,12 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/foundation.dart' show LicenseEntry;
 import 'package:flutter/widgets.dart';
 
-import '../config.dart';
 import '../feedback/feedback_controller.dart';
 import '../feedback/glyphs.dart';
 import '../host_controller.dart';
 import '../platform/releases.dart';
 import '../versions.dart';
 import 'about_page.dart';
-import 'core_page.dart';
 import 'feedback_page.dart';
 import 'general_page.dart';
 import 'licences_page.dart';
@@ -27,23 +25,14 @@ class SettingsShell extends StatefulWidget {
   const SettingsShell({
     super.key,
     required this.controller,
-    required this.onSave,
-    required this.pickBinary,
     required this.feedback,
     required this.onSendFeedback,
     this.services = const PlatformServices(),
     this.onClose,
-    this.firstRun = false,
     this.licenceSource = LicencesPage.defaultSource,
   });
 
   final HostController controller;
-
-  /// Save the Core form and start the host with it.
-  final ValueChanged<AppConfig> onSave;
-
-  /// Asks for the custom binary (the native file picker).
-  final Future<String?> Function() pickBinary;
 
   final PlatformServices services;
 
@@ -56,9 +45,6 @@ class SettingsShell extends StatefulWidget {
   /// Leave settings for the chat. Null when there is no chat to go back to.
   final VoidCallback? onClose;
 
-  /// No config has been saved yet: Settings opens on Core.
-  final bool firstRun;
-
   final Stream<LicenseEntry> Function() licenceSource;
 
   @override
@@ -66,12 +52,8 @@ class SettingsShell extends StatefulWidget {
 }
 
 class _SettingsShellState extends State<SettingsShell> {
-  late final CoreDraft _draft = CoreDraft(widget.controller.formConfig);
-
   // Null at compact width is the list of sections; at wider widths, General.
-  late SettingsSection? _section =
-      widget.controller.settingsSection ??
-      (widget.firstRun ? SettingsSection.core : null);
+  late SettingsSection? _section = widget.controller.settingsSection;
   bool _licences = false;
 
   @override
@@ -87,7 +69,6 @@ class _SettingsShellState extends State<SettingsShell> {
   @override
   void dispose() {
     widget.feedback.removeListener(_feedbackChanged);
-    _draft.dispose();
     super.dispose();
   }
 
@@ -98,7 +79,6 @@ class _SettingsShellState extends State<SettingsShell> {
 
   String _summary(SettingsSection section) => switch (section) {
     SettingsSection.general => themeSummary(widget.controller.prefs.theme),
-    SettingsSection.core => coreSummary(widget.controller),
     SettingsSection.models => 'Default model and providers',
     SettingsSection.feedback => switch (widget.feedback.reports.length) {
       0 => 'No reports saved',
@@ -110,7 +90,6 @@ class _SettingsShellState extends State<SettingsShell> {
 
   LucideGlyph _glyph(SettingsSection section) => switch (section) {
     SettingsSection.general => glyphSliders,
-    SettingsSection.core => glyphCpu,
     SettingsSection.models => glyphLayers,
     SettingsSection.feedback => glyphMessageSquareText,
     SettingsSection.about => glyphInfo,
@@ -122,15 +101,6 @@ class _SettingsShellState extends State<SettingsShell> {
       SettingsSection.general => GeneralPage(
         key: const ValueKey('page-general'),
         controller: host,
-        onBack: onBack,
-      ),
-      SettingsSection.core => CorePage(
-        key: const ValueKey('page-core'),
-        controller: host,
-        draft: _draft,
-        onSave: widget.onSave,
-        pickBinary: widget.pickBinary,
-        firstRun: widget.firstRun,
         onBack: onBack,
       ),
       SettingsSection.models => ModelsPage(

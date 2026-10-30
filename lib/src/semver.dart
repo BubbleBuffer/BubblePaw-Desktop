@@ -122,4 +122,3 @@ class VersionRange {
 
 /// The BubblePaw Core versions this Desktop works with. The one place to
 /// change when Desktop moves to a new Core.
-const coreCompatibleRange = VersionRange(SemVer(0, 3, 1), SemVer(0, 5, 0));
