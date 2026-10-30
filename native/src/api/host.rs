@@ -13,6 +13,9 @@ use serde_json::Value;
 use crate::frb_generated::StreamSink;
 use crate::host_setup;
 
+/// The host-API error code of `no_provider_configured`.
+const NO_PROVIDER_CONFIGURED: i64 = -32004;
+
 /// What kind of failure a [`HostCallError`] is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HostErrorKind {
@@ -72,6 +75,15 @@ impl From<ClientError> for HostCallError {
                 message,
                 data_json: data.map(|value| value.to_string()),
             },
+            // The host-API error code -32004: a run needs a model and no
+            // provider is configured. Passed on as the RPC error it is, so
+            // the Dart side keeps the code.
+            ClientError::NoProviderConfigured { message } => Self {
+                kind: HostErrorKind::Rpc,
+                code: NO_PROVIDER_CONFIGURED,
+                message,
+                data_json: None,
+            },
             ClientError::Disconnected => {
                 Self::plain(HostErrorKind::Disconnected, "the host session ended")
             }
@@ -94,7 +106,7 @@ pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
 }
 
-/// The Core release this build embeds, such as `0.5.0`.
+/// The Core release this build embeds, such as `0.5.1`.
 #[frb(sync)]
 pub fn core_version() -> String {
     crate::CORE_VERSION.to_owned()
@@ -187,9 +199,9 @@ impl BubblePawHost {
     #[frb(ignore)]
     pub async fn open_with(options: ConfigOptions) -> Result<BubblePawHost, HostCallError> {
         let config = host_setup::load(options)?;
-        let data_dir = config.data_dir().to_owned();
         let client = Client::open_configured(config).await?;
-        Ok(Self::wrap(client, host_setup::owned_elsewhere(&data_dir)))
+        let attached = client.is_attached();
+        Ok(Self::wrap(client, attached))
     }
 
     fn wrap(client: Client, attached: bool) -> Self {
@@ -246,7 +258,7 @@ mod tests {
         let host = BubblePawHost::open_with(isolated(dir.path()))
             .await
             .unwrap();
-        assert!(!host.attached());
+        assert!(!host.attached(), "a host on a fresh data dir is embedded");
         assert!(sessions(&host).await.is_empty());
         let initialized = host.call("initialize".into(), String::new()).await.unwrap();
         assert!(initialized.contains("\"protocol_version\":\"0.1\""));
@@ -297,9 +309,13 @@ mod tests {
             .unwrap_or_else(|| panic!("no session id in {created}"))
             .to_owned();
 
+        assert!(!owner.is_attached(), "an embedded client is not attached");
+
         let desktop = BubblePawHost::open_with(options).await.unwrap();
-        // Same process, so `attached` (which compares the published pid) is
-        // false; what matters is that both handles see one set of sessions.
+        assert!(
+            desktop.attached(),
+            "the second handle attached to the owner"
+        );
         let listed = sessions(&desktop).await;
         assert_eq!(listed.len(), 1, "{listed:?}");
         assert!(listed[0].to_string().contains(&id));
@@ -310,6 +326,51 @@ mod tests {
         desktop.close().await.unwrap();
         assert!(owner.call("session.list", json!({})).await.is_ok());
         owner.close().await.unwrap();
+    }
+
+    /// A first run has no provider. The host still starts and serves its
+    /// configuration methods; a run that needs a model fails with the typed
+    /// `no_provider_configured` error (code -32004), and the host stays up.
+    #[tokio::test]
+    async fn a_first_run_with_no_provider_starts_and_a_send_is_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("work")).unwrap();
+        std::fs::create_dir_all(dir.path().join("home")).unwrap();
+        let options = host_setup::bare(
+            &dir.path().join("data"),
+            &dir.path().join("work"),
+            &dir.path().join("home"),
+        );
+        let host = BubblePawHost::open_with(options)
+            .await
+            .expect("a host with no provider starts");
+        assert!(!host.attached());
+
+        let opened = host
+            .call("session.open".into(), json!({"title": "first"}).to_string())
+            .await
+            .unwrap();
+        let opened: Value = serde_json::from_str(&opened).unwrap();
+        let id = opened["session_id"]
+            .as_str()
+            .or_else(|| opened["id"].as_str())
+            .unwrap_or_else(|| panic!("no session id in {opened}"))
+            .to_owned();
+
+        let error = host
+            .call(
+                "run.start".into(),
+                json!({"session_id": id, "text": "hello"}).to_string(),
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(error.kind, HostErrorKind::Rpc, "{error:?}");
+        assert_eq!(error.code, NO_PROVIDER_CONFIGURED, "{error:?}");
+        assert!(!error.message.trim().is_empty());
+
+        // The refusal does not take the host down.
+        assert!(sessions(&host).await.len() == 1);
+        host.close().await.unwrap();
     }
 
     /// A configuration the host cannot start from is reported in the

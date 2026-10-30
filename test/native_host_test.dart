@@ -10,6 +10,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
+import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:bubblepaw_desktop/src/core/ffi_transport.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
     show ExternalLibrary;
@@ -104,8 +105,8 @@ void main() {
 
     final second = await open();
     addTearDown(second.dispose);
-    // `attached` compares the published pid with this process's, so a host
-    // in the same process does not count; the sessions show the attach.
+    expect(first.attached, isFalse, reason: 'the first one embeds the host');
+    expect(second.attached, isTrue, reason: 'the second one attaches to it');
     final seen = await second.request('session.list') as List<Object?>;
     expect(seen, hasLength(1));
     expect((seen.single as Map<String, Object?>)['title'], 'shared');
@@ -114,6 +115,34 @@ void main() {
     await second.dispose();
     expect(await first.request('session.list'), hasLength(1));
     await first.dispose();
+  });
+
+  // Needs a machine with no provider in the user config or the environment,
+  // as CI is. The host must start anyway; the send is refused with the typed
+  // error, which the backend maps to KitNeedsSetup.
+  test('a first run with no provider starts and a send needs setup', () async {
+    final transport = await FfiBubblePawTransport.open(
+      dataDirectory: '${temp.path}/bare-data',
+      workspaceDirectory: '${temp.path}/bare-work',
+    );
+    final backend = await BubblePawBackend.connect(
+      transport,
+      workspaceDirectory: '${temp.path}/bare-work',
+    );
+    addTearDown(backend.dispose);
+    final chat = await backend.createChat(title: 'first');
+    await expectLater(
+      backend.send(chat.id, 'hello'),
+      throwsA(
+        isA<KitNeedsSetup>().having(
+          (error) => error.message,
+          'message',
+          isNotEmpty,
+        ),
+      ),
+    );
+    // The host is still up.
+    expect((await backend.listChats()).chats, hasLength(1));
   });
 
   test('notifications stop when the host closes', () async {

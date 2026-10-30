@@ -21,7 +21,7 @@ DesktopIntegration   tray menu, close-to-tray, login entry (lib/src/platform/)
 ## Dependencies
 
 `agent_kit`, `agent_kit_core` and `agent_kit_bubblepaw` come from
-`BubbleBuffer/agent-kit` at a commit hash (currently v0.16.2, `2359ce7`). The ref is the commit hash
+`BubbleBuffer/agent-kit` at a commit hash (currently v0.16.3, `d5a9871`). The ref is the commit hash
 because the kit's packages depend on each other by path inside that repository,
 and pub resolves those to the hash; a tag in the app would conflict with it.
 v0.15.2 added `BubblePawBackend.connectionLost` (idle exit detection); v0.15.3
@@ -204,5 +204,5 @@ pins; renders from another platform will not match.
 - Worktrees, crew and the Context pane show only what the stdio backend reports. With BubblePaw-Core v0.3.0 that includes the context (pane, summaries, history ranges) and child questions; it still reports no jobs. Compaction needs a real model, so the demo provider shows an empty structure.
 - The header shows a branch only when the backend reports one; the
   stdio host reports none, so none is shown.
-- **A first run needs a configured provider.** The embedded host loads the CLI's configuration layers; with none, Core's default provider asks for credentials and the start fails with that text ("choose --auth-file for Codex credentials"). Providers are set in the host config, not in the app.
+- **A first run has no provider, and that is not a failure.** The embedded host loads the CLI's configuration layers and starts without a usable provider (Core v0.5.1). A send then fails with `no_provider_configured` (code -32004); the chat shows the host's message in its error line, and a notice reads "No model provider is set up. Add one in Settings > Models." with an Open Models button. Providers are still set in the host config, not in the app; the Models page lists them and can make one the default.
 - The Windows build of the native crate is checked in CI only.

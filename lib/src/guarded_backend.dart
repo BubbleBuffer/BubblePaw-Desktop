@@ -13,12 +13,16 @@ import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 import 'host_failure.dart';
 
 class GuardedBackend implements AgentBackend, BackendConstraintsProvider {
-  GuardedBackend(this._inner, {required this.onFailure});
+  GuardedBackend(this._inner, {required this.onFailure, this.onNeedsSetup});
 
   final AgentBackend _inner;
 
   /// Called once, with the first host failure seen.
   final void Function(HostFailure failure) onFailure;
+
+  /// Called when a send is refused because the host needs setup first (no
+  /// model provider). The error still reaches the chat's own error line.
+  final void Function(KitNeedsSetup error)? onNeedsSetup;
 
   final ValueNotifier<String?> _currentChat = ValueNotifier<String?>(null);
 
@@ -109,7 +113,14 @@ class GuardedBackend implements AgentBackend, BackendConstraintsProvider {
     String chatId,
     String text, {
     List<KitRef> refs = const [],
-  }) => _guard(_inner.send(chatId, text, refs: refs));
+  }) async {
+    try {
+      return await _guard(_inner.send(chatId, text, refs: refs));
+    } on KitNeedsSetup catch (error) {
+      onNeedsSetup?.call(error);
+      rethrow;
+    }
+  }
 
   @override
   Future<String> steer(

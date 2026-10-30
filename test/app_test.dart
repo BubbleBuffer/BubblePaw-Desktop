@@ -4,6 +4,7 @@ import 'package:agent_kit_core/fake.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/scripted.dart';
+import 'package:bubblepaw_desktop/src/settings/settings_section.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -214,6 +215,62 @@ void main() {
         find.byKey(const ValueKey('settings-nav-general')),
         findsOneWidget,
       );
+    });
+  });
+
+  group('no provider', () {
+    testWidgets(
+      'a send that needs setup shows a notice that opens Settings > Models',
+      (tester) async {
+        final scripted = Scripted();
+        final controller = scripted.controller();
+        await pumpApp(tester, controller);
+        await tester.tap(find.byKey(const ValueKey('rail-new-chat')));
+        await settle(tester);
+        expect(find.byKey(const ValueKey('needs-setup-notice')), findsNothing);
+
+        scripted.backend.failNext = const KitNeedsSetup(
+          'No provider is configured.',
+        );
+        await tester.enterText(composer, 'hello');
+        await tester.pump();
+        await tester.tap(find.text('Send'));
+        await settle(tester);
+
+        // The chat's own error line names the cause; the notice links on.
+        expect(find.text('No provider is configured.'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('needs-setup-notice')),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('No model provider is set up.'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.byKey(const ValueKey('needs-setup-open')));
+        await settle(tester);
+        expect(controller.settingsOpen, isTrue);
+        expect(controller.settingsSection, SettingsSection.models);
+        expect(find.byKey(const ValueKey('needs-setup-notice')), findsNothing);
+      },
+    );
+
+    testWidgets('the notice can be dismissed', (tester) async {
+      final scripted = Scripted();
+      await pumpApp(tester, scripted.controller());
+      await tester.tap(find.byKey(const ValueKey('rail-new-chat')));
+      await settle(tester);
+      scripted.backend.failNext = const KitNeedsSetup('No provider.');
+      await tester.enterText(composer, 'hello');
+      await tester.pump();
+      await tester.tap(find.text('Send'));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('needs-setup-notice')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('needs-setup-dismiss')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('needs-setup-notice')), findsNothing);
     });
   });
 

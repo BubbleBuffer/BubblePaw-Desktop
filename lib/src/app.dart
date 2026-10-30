@@ -22,6 +22,7 @@ import 'pick_folder.dart' as picker;
 import 'platform/releases.dart';
 import 'preferences.dart';
 import 'screens/diff_review.dart';
+import 'screens/needs_setup_notice.dart';
 import 'screens/notice.dart';
 import 'screens/saved_notice.dart';
 import 'screens/tray_notice.dart';
@@ -193,10 +194,21 @@ class _AppShellState extends State<AppShell> {
               bottom: 16,
               child: TrayNotice(onDismiss: controller.dismissTrayNotice),
             ),
-          if (feedback.savedId != null)
+          if (controller.needsSetupPending)
             Positioned(
               right: 16,
               bottom: controller.trayNoticePending ? 72 : 16,
+              child: NeedsSetupNotice(
+                onOpenModels: controller.openModelsFromNotice,
+                onDismiss: controller.dismissNeedsSetup,
+              ),
+            ),
+          if (feedback.savedId != null)
+            Positioned(
+              right: 16,
+              bottom:
+                  (controller.trayNoticePending ? 72 : 16) +
+                  (controller.needsSetupPending ? 56 : 0),
               child: SavedNotice(
                 id: feedback.savedId!,
                 onOpen: () => unawaited(feedback.open(feedback.savedId)),
