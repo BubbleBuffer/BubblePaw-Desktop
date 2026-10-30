@@ -1,77 +1,72 @@
-# BubblePaw Desktop
+<!-- lockup: design/readme/wordmark.py, glyph assets/icon/tray/tray.svg, Bricolage Grotesque (assets/fonts) -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="design/readme/bubblepaw-desktop-dark.svg">
+    <img src="design/readme/bubblepaw-desktop-light.svg" alt="BubblePaw Desktop" width="388">
+  </picture>
+</p>
 
-Desktop app (Windows and Linux) for BubblePaw. It holds almost no UI of its own:
-it composes the [BubbleBuffer agent kit](https://github.com/BubbleBuffer/agent-kit)
-(`AgentWorkbench`: session rail, header, transcript, composer, approvals, diffs)
-over a BubblePaw host that runs as a child process. Licensed under AGPL-3.0.
+<p align="center">
+  Desktop app (Windows and Linux) for BubblePaw. It holds almost no UI of its own:
+  it composes the <a href="https://github.com/BubbleBuffer/agent-kit">BubbleBuffer agent kit</a>
+  (<code>AgentWorkbench</code>: session rail, header, transcript, composer, approvals, diffs)
+  over a BubblePaw host that runs as a child process.
+</p>
 
 Version 0.1. The wiki is in [`docs/`](docs/README.md).
 
-## Run it
+<!-- hero screenshot: later -->
 
-Needs Flutter 3.47 (stable) with desktop support for your platform.
+## What it is
+
+- **Chat with a BubblePaw agent.** Chats run in the agent kit's workbench: the session list, the transcript, the composer, approvals, and a diff review for edits.
+- **A host it starts for you.** The app runs `bubblepaw --workspace <dir> --data-dir <dir> stdio` as a child process and talks to it over stdio. Switching workspace starts a new host. A failed or stopped host shows a notice with Restart and Settings.
+- **Core, downloaded or installed.** On first run it downloads the newest BubblePaw-Core release in range and checks it against the release's `SHA256SUMS`. It can also run a Core already installed on the computer, or a custom binary.
+- **Settings.** General (theme, start at login, tray), Core, Models (the host's providers and default model; keys are never shown), About (versions, updates and licences), and Feedback.
+- **Local feedback.** Ctrl+Shift+F opens a sheet that saves a report, a screenshot and redacted diagnostics in a folder on this computer. Nothing is sent anywhere.
+- **Tray and background.** A tray menu with Open BubblePaw, the host's status, the number of chats waiting for you, Restart host and Quit. With "Keep running in the tray" on, closing the window hides it.
+- **App updates.** The Stable and Nightly channels read `update.json` manifests from GitHub Releases, and each download is checked against its SHA-256. Windows updates run the Inno installer. On Linux the app shows where the tarball is.
+
+## How it fits together
+
+```mermaid
+flowchart LR
+  app["BubblePaw Desktop<br/>Flutter, Windows and Linux"] -- "starts; stdio JSON-RPC" --> host["BubblePaw host<br/>bubblepaw ... stdio"]
+  app -- "downloads and checks" --> core["BubblePaw-Core releases<br/>on GitHub"]
+  app -- "update.json and installers" --> desk["Desktop releases<br/>on GitHub"]
+  host -- "model calls" --> providers["Model providers<br/>from the host config"]
+```
+
+| Package | Path | What it does |
+| --- | --- | --- |
+| `bubblepaw_desktop` | [`lib/`](lib) | The desktop app shell for BubblePaw on the agent kit: Core, the host's lifetime, settings, tray, feedback, updates |
+| `agent_kit` | [`packages/agent_kit`](https://github.com/BubbleBuffer/agent-kit/tree/af5b27f3fb9009aaf23fa5807f28fdc9c74b9174/packages/agent_kit) | Flutter widgets for the agent kit: theme, status, transcript, composer, chrome, workspace |
+| `agent_kit_core` | [`packages/agent_kit_core`](https://github.com/BubbleBuffer/agent-kit/tree/af5b27f3fb9009aaf23fa5807f28fdc9c74b9174/packages/agent_kit_core) | Pure Dart agent UI core: view models, the `AgentBackend` port, the event reducer and a scripted fake backend |
+| `agent_kit_bubblepaw` | [`packages/agent_kit_bubblepaw`](https://github.com/BubbleBuffer/agent-kit/tree/af5b27f3fb9009aaf23fa5807f28fdc9c74b9174/packages/agent_kit_bubblepaw) | Pure Dart BubblePaw stdio JSON-RPC backend for the agent kit |
+| `bb_ui` | [`packages/bb_ui`](https://github.com/BubbleBuffer/bb-ui/tree/v0.6.0/packages/bb_ui) | BubbleBuffer UI primitives for Flutter without Material |
+
+## Build
+
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on GitHub-hosted `ubuntu-latest` with Flutter **3.47.7** on the stable channel. The Linux build also needs `clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev` from apt.
+
+The live check runs against BubblePaw-Core **v0.3.1**. CI downloads `bubblepaw-v0.3.1-x86_64-unknown-linux-gnu.tar.gz` and `SHA256SUMS` from that release, verifies the archive with `sha256sum -c`, extracts it, and points `BP_TEST_BIN` at the `bubblepaw` binary. The Core range the app accepts is `>=0.3.1 <0.5.0` (`lib/src/semver.dart`).
 
 ```sh
 flutter pub get
-```
-
-**Scripted mode** runs the kit's scripted fake backend. It needs no BubblePaw
-binary and no configuration, and is how the tests run:
-
-```sh
-flutter run -d linux --dart-entrypoint-args=--scripted     # or -d windows
-```
-
-A built app takes the flag directly: `bubblepaw_desktop --scripted`.
-
-**Real mode** starts the `bubblepaw` binary as a child process
-(`bubblepaw --workspace <dir> --data-dir <dir> stdio`):
-
-```sh
-flutter run -d linux
-```
-
-When a `bubblepaw` sits next to the app, the app uses it and needs no setup. Otherwise,
-or when the binary is missing, it opens Settings on **Core**: the **binary** (bundled or
-custom), the **data directory** and **extra host arguments**. The workspace is chosen from
-the rail. The data directory defaults to a folder of the app's own, because a
-data directory must never be shared with another BubblePaw host. The host reads
-The extra arguments are added to the host's command line as typed, with quotes
-grouping a value that has spaces: `--provider demo`, or
-`--set 'agent.execution_mode="native"'`. Leave them empty to use the provider
-from BubblePaw's own configuration.
-
-The app needs a BubblePaw build that speaks stdio protocol `0.1`
-([BubblePaw-Core](https://github.com/BubbleBuffer/BubblePaw-Core) v0.2.2 or v0.3.0).
-
-## Where the config lives
-
-`config.json` in the platform app-support directory:
-
-| Platform | Directory |
-|---|---|
-| Windows | `%APPDATA%\BubblePaw Desktop` |
-| Linux | `$XDG_DATA_HOME/bubblepaw-desktop`, else `~/.local/share/bubblepaw-desktop` |
-
-`--config-dir <dir>` replaces that directory for one launch. The file holds
-`binarySource` (bundled or custom), `binaryPath`, `workspaceDirectory`,
-`dataDirectory` and, when set, `extraArguments`, and nothing secret. The app's own
-preferences (theme, login and tray switches, whether the host starts with the app) are in
-`preferences.json` beside it.
-
-## Tests
-
-All builds and tests run on Linux: in CI on a GitHub-hosted Ubuntu runner, or on any Linux machine.
-
-```sh
+dart format --output=none --set-exit-if-changed lib test
 flutter analyze
-flutter test --exclude-tags golden      # unit and widget tests, scripted backend
-flutter test --tags golden              # compares test/goldens/*.png
-flutter test --tags golden --update-goldens   # re-render them (on Linux)
+flutter test --exclude-tags golden                             # unit and widget tests, scripted backend
+flutter test --tags golden                                     # compares test/goldens/*.png (rendered on Linux)
 BP_TEST_BIN=/path/to/bubblepaw flutter test --tags live test/live_test.dart
+flutter build linux --debug
 ```
 
-The live test starts a real host with BubblePaw's built-in `demo` provider (no
-model, no network), passed through the extra-arguments field's config value,
-opens a chat, sends a message and approves the one `exec`
-approval the demo triggers.
+**Run it.** Scripted mode runs the kit's fake backend and needs no BubblePaw binary: `flutter run -d linux --dart-entrypoint-args=--scripted`, or `bubblepaw_desktop --scripted` for a built app. Real mode is `flutter run -d linux`; on first run the app downloads Core, and Settings > Core shows what it is using.
+
+Config is `config.json` in the app-support directory: `%APPDATA%\BubblePaw Desktop` on Windows, or `$XDG_DATA_HOME/bubblepaw-desktop` (else `~/.local/share/bubblepaw-desktop`) on Linux. `--config-dir <dir>` replaces that directory for one launch. The app's own preferences are in `preferences.json` beside it. Release builds and the Windows installer are described in [docs/releases.md](docs/releases.md).
+
+## Licence
+
+`AGPL-3.0`; see [LICENSE](LICENSE). The bundled fonts (Atkinson Hyperlegible Next, Bricolage Grotesque, Fragment Mono) are under the SIL Open Font License 1.1, in [`assets/fonts/licenses/`](assets/fonts/licenses). Settings > About > Licences lists the licence of each package the app ships.
+
+BubblePaw Desktop is made by [BubbleBuffer](https://0xbubbuff.de).
