@@ -202,15 +202,15 @@
       const n = c.ids.filter((i) => on.has(i)).length, st = n === 0 ? 'false' : n === c.ids.length ? 'true' : 'mixed', open = !M.edClosed.has(c.name);
       const head = `<div class="cat-h">${chev(open, c.name, 'edTog')}<button class="chk catchk" role="checkbox" aria-checked="${st}" ${x.builtin ? 'disabled' : A('catSet', c.name)}><span class="box">${st === 'true' ? ic('check', 14) : st === 'mixed' ? ic('minus', 14) : ''}</span><span class="cname">${catName(c)}</span></button><span class="cnt">${n} of ${c.ids.length}</span></div>`;
       const rows = open ? c.ids.map((i) => chk(on.has(i), label(i), 'tsTool', i, x.builtin).replace('class="chk"', 'class="chk sub"')).join('') : '';
-      return `<div class="cat">${head}${rows}</div>`;
+      return `<div class="cat">${head}${rows ? `<div class="cat-rows">${rows}</div>` : ''}</div>`;
     }).join('');
   }
   function approvalGroups() {
     return cats().map((c) => {
       const vals = new Set(c.ids.map(apprOf)), mixed = vals.size > 1, open = M.apOpen.has(c.name);
       const head = `<div class="cat-h ap">${chev(open, c.name, 'apTog')}<span class="cname grow">${catName(c)}</span>${mixed ? '<span class="cnt">Mixed</span>' : ''}${seg3(c.name, mixed ? '' : [...vals][0], 'catAppr', c.name)}</div>`;
-      const rows = open ? c.ids.map((i) => `<div class="rowline sub"><div class="grow mono" style="font-size:13.6px">${label(i)}</div>${seg3(label(i), apprOf(i), 'appr', i)}</div>`).join('') : '';
-      return `<div class="cat">${head}${rows}</div>`;
+      const rows = open ? c.ids.map((i) => `<div class="rowline sub"><div class="grow mono">${label(i)}</div>${seg3(label(i), apprOf(i), 'appr', i)}</div>`).join('') : '';
+      return `<div class="cat">${head}${rows ? `<div class="cat-rows">${rows}</div>` : ''}</div>`;
     }).join('');
   }
   function pageTools() {

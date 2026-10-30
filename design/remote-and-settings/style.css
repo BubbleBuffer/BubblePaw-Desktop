@@ -528,19 +528,28 @@ button.wi:hover:not(:disabled) { background: var(--w-hover); }
 .dialog { max-height: 100%; min-height: 0; }
 
 /* Tool categories */
-.cat { border-bottom: 1px solid var(--seam-subtle); }
-.cat:last-child { border-bottom: 0; }
-.cat-h { display: flex; align-items: center; gap: 4px; min-height: 44px; }
-.cat-h.ap { flex-wrap: wrap; row-gap: 4px; padding: 4px 0; }
+.cat { margin-top: 12px; }
+.cat:first-child { margin-top: 0; }
+.cat-h { display: flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 8px 0 4px; background: var(--surface2); border-radius: var(--r-md); }
+.cat-h.ap { flex-wrap: wrap; row-gap: 4px; padding: 4px 8px 4px 4px; }
 .cat-h .grow { flex: 1; min-width: 0; }
-.chk.catchk { flex: 1; min-width: 0; border-bottom: 0; }
-.cname { font-weight: 600; font-size: 14px; font-family: var(--sans); }
+.chk.catchk { flex: 1; min-width: 0; border-bottom: 0; background: transparent; }
+.chk.catchk:hover:not(:disabled) { background: transparent; }
+.cname { font-weight: 600; font-size: 15px; line-height: 20px; font-family: var(--sans); }
 .mcpt { margin-left: 6px; font-size: 11px; font-weight: 400; color: var(--faint); }
 .cnt { font-size: 12px; color: var(--muted); white-space: nowrap; padding: 0 6px; }
-.chk.sub { padding-left: 38px; }
-.rowline.sub { padding-left: 38px; }
+.cat-rows { margin: 0 0 0 20px; padding-left: 12px; border-left: 2px solid var(--thread); }
+.cat-rows .chk, .cat-rows .rowline { min-height: 34px; padding: 2px 4px; font-size: 12.5px; font-weight: 400; background: transparent; }
+.cat-rows .chk:last-child, .cat-rows .rowline:last-child { border-bottom: 0; }
+.cat-rows .chk .mono, .cat-rows .rowline .mono { font-size: 12.5px; font-weight: 400; }
+.cat-rows .chk .box { width: 14px; height: 14px; border-width: 1px; border-radius: 3px; }
+.cat-rows .chk .box svg { width: 11px; height: 11px; }
+.cat-rows .seg button { min-height: 22px; padding: 1px 9px; font-size: 11.5px; font-weight: 500; }
 .chk[aria-checked="mixed"] .box { background: var(--moss); border-color: var(--moss); }
 .phone .cat-h { min-height: 48px; }
-.phone .chk.sub, .phone .rowline.sub { padding-left: 44px; }
-.rowline.sub:last-child { border-bottom: 1px solid var(--seam-subtle); }
+.phone .cat-rows .chk, .phone .cat-rows .rowline { min-height: 44px; }
+.phone .cat-rows .seg button { min-height: 32px; padding: 4px 11px; font-size: 13px; }
 .rowline .grow.mono { overflow-wrap: anywhere; }
+.cat-h .cname.grow { padding-right: 8px; }
+.cat-h.ap .cnt { margin-left: 8px; }
+.phone .cat-h .seg button { padding: 6px 10px; }
