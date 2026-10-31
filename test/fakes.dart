@@ -113,9 +113,7 @@ class FakeHostSettings implements HostSettings {
     reads.add(key);
     return [
       for (final entry in values.entries)
-        if (key == null ||
-            entry.key == key ||
-            entry.key.startsWith('$key.'))
+        if (key == null || entry.key == key || entry.key.startsWith('$key.'))
           HostSetting(key: entry.key, value: entry.value),
     ];
   }

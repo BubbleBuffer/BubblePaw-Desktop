@@ -79,10 +79,7 @@ void main() {
       await settle(tester);
       expect(settings.writes, [('model.main', 'demo/scripted-fast')]);
       expect(button, findsNothing);
-      expect(
-        _text(tester, 'provider-default'),
-        'demo/scripted-fast',
-      );
+      expect(_text(tester, 'provider-default'), 'demo/scripted-fast');
       expect(find.byKey(const ValueKey('provider-restart')), findsNothing);
       expect(
         played.backend.commands.where((c) => c.name == 'setDefaultModel'),
@@ -98,10 +95,7 @@ void main() {
       );
       await pumpApp(tester, _played(settings: settings).controller());
       await _openSettings(tester);
-      expect(
-        _text(tester, 'provider-default'),
-        'demo/scripted-fast',
-      );
+      expect(_text(tester, 'provider-default'), 'demo/scripted-fast');
     });
 
     testWidgets('a restart_required reply says it applies after restart', (
@@ -125,10 +119,7 @@ void main() {
         'Saved as demo/scripted-fast. Applies after restart.',
       );
       // The host still runs the old default.
-      expect(
-        _text(tester, 'provider-default'),
-        'demo/scripted',
-      );
+      expect(_text(tester, 'provider-default'), 'demo/scripted');
     });
 
     testWidgets('a refused change shows the error and keeps the default', (
@@ -151,10 +142,7 @@ void main() {
         'Could not make demo/scripted-fast the default. '
         'The host rejected the value.',
       );
-      expect(
-        _text(tester, 'provider-default'),
-        'demo/scripted',
-      );
+      expect(_text(tester, 'provider-default'), 'demo/scripted');
     });
 
     testWidgets('without host settings there is no Make default', (
