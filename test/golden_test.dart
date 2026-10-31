@@ -364,6 +364,7 @@ void main() {
         capabilities: hostControlCapabilities,
         providers: sampleProviders,
         models: sampleModels,
+        settings: FakeHostSettings(values: {'model.main': 'demo/scripted'}),
       ).controller(),
       after: (tester) => openSettings(tester, 'models'),
     ),

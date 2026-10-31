@@ -106,6 +106,7 @@ class _SettingsShellState extends State<SettingsShell> {
       SettingsSection.models => ModelsPage(
         key: const ValueKey('page-models'),
         backend: host.phase == HostPhase.running ? host.backend : null,
+        settings: host.phase == HostPhase.running ? host.settings : null,
         onBack: onBack,
       ),
       SettingsSection.feedback => FeedbackPage(
