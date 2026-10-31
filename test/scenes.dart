@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:agent_kit_core/fake.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
+import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/scripted.dart';
 
@@ -94,6 +95,7 @@ class Played {
     this.chatPageSize,
     this.version,
     this.attached = false,
+    this.settings,
   });
 
   final List<ChatScript>? scripts;
@@ -105,6 +107,9 @@ class Played {
   /// The Core version the started host reports; null for none.
   final String? version;
   final bool attached;
+
+  /// The host's settings; null for none.
+  final HostSettings? settings;
   Future<Object>? connectionLost;
 
   /// Chats the host creates by itself, as BubblePawBackend does for a rewind.
@@ -129,6 +134,7 @@ class Played {
       createdChats: createdChats,
       version: version,
       attached: attached,
+      settings: settings,
     );
   }
 

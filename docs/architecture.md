@@ -121,7 +121,11 @@ cause (a locked store, a bad config).
   - **Storage** (on the General page): the data directory, where the chats are stored. "Save and restart" writes `config.json` and opens the host again on the new directory (`HostController.setDataDirectory`); chats already stored in the old directory stay there.
   - **Models**: the host's providers (kind, base URL, whether the host found the key, never
     the key) and their models with the Default mark or Make default (on hover or focus at
-    desktop width, always at compact width). The key is an environment variable the host
+    desktop width, always at compact width). The default is the host setting `model.main`: the
+    page reads it with `config.get` and Make default writes it with `config.set` (Core v0.6.0,
+    through `TransportHostSettings`, `lib/src/core/host_settings.dart`). A `restart_required`
+    reply shows "Saved as <model>. Applies after restart." and the page keeps showing the model
+    the host runs. A refusal shows the error line "Could not make <model> the default." The key is an environment variable the host
     reads, so the app has no Edit key action.
   - **About**: Updates (BubblePaw state, Channel Stable or Nightly, "Check automatically",
     Last checked with Review update and Check now), then the versions of the app, agent
@@ -179,10 +183,11 @@ dark setting, and the form factor is always desktop.
 | `test/guarded_backend_test.dart` | The host-exit detector |
 | `test/config_test.dart` | Config file and app-support paths; old fields ignored on load |
 | `test/host_controller_test.dart` | First run, start failure with the host's text, restart, switching workspace, attach versus embed |
+| `test/host_settings_test.dart` | `config.get` and `config.set` over the kit transport: request shapes, live and restart_required replies, refusals |
 | `test/ffi_transport_test.dart` | The FFI transport on a fake `NativeHost`: round trip, RPC error mapping, notifications, close, lost session, failed open |
 | `test/native_host_test.dart` | Tag `native`: the transport against the built crate (`session.list` on a temp data dir) |
 | `test/crew_test.dart` | Crew: the ledger lists a running and a finished child, a child's open question shows in the parent and is answered (reaches `answerChildQuestion`), no answer action without the capability; rail: 2000 chats, rows build lazily and the last is reachable |
-| `test/host_controls_test.dart` | Core v0.3.1 on the scripted backend: providers section (list, missing key, Make default, no capability), the composer's default-model pick, rail paging, crew Cancel and its heading |
+| `test/host_controls_test.dart` | Core v0.3.1 on the scripted backend: providers section (list, missing key, Make default through config.set, restart_required, a refusal, no capability), the composer's default-model pick, rail paging, crew Cancel and its heading |
 | `test/workspace_switch_test.dart` | Recent workspaces (order, repeats, cap of 8, JSON), the rail menu, switching restarts the host with the same data directory, Open folder, a cancelled picker |
 | `test/settings_test.dart` | General switches and theme, Models, About (versions, Core row, Updates, Licences search and expand), the tray notice, version constants |
 | `test/semver_test.dart`, `test/download_test.dart`, `test/updates_test.dart`, `test/update_dialog_test.dart` | Versions, the verified download, app updates and the dialog; see [core-and-updates.md](core-and-updates.md) |
@@ -196,7 +201,7 @@ pins; renders from another platform will not match.
 ## Known gaps
 
 - **Host controls need a host that advertises them.** A host that advertises `session.list.pagination`, `providers.list`, `roles.set_main` and `child.cancel` gets rail paging ("Show older sessions"), the Models page in Settings, the composer's default-model pick and Cancel on a running child. A v0.3.0 host advertises none of them and shows none; the adapter turns each on by its own feature.
-- **The model pick is host-wide.** `roles.set_main` saves one default model for every chat; there is no per-chat model. The pick is titled "Default model", and a run in progress keeps its own. There is no new-chat sheet: `session.open` takes only a title, and agent profiles exist only in JS.
+- **The model pick is host-wide.** Make default saves `model.main` through `config.set` (the composer pick still uses `roles.set_main`) and saves one default model for every chat; there is no per-chat model. The pick is titled "Default model", and a run in progress keeps its own. There is no new-chat sheet: `session.open` takes only a title, and agent profiles exist only in JS.
 - **Provider setup stays in the host config.** Settings > Models lists providers, whether the host found each key (never the key) and Make default. Adding a provider or setting a key is done in the host configuration: the host reads `$BUBBLEPAW_CONFIG`, else `~/.bubblepaw/config.toml` and `<workspace>/.bubblepaw/config.toml`, and keys come from environment variables the config names. The app never handles keys.
 - **No host log.** The diagnostics' host block is what Desktop observed (start, attach, stop, exit codes, stderr tails). A real host log tail needs an agent-kit API.
 - Chat search filters the loaded pages only; the host's `session.list` has no query.

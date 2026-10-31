@@ -1,19 +1,30 @@
 // Models: the host's default model and its providers, each with whether the
-// host found the key and its models. The host reports only whether a key is
-// present; nothing here reads, shows or stores one.
+// host found the key and its models. The default model is the host setting
+// `model.main`, read with config.get and changed with config.set. The host
+// reports only whether a key is present; nothing here reads, shows or stores
+// one.
 
 import 'package:agent_kit/agent_kit.dart';
 import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
+import '../core/host_settings.dart';
 import 'settings_widgets.dart';
 
 class ModelsPage extends StatefulWidget {
-  const ModelsPage({super.key, required this.backend, this.onBack});
+  const ModelsPage({
+    super.key,
+    required this.backend,
+    required this.settings,
+    this.onBack,
+  });
 
   /// The running backend; null while the host is not running.
   final AgentBackend? backend;
+
+  /// The host's settings; null when the host has none to read or change.
+  final HostSettings? settings;
   final VoidCallback? onBack;
 
   @override
@@ -22,6 +33,13 @@ class ModelsPage extends StatefulWidget {
 
 class _ModelsPageState extends State<ModelsPage> {
   ProviderSetup? _setup;
+
+  /// The host's default model, qualified, from `model.main`; null until read
+  /// and when no host settings are available.
+  String? _default;
+
+  /// A model saved as the default that applies after the host restarts.
+  String? _restartModel;
   String? _loadError;
   String? _makeError;
   String? _making;
@@ -39,8 +57,10 @@ class _ModelsPageState extends State<ModelsPage> {
   @override
   void didUpdateWidget(ModelsPage old) {
     super.didUpdateWidget(old);
-    if (old.backend != widget.backend) {
+    if (old.backend != widget.backend || old.settings != widget.settings) {
       _setup = null;
+      _default = null;
+      _restartModel = null;
       _loadError = null;
       _makeError = null;
       _making = null;
@@ -48,8 +68,50 @@ class _ModelsPageState extends State<ModelsPage> {
     }
   }
 
-  static String _describe(Object error) =>
-      error is KitError ? error.message : 'Something went wrong.';
+  static String _describe(Object error) => switch (error) {
+    KitError() => error.message,
+    HostSettingsException() => error.message,
+    _ => 'Something went wrong.',
+  };
+
+  /// The providers, and the default model read from the host's settings.
+  Future<void> _read(AgentBackend backend) async {
+    final setup = await backend.listProviders();
+    final settings = widget.settings;
+    if (settings == null) {
+      if (!mounted) return;
+      setState(() {
+        _setup = setup;
+        _default = setup.defaultModel;
+        _restartModel = null;
+      });
+      return;
+    }
+    final entries = {for (final s in await settings.get('model')) s.key: s};
+    final main = entries['model.main'];
+    final provider = entries['model.provider']?.value;
+    final value = main?.value;
+    final qualified = value is String
+        ? _qualify(setup, value, provider is String ? provider : null)
+        : null;
+    if (!mounted) return;
+    setState(() {
+      _setup = setup;
+      _default = qualified;
+      _restartModel = main?.pendingRestart == true ? setup.main : null;
+    });
+  }
+
+  /// `model.main` may omit the provider that `model.provider` supplies.
+  static String _qualify(ProviderSetup setup, String main, String? provider) {
+    final known = {
+      for (final p in setup.providers)
+        for (final m in p.models) p.qualify(m),
+    };
+    if (known.contains(main) || provider == null) return main;
+    final routed = '$provider/$main';
+    return known.contains(routed) ? routed : main;
+  }
 
   Future<void> _load() async {
     final backend = widget.backend;
@@ -57,9 +119,8 @@ class _ModelsPageState extends State<ModelsPage> {
     final ticket = ++_ticket;
     setState(() => _loadError = null);
     try {
-      final setup = await backend.listProviders();
-      if (!mounted || ticket != _ticket) return;
-      setState(() => _setup = setup);
+      await _read(backend);
+      if (ticket != _ticket) return;
     } catch (error) {
       if (!mounted || ticket != _ticket) return;
       setState(() => _loadError = _describe(error));
@@ -68,18 +129,22 @@ class _ModelsPageState extends State<ModelsPage> {
 
   Future<void> _makeDefault(String id) async {
     final backend = widget.backend;
-    if (backend == null) return;
+    final settings = widget.settings;
+    if (backend == null || settings == null) return;
     final ticket = ++_ticket;
     setState(() {
       _making = id;
       _makeError = null;
     });
     try {
-      final setup = await backend.setDefaultModel(id);
+      final change = await settings.set('model.main', id);
+      await _read(backend);
       if (!mounted || ticket != _ticket) return;
       setState(() {
-        _setup = setup;
         _making = null;
+        if (change.applied == SettingApplied.restartRequired) {
+          _restartModel = id;
+        }
       });
     } catch (error) {
       if (!mounted || ticket != _ticket) return;
@@ -130,9 +195,9 @@ class _ModelsPageState extends State<ModelsPage> {
     } else {
       body = _Providers(
         setup: setup,
-        onMakeDefault: backend.capabilities.has(KitCapability.defaultModel)
-            ? _makeDefault
-            : null,
+        current: _default,
+        restartModel: _restartModel,
+        onMakeDefault: widget.settings == null ? null : _makeDefault,
         making: _making,
         error: _makeError,
       );
@@ -160,6 +225,8 @@ class _Note extends StatelessWidget {
 
 class _Providers extends StatelessWidget {
   const _Providers({
+    required this.current,
+    required this.restartModel,
     required this.setup,
     required this.onMakeDefault,
     required this.making,
@@ -167,6 +234,10 @@ class _Providers extends StatelessWidget {
   });
 
   final ProviderSetup setup;
+  final String? current;
+
+  /// A model saved as the default that the host applies after a restart.
+  final String? restartModel;
   final ValueChanged<String>? onMakeDefault;
   final String? making;
   final String? error;
@@ -174,8 +245,10 @@ class _Providers extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    final current = setup.defaultModel;
-    final pending = setup.reloadNeeded && setup.main != setup.activeMain;
+    final pending =
+        restartModel == null &&
+        setup.reloadNeeded &&
+        setup.main != setup.activeMain;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -198,6 +271,15 @@ class _Providers extends StatelessWidget {
             mono: current != null,
           ),
         ),
+        if (restartModel != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'Saved as $restartModel. Applies after restart.',
+              key: const ValueKey('provider-restart'),
+              style: ts(theme.typeScale.uiSmall, theme.muted),
+            ),
+          ),
         if (pending)
           Padding(
             padding: const EdgeInsets.only(top: 6),

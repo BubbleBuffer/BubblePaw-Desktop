@@ -5,9 +5,11 @@
 import 'package:agent_kit/agent_kit.dart';
 import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:agent_kit_core/fake.dart';
+import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
 
@@ -16,12 +18,14 @@ Played _played({
   KitCapabilities? capabilities,
   bool providers = true,
   int? chatPageSize,
+  FakeHostSettings? settings,
 }) => Played(
   scripts: scripts,
   capabilities: capabilities ?? hostControlCapabilities,
   providers: providers ? sampleProviders : null,
   models: providers ? sampleModels : const [],
   chatPageSize: chatPageSize,
+  settings: settings,
 );
 
 Future<void> _openSettings(WidgetTester tester) async {
@@ -35,6 +39,9 @@ Future<void> _openSettings(WidgetTester tester) async {
   await tester.tap(find.byKey(const ValueKey('settings-nav-models')));
   await settle(tester);
 }
+
+String? _text(WidgetTester tester, String key) =>
+    tester.widget<Text>(find.byKey(ValueKey(key))).data;
 
 void main() {
   group('providers in Settings > Models', () {
@@ -55,8 +62,13 @@ void main() {
       expect(find.text('Default'), findsOneWidget);
     });
 
-    testWidgets('Make default sets the host default', (tester) async {
-      final played = _played();
+    testWidgets('Make default sets model.main through config.set', (
+      tester,
+    ) async {
+      final settings = FakeHostSettings(
+        values: {'model.main': 'demo/scripted', 'model.provider': 'demo'},
+      );
+      final played = _played(settings: settings);
       await pumpApp(tester, played.controller());
       await _openSettings(tester);
       final button = find.byKey(
@@ -65,15 +77,95 @@ void main() {
       await tester.ensureVisible(button);
       await tester.tap(button);
       await settle(tester);
+      expect(settings.writes, [('model.main', 'demo/scripted-fast')]);
+      expect(button, findsNothing);
       expect(
-        played.backend.commands.lastWhere((c) => c.name == 'setDefaultModel'),
-        isNotNull,
-      );
-      expect(
-        (await played.backend.listProviders()).defaultModel,
+        _text(tester, 'provider-default'),
         'demo/scripted-fast',
       );
-      expect(button, findsNothing);
+      expect(find.byKey(const ValueKey('provider-restart')), findsNothing);
+      expect(
+        played.backend.commands.where((c) => c.name == 'setDefaultModel'),
+        isEmpty,
+      );
+    });
+
+    testWidgets('an unqualified model.main shows with its provider', (
+      tester,
+    ) async {
+      final settings = FakeHostSettings(
+        values: {'model.main': 'scripted-fast', 'model.provider': 'demo'},
+      );
+      await pumpApp(tester, _played(settings: settings).controller());
+      await _openSettings(tester);
+      expect(
+        _text(tester, 'provider-default'),
+        'demo/scripted-fast',
+      );
+    });
+
+    testWidgets('a restart_required reply says it applies after restart', (
+      tester,
+    ) async {
+      final settings = FakeHostSettings(
+        values: {'model.main': 'demo/scripted'},
+        restartOnly: {'model.main'},
+      );
+      await pumpApp(tester, _played(settings: settings).controller());
+      await _openSettings(tester);
+      final button = find.byKey(
+        const ValueKey('make-default-demo/scripted-fast'),
+      );
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await settle(tester);
+      expect(settings.writes, [('model.main', 'demo/scripted-fast')]);
+      expect(
+        _text(tester, 'provider-restart'),
+        'Saved as demo/scripted-fast. Applies after restart.',
+      );
+      // The host still runs the old default.
+      expect(
+        _text(tester, 'provider-default'),
+        'demo/scripted',
+      );
+    });
+
+    testWidgets('a refused change shows the error and keeps the default', (
+      tester,
+    ) async {
+      final settings = FakeHostSettings(
+        values: {'model.main': 'demo/scripted'},
+        failWith: const HostSettingsException('The host rejected the value.'),
+      );
+      await pumpApp(tester, _played(settings: settings).controller());
+      await _openSettings(tester);
+      final button = find.byKey(
+        const ValueKey('make-default-demo/scripted-fast'),
+      );
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await settle(tester);
+      expect(
+        _text(tester, 'provider-error'),
+        'Could not make demo/scripted-fast the default. '
+        'The host rejected the value.',
+      );
+      expect(
+        _text(tester, 'provider-default'),
+        'demo/scripted',
+      );
+    });
+
+    testWidgets('without host settings there is no Make default', (
+      tester,
+    ) async {
+      await pumpApp(tester, _played().controller());
+      await _openSettings(tester);
+      expect(
+        find.byKey(const ValueKey('make-default-demo/scripted-fast')),
+        findsNothing,
+      );
     });
 
     testWidgets('a host without the capability says so', (tester) async {

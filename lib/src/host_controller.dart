@@ -9,6 +9,7 @@ import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:flutter/foundation.dart';
 
 import 'config.dart';
+import 'core/host_settings.dart';
 import 'feedback/log_buffer.dart';
 import 'core/ffi_transport.dart';
 import 'guarded_backend.dart';
@@ -28,9 +29,14 @@ class StartedBackend {
     this.connectionLost,
     this.attached = false,
     this.version,
+    this.settings,
   });
 
   final AgentBackend backend;
+
+  /// The host's settings (config.get and config.set); null when the backend
+  /// has none, as the scripted one.
+  final HostSettings? settings;
 
   /// The host was already running; [dispose] only disconnects from it.
   final bool attached;
@@ -84,6 +90,7 @@ Future<StartedBackend> startBubblePaw(
     connectionLost: backend.connectionLost,
     attached: transport.attached,
     version: embeddedCoreVersion(),
+    settings: TransportHostSettings(transport),
   );
 }
 
@@ -121,6 +128,7 @@ class HostController extends ChangeNotifier {
   AppConfig? _config;
   HostFailure? _failure;
   GuardedBackend? _backend;
+  HostSettings? _settings;
   Stream<ChatSummary>? _createdChats;
   DateTime? _now;
   Future<void> Function()? _dispose;
@@ -254,6 +262,9 @@ class HostController extends ChangeNotifier {
 
   HostFailure? get failure => _failure;
   GuardedBackend? get backend => _backend;
+
+  /// The running host's settings, or null when the backend has none.
+  HostSettings? get settings => _settings;
 
   /// The chat the person has open, when one is known.
   String? get currentChatId => _backend?.currentChat.value;
@@ -396,6 +407,7 @@ class HostController extends ChangeNotifier {
     _createdChats = started.createdChats;
     _now = started.now;
     _attached = started.attached;
+    _settings = started.settings;
     _backend = GuardedBackend(
       started.backend,
       onFailure: _hostFailed,
@@ -425,6 +437,7 @@ class HostController extends ChangeNotifier {
     _phase = HostPhase.failed;
     final dispose = _dispose;
     _backend = null;
+    _settings = null;
     _dispose = null;
     _notify();
     if (dispose != null) unawaited(_quietly(dispose));
@@ -450,6 +463,7 @@ class HostController extends ChangeNotifier {
     if (dispose != null) log.host('host stopped');
     _backend?.closing();
     _backend = null;
+    _settings = null;
     _createdChats = null;
     _dispose = null;
     _attached = false;
