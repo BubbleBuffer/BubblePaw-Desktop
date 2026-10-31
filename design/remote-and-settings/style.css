@@ -458,3 +458,98 @@ button.wi:hover:not(:disabled) { background: var(--w-hover); }
 .rail .gmeta { flex-basis: 100%; margin-left: 20px; order: 3; font-size: 11.5px; }
 .rail .chatrow .s { flex-wrap: wrap; row-gap: 2px; }
 .rail .chatrow .tag { margin-left: 0; }
+
+/* Thin scrollbars, thread-coloured on hover (as in session-sources) */
+.frame * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.frame *:hover { scrollbar-color: var(--thread) transparent; }
+.set-main, .phone-body, .dbody { overflow-x: hidden; }
+
+/* Settings: Tools, MCP servers, Skills */
+.lrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 4px; border: 0; border-bottom: 1px solid var(--seam-subtle); background: transparent; text-align: left; }
+.lrow:hover { background: var(--hover); }
+.lrow .grow { flex: 1; min-width: 0; }
+.lrow .t { font-weight: 600; }
+.lrow .s { font-size: 12px; line-height: 16px; color: var(--muted); }
+.lrow .ic { color: var(--muted); }
+.lrow .tag { margin-left: 0; }
+.phone .lrow { min-height: 56px; }
+.phone .lrow .s { font-size: 13px; }
+.rowline .seg { flex: none; }
+.phone .rowline .mono + .seg { margin-left: auto; }
+.chk { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 4px 4px; border: 0; border-bottom: 1px solid var(--seam-subtle); background: transparent; text-align: left; font-size: 13.6px; }
+.chk:hover:not(:disabled) { background: var(--hover); }
+.chk:disabled { cursor: default; }
+.chk .box { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border: 1.5px solid var(--thread-strong); border-radius: 4px; background: var(--raised); color: var(--on-moss); }
+.chk[aria-checked="true"] .box { background: var(--moss); border-color: var(--moss); }
+.chk:disabled .box { opacity: .6; }
+.phone .chk { min-height: 48px; }
+.srv-h { display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 4px; flex-wrap: wrap; background: var(--raised); }
+.srv-main { flex: 1 1 200px; min-width: 0; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 8px; border: 0; background: transparent; text-align: left; border-radius: var(--r-md); }
+.srv-main:hover { background: var(--hover); }
+.srv-main .grow { flex: 1; min-width: 0; }
+.srv-main .t { font-weight: 600; font-size: 14px; }
+.srv-main .s { font-size: 12px; line-height: 16px; color: var(--muted); overflow-wrap: anywhere; }
+.srv-main .ic { color: var(--muted); }
+.srv-err { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-top: 1px solid var(--seam); border-left: 3px solid var(--danger-ink); background: var(--danger); font-size: 13px; line-height: 18px; overflow-wrap: anywhere; }
+.srv-err .ic { margin-top: 1px; color: var(--danger-ink); }
+.srv-note { padding: 10px 12px; border-top: 1px solid var(--seam); font-size: 13px; color: var(--muted); }
+.pcard .mrow { border-top: 0; }
+.pcard .srv-h + .mrow { border-top: 1px solid var(--seam); }
+.envrow { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 8px; }
+.envrow .field { flex: 1; }
+.skrow { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--seam-subtle); }
+.skrow:last-child { border-bottom: 0; }
+.skrow .grow { flex: 1; min-width: 0; }
+.skrow .t { font-weight: 600; font-family: var(--mono); font-size: 13.6px; }
+.skrow .s { font-size: 13px; color: var(--muted); }
+.skrow .where { margin-top: 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; }
+.skrow .where .tag { margin-left: 0; font: 400 11px/16px var(--mono); }
+.dirs { list-style: none; margin: 8px 0; padding: 0; }
+.dirs li { padding: 3px 0; color: var(--ink); font-size: 13px; }
+
+/* MCP servers: sign-in rows and the server form */
+.srv-wait { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--seam); font-size: 13px; }
+.srv-wait .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.srv-wait > .ic { color: var(--muted); }
+.kvrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; margin-bottom: 8px; }
+.kvrow > .field { flex: 1 1 130px; }
+.kvrow > .field:nth-child(2) { flex: 1.4 1 150px; }
+.srcsel { width: auto; flex: none; min-width: 128px; }
+.dialog { display: flex; flex-direction: column; max-height: calc(100% - 32px); }
+.dialog .dbody { overflow: auto; min-height: 0; }
+.dialog > header, .dialog > footer { flex: none; }
+.phone .dialog .dbody { max-height: none; }
+.phone .dialog footer .grow:empty { display: none; }
+.phone .srv-main { flex-basis: 100%; }
+.phone .srv-h > .btn.quiet { margin-left: auto; }
+.overlay { grid-template-rows: minmax(0, 1fr); }
+.frame.desktop .overlay { padding: 16px; }
+.frame.phone .overlay { padding-top: 16px; }
+.dialog { max-height: 100%; min-height: 0; }
+
+/* Tool categories */
+.cat { margin-top: 12px; }
+.cat:first-child { margin-top: 0; }
+.cat-h { display: flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 8px 0 4px; background: var(--surface2); border-radius: var(--r-md); }
+.cat-h.ap { flex-wrap: wrap; row-gap: 4px; padding: 4px 8px 4px 4px; }
+.cat-h .grow { flex: 1; min-width: 0; }
+.chk.catchk { flex: 1; min-width: 0; border-bottom: 0; background: transparent; }
+.chk.catchk:hover:not(:disabled) { background: transparent; }
+.cname { font-weight: 600; font-size: 15px; line-height: 20px; font-family: var(--sans); }
+.mcpt { margin-left: 6px; font-size: 11px; font-weight: 400; color: var(--faint); }
+.cnt { font-size: 12px; color: var(--muted); white-space: nowrap; padding: 0 6px; }
+.cat-rows { margin: 0 0 0 20px; padding-left: 12px; border-left: 2px solid var(--thread); }
+.cat-rows .chk, .cat-rows .rowline { min-height: 34px; padding: 2px 4px; font-size: 12.5px; font-weight: 400; background: transparent; }
+.cat-rows .chk:last-child, .cat-rows .rowline:last-child { border-bottom: 0; }
+.cat-rows .chk .mono, .cat-rows .rowline .mono { font-size: 12.5px; font-weight: 400; }
+.cat-rows .chk .box { width: 14px; height: 14px; border-width: 1px; border-radius: 3px; }
+.cat-rows .chk .box svg { width: 11px; height: 11px; }
+.cat-rows .seg button { min-height: 22px; padding: 1px 9px; font-size: 11.5px; font-weight: 500; }
+.chk[aria-checked="mixed"] .box { background: var(--moss); border-color: var(--moss); }
+.phone .cat-h { min-height: 48px; }
+.phone .cat-rows .chk, .phone .cat-rows .rowline { min-height: 44px; }
+.phone .cat-rows .seg button { min-height: 32px; padding: 4px 11px; font-size: 13px; }
+.rowline .grow.mono { overflow-wrap: anywhere; }
+.cat-h .cname.grow { padding-right: 8px; }
+.cat-h.ap .cnt { margin-left: 8px; }
+.phone .cat-h .seg button { padding: 6px 10px; }

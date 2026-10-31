@@ -26,6 +26,32 @@
   const WORDS = ['tidy', 'violet', 'harbor', 'amber', 'quiet', 'maple', 'river', 'lantern', 'copper', 'meadow'];
   const tempAddr = () => `${WORDS[Math.floor(Math.random() * 10)]}-${WORDS[Math.floor(Math.random() * 10)]}-${WORDS[Math.floor(Math.random() * 10)]}-${rnd(4).toLowerCase()}.trycloudflare.com`;
   let uid = 10;
+  const CATS = [
+    ['Files', ['list', 'read', 'search', 'edit', 'write']],
+    ['Commands', ['exec', 'poll', 'wait', 'cancel', 'jobs']],
+    ['Web', ['web_search', 'web_fetch']],
+    ['Agents', ['agent', 'agent_send', 'agent_status']],
+    ['History', ['history_chapters', 'history_search', 'history_read']],
+    ['Other', ['js', 'question', 'todo', 'reload', 'environments', 'tool_search', 'call_tool']],
+  ];
+  const TOOLS = CATS.flatMap((c) => c[1]);
+  /* One category per MCP server that is running, with the tools that are on. */
+  function mcpCats(servers) {
+    return servers.filter((v) => v.tools.some((t) => t[1])).map((v) => ({ name: v.name, mcp: true, ids: v.tools.filter((t) => t[1]).map((t) => v.name + '/' + t[0]) }));
+  }
+  function mkTl() {
+    const mcp = mcpCats(mkServers().filter((v) => v.on && !v.error && (v.kind !== 'url' || v.auth !== 'oauth' || v.o === 'in'))).flatMap((c) => c.ids);
+    const ro = ['list', 'read', 'search', 'wait', 'jobs', 'web_search', 'web_fetch', 'agent_status', 'history_chapters', 'history_search', 'history_read', 'js', 'question', 'todo', 'reload', 'environments', 'tool_search', 'call_tool'];
+    return {
+      edit: null, main: 'all',
+      sets: [
+        { id: 'read-only', name: 'read-only', builtin: true, tools: ro },
+        { id: 'all', name: 'all', builtin: true, all: true, tools: [] },
+        { id: 'no-web', name: 'no-web', builtin: false, tools: TOOLS.filter((t) => !t.startsWith('web_')).concat(mcp) },
+      ],
+      appr: { list: 'allow', read: 'allow', search: 'allow', edit: 'ask', write: 'ask', exec: 'ask', poll: 'allow', wait: 'allow', cancel: 'ask', jobs: 'allow', web_search: 'allow', web_fetch: 'deny', agent: 'ask', agent_send: 'ask', agent_status: 'allow', history_chapters: 'allow', history_search: 'allow', history_read: 'allow', js: 'ask', question: 'allow', todo: 'allow', reload: 'ask', environments: 'allow', tool_search: 'allow', call_tool: 'ask' },
+    };
+  }
 
   const M = {
     pref: H.theme || 'light', turn: 'closed', login: false, startTray: false, keepTray: true, toast: H.toast === '1', hostAuto: true, hostKeep: H.keep !== '0', autoShare: true, chats: H.chats !== undefined ? +H.chats : 2, tmenu: true,
@@ -54,6 +80,15 @@
     dlg: null, add: { step: 1 }, addDone: false, back: 'phone',
     pview: H.pview === 'chat' ? 'chat' : 'list', sheet: H.sheet === '1', sw: H.sw !== '0', pop: H.pop !== '0', dsel: { h: H.dsel || 'local' }, expR: new Set(), lastProj: 'garden-api', ppick: H.ppick === '1', active: H.active || 'h1',
     fail2: false,
+    tl: mkTl(), edClosed: new Set(), apOpen: new Set(),
+    srvOpen: new Set(), srvTry: false, envs: [], view: '',
+    servers: mkServers(), toks: [{ n: '', m: 'value', v: '' }], hdrs: [],
+    skillsNone: false,
+    skills: [
+      { id: 'release-notes', name: 'release-notes', desc: 'Draft release notes from the merged pull requests.', where: 'Project', dir: '.claude/skills', on: true },
+      { id: 'db-migration', name: 'db-migration', desc: 'Write and check a database migration.', where: 'Project', dir: '.agents/skills', on: true },
+      { id: 'commit-style', name: 'commit-style', desc: 'Write commit messages in the style of this team.', where: 'User', dir: '~/.config/bubblepaw/skills', on: false },
+    ],
   };
   if (S.screen === 'pair') M.dlg = { type: 'pair', step: +(H.step || 1), left: 292, code: 'K7M2Q-9XFD4', prof: 'edit' };
   if (S.screen === 'add') { M.add = { step: +(H.add || 1) }; if (M.add.step === 1 && H.add) M.f.addCode = 'K7M2Q9XFD4'; }
@@ -68,7 +103,7 @@
   const iconBtn = (name, label, act, arg) => `<button class="iconbtn" aria-label="${label}" title="${label}" ${A(act, arg)}>${ic(name, 18)}</button>`;
   const field = (label, hintText, key, o = {}) =>
     `<div class="field ${o.err ? 'err' : ''}"><label for="f-${key}">${label}</label>${hintText ? `<div class="hint">${hintText}</div>` : ''}<input id="f-${key}" class="input ${o.sans ? 'sans' : ''}" data-k="${key}" value="${(M.f[key] || '').replace(/"/g, '&quot;')}" placeholder="${o.ph || ''}" ${o.type ? `type="${o.type}"` : ''} ${o.cap ? 'autocapitalize="characters"' : ''}>${o.err ? `<div class="hint errtxt">${o.err}</div>` : ''}</div>`;
-  const sw = (on, label, act, dis) => `<button class="switch" role="switch" aria-checked="${on}" ${dis ? 'disabled' : A(act)}><span class="track"><span class="thumb"></span></span><span class="st">${on ? 'On' : 'Off'}</span><span class="sr">${label}</span></button>`;
+  const sw = (on, label, act, dis, arg) => `<button class="switch" role="switch" aria-checked="${on}" ${dis ? 'disabled' : A(act, arg)}><span class="track"><span class="thumb"></span></span><span class="st">${on ? 'On' : 'Off'}</span><span class="sr">${label}</span></button>`;
   const seg = (items, cur, act) => `<div class="seg" role="group">${items.map(([v, l]) => `<button aria-pressed="${cur === v}" ${A(act, v)}>${l}</button>`).join('')}</div>`;
   const pill = (txt, kind) => `<span class="pill ${kind}">${txt}</span>`;
   const sec = (title, body, right = '') => `<section class="sec"><h2><span>${title}</span>${right}</h2>${body}</section>`;
@@ -96,11 +131,15 @@
   /* ---------- settings pages ---------- */
   const NAV = [
     ['general', 'General', 'sliders-horizontal', ''], ['host', 'Core', 'cpu', 'desktop'], ['models', 'Models', 'layers', ''],
+    ['tools', 'Tools', 'wrench', ''], ['mcp', 'MCP servers', 'plug', ''], ['skills', 'Skills', 'book-open', ''],
     ['remote', 'Remote access', 'globe', ''], ['about', 'About', 'info', ''],
   ];
   const phoneSub = {
     general: () => ({ system: 'System theme', light: 'Light theme', dark: 'Dark theme' }[M.pref]),
     models: () => `Default ${M.def}`,
+    tools: () => `Main chat uses ${tsName(M.tl.main)}`,
+    mcp: () => `${M.servers.length} servers, ${M.servers.filter((v) => srvStatus(v) === 'running').length} running`,
+    skills: () => (M.skillsNone ? 'None found' : `${M.skills.filter((v) => v.on).length} of ${M.skills.length} on`),
     remote: () => `${M.hosts.length} host${M.hosts.length === 1 ? '' : 's'}, ${M.hosts.filter((h) => h.online).length} online`,
     about: () => `BubblePaw ${M.u.app.cur}`,
   };
@@ -138,6 +177,173 @@
     }).join('');
     return sec('Default model', `<div class="field"><div class="hint">New runs in every chat use this model. A run in progress keeps its own.</div><div class="mono" style="font-size:15px">${M.def}</div></div>`) + sec('Providers', cards);
   }
+  /* ---------- Tools, MCP servers, Skills ---------- */
+  const tsName = (id) => (M.tl.sets.find((x) => x.id === id) || {}).name || '';
+  const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+  function tsError() {
+    const v = (M.f.tsName || '').trim(), cur = M.tl.sets.find((x) => x.id === M.tl.edit);
+    if (!v) return 'Enter a name.';
+    if (!NAME_RE.test(v)) return 'Use letters, numbers, - and _ only.';
+    if (M.tl.sets.some((x) => x !== cur && x.name === v)) return `A toolset named ${v} already exists.`;
+    return '';
+  }
+  const label = (id) => (id.includes('/') ? id.split('/')[1] : id);
+  const cats = () => CATS.map(([name, ids]) => ({ name, mcp: false, ids })).concat(mcpCats(M.servers.filter((v) => srvStatus(v) === 'running')));
+  const allIds = () => cats().flatMap((c) => c.ids);
+  const setTools = (x) => (x.all ? allIds() : x.tools);
+  const apprOf = (id) => M.tl.appr[id] || 'ask';
+  const chk = (on, text, act, arg, dis) => `<button class="chk" role="checkbox" aria-checked="${on}" ${dis ? 'disabled' : A(act, arg)}><span class="box">${on ? ic('check', 14) : ''}</span><span class="mono">${text}</span></button>`;
+  const seg3 = (name, cur, act, key) => `<div class="seg" role="group" aria-label="Approval for ${name}">${[['ask', 'Ask'], ['allow', 'Allow'], ['deny', 'Deny']].map(([v, l]) => `<button aria-pressed="${cur === v}" ${A(act, key + '|' + v)}>${l}</button>`).join('')}</div>`;
+  const catName = (c) => `${c.name}${c.mcp ? ' <span class="mcpt">MCP</span>' : ''}`;
+  const chev = (open, name, act) => `<button class="iconbtn sm" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} ${name}" ${A(act, name)}>${ic(open ? 'chevron-down' : 'chevron-right', 16)}</button>`;
+  function editorCats(x) {
+    const on = new Set(setTools(x));
+    return cats().map((c) => {
+      const n = c.ids.filter((i) => on.has(i)).length, st = n === 0 ? 'false' : n === c.ids.length ? 'true' : 'mixed', open = !M.edClosed.has(c.name);
+      const head = `<div class="cat-h">${chev(open, c.name, 'edTog')}<button class="chk catchk" role="checkbox" aria-checked="${st}" ${x.builtin ? 'disabled' : A('catSet', c.name)}><span class="box">${st === 'true' ? ic('check', 14) : st === 'mixed' ? ic('minus', 14) : ''}</span><span class="cname">${catName(c)}</span></button><span class="cnt">${n} of ${c.ids.length}</span></div>`;
+      const rows = open ? c.ids.map((i) => chk(on.has(i), label(i), 'tsTool', i, x.builtin).replace('class="chk"', 'class="chk sub"')).join('') : '';
+      return `<div class="cat">${head}${rows ? `<div class="cat-rows">${rows}</div>` : ''}</div>`;
+    }).join('');
+  }
+  function approvalGroups() {
+    return cats().map((c) => {
+      const vals = new Set(c.ids.map(apprOf)), mixed = vals.size > 1, open = M.apOpen.has(c.name);
+      const head = `<div class="cat-h ap">${chev(open, c.name, 'apTog')}<span class="cname grow">${catName(c)}</span>${mixed ? '<span class="cnt">Mixed</span>' : ''}${seg3(c.name, mixed ? '' : [...vals][0], 'catAppr', c.name)}</div>`;
+      const rows = open ? c.ids.map((i) => `<div class="rowline sub"><div class="grow mono">${label(i)}</div>${seg3(label(i), apprOf(i), 'appr', i)}</div>`).join('') : '';
+      return `<div class="cat">${head}${rows ? `<div class="cat-rows">${rows}</div>` : ''}</div>`;
+    }).join('');
+  }
+  function pageTools() {
+    if (S.sub === 'toolset') return backRow('Tools') + toolsetEditor();
+    const rows = M.tl.sets.map((x) => `<button class="lrow" ${A('openTs', x.id)}><span class="grow"><div class="t">${x.name}</div><div class="s">${setTools(x).length} of ${allIds().length} tools</div></span>${x.builtin ? '<span class="tag">Built-in</span>' : ''}${ic('chevron-right', 18)}</button>`).join('');
+    return sec('Toolsets', `<div class="hint" style="margin:-4px 0 6px">The parent agent picks a toolset when it starts a subagent.</div>${rows}`, btn('New toolset', { icon: 'plus', act: 'newTs' })) +
+      sec('Main chat uses', `<div class="field" style="margin:0"><label class="sr" for="f-mainSet">Main chat uses</label><select id="f-mainSet" class="input" data-k="mainSet">${M.tl.sets.map((x) => `<option value="${x.id}" ${M.tl.main === x.id ? 'selected' : ''}>${x.name}</option>`).join('')}</select></div>`) +
+      sec('Approvals', approvalGroups());
+  }
+  function toolsetEditor() {
+    const x = M.tl.sets.find((v) => v.id === M.tl.edit), err = x.builtin ? '' : tsError();
+    const isMain = M.tl.main === x.id;
+    const nameField = field('Name', x.builtin ? "Built-in toolsets can't be renamed or deleted." : '', 'tsName', { sans: true, err });
+    return (x.builtin ? nameField.replace('<input ', '<input disabled ') : nameField) +
+      sec('Tools', editorCats(x)) +
+      (x.builtin ? '' : `<div class="actions">${btn('Delete toolset', { kind: 'danger', icon: 'trash-2', act: 'dlg', arg: 'delTs:' + x.id, disabled: isMain })}${isMain ? '<span class="hint">Main chat uses this toolset. Choose another one first.</span>' : ''}</div>`);
+  }
+  function ent(n, m, v) { return { n, m, v }; }
+  const VAR_RE = /^[A-Za-z_][A-Za-z0-9_]*$/, HDR_RE = /^[A-Za-z0-9-]+$/;
+  const VAR_MSG = 'Use letters, numbers and _, and do not start with a number.';
+  function mkServers() {
+    return [
+      { id: 'filesystem', name: 'filesystem', kind: 'cmd', cmd: 'npx', args: '-y @modelcontextprotocol/server-filesystem /home/maya/projects/garden-api', cwd: '/home/maya/projects/garden-api', env: [ent('LOG_LEVEL', 'value', 'info'), ent('API_TOKEN', 'var', 'GARDEN_TOKEN')], timeout: 60, on: true, error: '', tools: [['read_text_file', true], ['list_directory', true], ['search_files', true], ['edit_file', false]] },
+      { id: 'github', name: 'github', kind: 'url', url: 'https://mcp.example.com/github', auth: 'oauth', o: 'in', account: 'maya@example.com', hdr: [ent('X-Org', 'value', 'garden')], tok: null, timeout: 30, on: true, error: '', tools: [['list_issues', true], ['get_pull_request', true], ['create_issue_comment', false]] },
+      { id: 'docs', name: 'docs', kind: 'url', url: 'https://mcp.example.com/docs', auth: 'oauth', o: 'needed', account: '', hdr: [], tok: null, timeout: 60, on: true, error: '', tools: [] },
+      { id: 'garden-api', name: 'garden-api', kind: 'cmd', cmd: 'node', args: './tools/garden-mcp.js', cwd: '', env: [], timeout: 60, on: true, error: "Exited with code 1: Cannot find module './tools/garden-mcp.js'", tools: [] },
+      { id: 'sqlite', name: 'sqlite', kind: 'cmd', cmd: 'uvx', args: 'mcp-server-sqlite --db-path ./garden.db', cwd: '', env: [], timeout: 60, on: false, error: '', tools: [['query', true], ['list_tables', true]] },
+    ];
+  }
+  const isOauth = (v) => v.kind === 'url' && v.auth === 'oauth';
+  const srvStatus = (v) => (!v.on ? 'stopped' : v.error ? 'error' : isOauth(v) ? (v.o === 'in' ? 'running' : v.o === 'expired' ? 'expired' : 'needed') : 'running');
+  const srvLine = (v) => (v.kind === 'url' ? v.url : (v.cmd + ' ' + (v.args || '')).trim());
+  function pageMcp() {
+    const cards = M.servers.map((v) => {
+      const st = srvStatus(v), open = M.srvOpen.has(v.id);
+      const pl = st === 'running' ? pill('Running', 'ok') : st === 'error' ? pill('Error', 'danger') : st === 'needed' ? pill('Sign-in needed', 'attn') : st === 'expired' ? pill('Sign-in expired', 'attn') : pill('Stopped', 'off');
+      const signBtn = (st === 'needed' && v.o !== 'waiting') ? btn('Sign in', { kind: 'primary', act: 'srvSignIn', arg: v.id }) : st === 'expired' ? btn('Sign in again', { kind: 'primary', act: 'srvSignIn', arg: v.id }) : '';
+      let body = '';
+      if (st === 'error') body += `<div class="srv-err">${ic('circle-alert', 15)}<span>${v.error}</span></div>`;
+      if (st === 'needed' && v.o === 'waiting') body += `<div class="srv-wait">${ic('loader', 15, 'spin')}<span class="grow">Waiting for sign-in in your browser</span>${btn('Cancel', { act: 'srvCancel', arg: v.id })}</div>`;
+      if (open) {
+        if (st === 'running') {
+          if (isOauth(v)) body += `<div class="srv-wait">${ic('circle-check', 15)}<span class="grow">${v.account ? 'Signed in as <b>' + v.account + '</b>' : 'Signed in'}</span>${btn('Sign out', { act: 'srvSignOut', arg: v.id })}</div>`;
+          body += (v.tools.map(([n, on]) => `<div class="mrow"><div class="grow mono" style="font-size:13.6px">${n}</div>${sw(on, 'Tool ' + n, 'srvTool', false, v.id + '|' + n)}</div>`).join('') || '<div class="srv-note">The server has not listed any tools.</div>');
+        } else {
+          body += `<div class="srv-note">${{ error: 'No tools are listed while the server has an error.', needed: 'Sign in to list its tools.', expired: 'Tools are not available until you sign in again.', stopped: 'Turn the server on to list its tools.' }[st]}</div>`;
+        }
+      }
+      return `<div class="pcard"><div class="srv-h"><button class="srv-main" aria-expanded="${open}" ${A('srvOpen', v.id)}>${ic(open ? 'chevron-down' : 'chevron-right', 16)}<span class="grow"><div class="t">${v.name}</div><div class="s mono">${srvLine(v)}</div></span></button>${pl}${signBtn}${btn('Edit', { cls: 'quiet', act: 'editSrv', arg: v.id })}${sw(v.on, 'Server ' + v.name, 'srvOn', false, v.id)}</div>${body}</div>`;
+    }).join('');
+    return sec('Servers', cards, btn('Add server', { icon: 'plus', act: 'addSrv' }));
+  }
+  /* server form (add and edit share it) */
+  function loadForm(v) {
+    const f = M.f, cp = (l) => (l || []).map((e) => ({ ...e }));
+    f.sname = v ? v.name : ''; f.skind = v ? v.kind : 'cmd'; f.scmd = (v && v.cmd) || ''; f.sargs = (v && v.args) || ''; f.scwd = (v && v.cwd) || '';
+    f.surl = (v && v.url) || ''; f.sauth = (v && v.auth) || 'none'; f.stimeout = String(v ? v.timeout : 60);
+    M.envs = cp(v && v.env); M.hdrs = cp(v && v.hdr); M.toks = [v && v.tok ? { ...v.tok } : ent('', 'value', '')];
+  }
+  function formToServer() {
+    const f = M.f, clean = (l) => l.filter((e) => e.n.trim() || e.v.trim()).map((e) => ({ n: e.n.trim(), m: e.m, v: e.v.trim() }));
+    const o = { name: f.sname.trim(), kind: f.skind, timeout: +f.stimeout };
+    if (f.skind === 'cmd') return Object.assign(o, { cmd: f.scmd.trim(), args: f.sargs.trim(), cwd: f.scwd.trim(), env: clean(M.envs) });
+    return Object.assign(o, { url: f.surl.trim(), auth: f.sauth, hdr: clean(M.hdrs), tok: f.sauth === 'token' ? { n: '', m: M.toks[0].m, v: M.toks[0].v.trim() } : null });
+  }
+  function entErr(en, named, nameRe, nameMsg) {
+    const e = { n: '', v: '' }, v = en.v.trim(), n = en.n.trim();
+    if (named && !n && !v) return e;
+    if (named) e.n = !n ? 'Enter a name.' : !nameRe.test(n) ? nameMsg : '';
+    if (en.m === 'var') e.v = !v ? 'Enter a variable name.' : !VAR_RE.test(v) ? VAR_MSG : '';
+    else e.v = !v ? 'Enter a value.' : '';
+    return e;
+  }
+  function srvErrors(all) {
+    const f = M.f, self = M.dlg && M.dlg.edit;
+    const e = { name: '', cmd: '', url: '', timeout: '', env: M.envs.map((x) => entErr(x, true, VAR_RE, VAR_MSG)), hdr: M.hdrs.map((x) => entErr(x, true, HDR_RE, 'Use letters, numbers and - only.')), tok: entErr(M.toks[0], false) };
+    const n = f.sname.trim();
+    e.name = !n ? 'Enter a name.' : !NAME_RE.test(n) ? 'Use letters, numbers, - and _ only.' : M.servers.some((x) => x.name === n && x.id !== self) ? `A server named ${n} already exists.` : '';
+    if (f.skind === 'cmd') { if (!f.scmd.trim()) e.cmd = 'Enter a command.'; }
+    else { const u = f.surl.trim(); e.url = !u ? 'Enter a URL.' : /^https?:\/\/[^\s/]+\S*$/.test(u) ? '' : 'Enter a URL that starts with http:// or https://.'; }
+    const t = f.stimeout.trim(); e.timeout = !t ? 'Enter a number of seconds.' : !/^\d+$/.test(t) || +t < 1 || +t > 600 ? 'Enter a whole number of seconds from 1 to 600.' : '';
+    if (f.skind === 'cmd') { e.hdr = []; e.tok = { n: '', v: '' }; } else { e.env = []; }
+    if (f.skind === 'url' && f.sauth !== 'token') e.tok = { n: '', v: '' };
+    if (!all) { // required-field messages wait until the owner has tried to save
+      const q = (s) => (s.startsWith('Enter a') && !s.startsWith('Enter a URL that') && !s.startsWith('Enter a whole') ? '' : s);
+      e.name = q(e.name); e.cmd = q(e.cmd); e.url = q(e.url); e.timeout = q(e.timeout);
+      [...e.env, ...e.hdr, e.tok].forEach((x) => { x.n = q(x.n); x.v = q(x.v); });
+    }
+    return e;
+  }
+  const hasErr = (e) => !!(e.name || e.cmd || e.url || e.timeout || e.tok.n || e.tok.v || [...e.env, ...e.hdr].some((x) => x.n || x.v));
+  function syncEdit() {
+    const id = M.dlg && M.dlg.edit;
+    if (!id || hasErr(srvErrors(true))) return;
+    const s2 = M.servers.find((q) => q.id === id), fresh = formToServer();
+    if (fresh.kind === 'url' && fresh.auth === 'oauth' && !(s2.kind === 'url' && s2.auth === 'oauth')) { s2.o = 'needed'; s2.account = ''; }
+    Object.assign(s2, fresh);
+  }
+  const errLine = (t) => (t ? `<div class="hint errtxt">${t}</div>` : '');
+  function kvRows(kind, list, errs, named, namePh) {
+    return list.map((en, i) => {
+      const er = errs[i] || { n: '', v: '' }, vm = en.m === 'value';
+      const nm = named ? `<div class="field ${er.n ? 'err' : ''}" style="margin:0"><label class="sr" for="f-${kind}${i}n">Name ${i + 1}</label><input id="f-${kind}${i}n" class="input" data-k="${kind}:${i}:n" value="${en.n.replace(/"/g, '&quot;')}" placeholder="${namePh}" autocomplete="off">${errLine(er.n)}</div>` : '';
+      const val = `<div class="field ${er.v ? 'err' : ''}" style="margin:0"><label class="sr" for="f-${kind}${i}v">${vm ? 'Value' : 'Variable name'} ${i + 1}</label><input id="f-${kind}${i}v" class="input" data-k="${kind}:${i}:v" ${vm ? 'type="password"' : ''} value="${en.v.replace(/"/g, '&quot;')}" placeholder="${vm ? 'Value, hidden' : 'VAR_NAME'}" autocomplete="off">${errLine(er.v)}</div>`;
+      const src = `<select class="input srcsel" data-k="${kind}:${i}:m" aria-label="Source of ${named ? 'entry ' + (i + 1) : 'the token'}"><option value="value" ${vm ? 'selected' : ''}>Value</option><option value="var" ${vm ? '' : 'selected'}>From env var</option></select>`;
+      return `<div class="kvrow">${nm}${val}${src}${named ? iconBtn('x', 'Remove entry ' + (i + 1), 'kvDel', kind + '|' + i) : ''}</div>`;
+    }).join('');
+  }
+  function addSrvDialog() {
+    const edit = M.dlg.edit, e = srvErrors(M.srvTry || !!edit), f = M.f;
+    const cmd = field('Command', '', 'scmd', { ph: 'npx', err: e.cmd }) + field('Arguments', 'Separated by spaces.', 'sargs', { ph: '-y @modelcontextprotocol/server-filesystem .' }) +
+      field('Working folder', 'Optional.', 'scwd', { ph: '/home/maya/projects/garden-api' }) +
+      `<div class="field"><div class="lab">Environment variables</div><div class="hint">Values are hidden. Choose From env var to read the value from a variable instead.</div>${kvRows('env', M.envs, e.env, true, 'NAME')}<div>${btn('Add variable', { icon: 'plus', cls: 'quiet', act: 'envAdd' })}</div></div>`;
+    const url = field('URL', '', 'surl', { ph: 'https://mcp.example.com/github', err: e.url }) +
+      `<div class="field"><div class="lab">Authentication</div><div>${seg([['none', 'None'], ['oauth', 'OAuth'], ['token', 'Header token']], f.sauth, 'srvAuth')}</div>${f.sauth === 'oauth' ? "<div class=\"hint\">Sign in from the server's row.</div>" : ''}</div>` +
+      (f.sauth === 'token' ? `<div class="field"><div class="lab">Token</div><div class="hint">Sent in the Authorization header. Hidden.</div>${kvRows('tok', M.toks, [e.tok], false)}</div>` : '') +
+      `<div class="field"><div class="lab">Headers</div><div class="hint">Values are hidden. Choose From env var to read the value from a variable instead.</div>${kvRows('hdr', M.hdrs, e.hdr, true, 'Header-Name')}<div>${btn('Add header', { icon: 'plus', cls: 'quiet', act: 'hdrAdd' })}</div></div>`;
+    const body = field('Name', '', 'sname', { sans: true, ph: 'filesystem', err: e.name }) +
+      `<div class="field"><div class="lab">Type</div><div>${seg([['cmd', 'Command'], ['url', 'URL']], f.skind, 'srvKind')}</div></div>` + (f.skind === 'cmd' ? cmd : url) +
+      field('Request timeout', 'Seconds.', 'stimeout', { ph: '60', err: e.timeout });
+    if (edit) {
+      const cur = M.servers.find((q) => q.id === edit);
+      return dlgShell(`Edit ${cur.name}`, body, `${btn('Remove server', { kind: 'danger', icon: 'trash-2', act: 'dlg', arg: 'delSrv:' + edit })}<span class="grow"></span>${btn('Done', { kind: 'primary', act: 'close' })}`);
+    }
+    return dlgShell('Add server', body, `${btn('Cancel', { act: 'close' })}${btn('Add server', { kind: 'primary', act: 'srvAdd' })}`);
+  }
+  function pageSkills() {
+    if (M.skillsNone) {
+      return sec('Discovered skills', `<div class="empty">No skills found. BubblePaw looks in these folders:<ul class="dirs"><li class="mono">.agents/skills</li><li class="mono">.claude/skills</li><li class="mono">~/.config/bubblepaw/skills</li></ul>A skill you add to one of them appears here.</div>`);
+    }
+    return sec('Discovered skills', M.skills.map((k) => `<div class="skrow"><div class="grow"><div class="t">${k.name}</div><div class="s">${k.desc}</div><div class="where"><span class="muted">${k.where}</span> <span class="tag">${k.dir}</span></div></div>${sw(k.on, 'Skill ' + k.name, 'skillOn', false, k.id)}</div>`).join(''));
+  }
+
   function pageKey() {
     const n = M.devices.length, hn = M.hosts.length;
     const cons = n + hn ? `All ${n} paired device${n === 1 ? '' : 's'} and ${hn} host${hn === 1 ? '' : 's'} you can open stop recognising this device, and each pairing has to be done again.` : 'This device has no pairings yet, so nothing else breaks.';
@@ -275,9 +481,9 @@
     if (p) return deviceCard() + hostsList(true);
     return deviceCard() + `<div style="margin-bottom:20px">${seg([['share', 'Share this host'], ['hosts', 'Hosts you can open']], S.tab, 'tab')}</div>` + (S.tab === 'hosts' ? hostsList(false) : pageShare());
   }
-  const pageBody = (p, phn) => ({ general: pageGeneral, host: pageHost, models: pageModels, remote: pageRemote, about: pageAbout }[p])(phn);
+  const pageBody = (p, phn) => ({ general: pageGeneral, host: pageHost, models: pageModels, tools: pageTools, mcp: pageMcp, skills: pageSkills, remote: pageRemote, about: pageAbout }[p])(phn);
 
-  const subTitle = () => (S.sub === 'key' ? 'Device key' : S.sub === 'licences' ? 'Licences' : '');
+  const subTitle = () => (S.sub === 'key' ? 'Device key' : S.sub === 'licences' ? 'Licences' : S.sub === 'toolset' ? 'Toolset' : '');
   function settingsDesktop() {
     const nav = NAV.map(([id, label, icon]) => `<button class="nav-item" ${S.page === id ? 'aria-current="page"' : ''} ${A('page', id)}>${ic(icon, 16)}${label}</button>`).join('');
     return `<div class="set-desk"><nav class="set-nav" aria-label="Settings"><button class="nav-item back" ${A('toChat')}>${ic('chevron-left', 16)}Back to chat</button><h1>Settings</h1>${nav}</nav>
@@ -373,6 +579,15 @@
       if (d.step === 2) return dlgShell('Key regenerated', `${okNotice(`This device is now ${M.key.id}. All pairings were cleared.`)}`, btn('Done', { kind: 'primary', act: 'close' }));
       return dlgShell('Regenerate device key?', `<div class="notice danger">${ic('circle-alert', 16)}<div>${pageKeyCons()}</div></div><p style="margin:0">This cannot be undone. Export the current key file first if you may want it back.</p>`,
         `${btn('Cancel', { act: 'close' })}${btn('Regenerate and clear pairings', { kind: 'danger', icon: 'trash-2', act: 'doRegen' })}`);
+    }
+    if (d.type === 'addSrv') return addSrvDialog();
+    if (d.type === 'delSrv') {
+      const x = M.servers.find((v) => v.id === d.id);
+      return dlgShell(`Remove ${x.name}?`, `<p style="margin:0">The server ${x.name} and its settings are removed. Its tools are no longer available.</p>`, `${btn('Cancel', { act: 'editSrv', arg: x.id })}${btn(`Remove ${x.name}`, { kind: 'danger', icon: 'trash-2', act: 'doDelSrv' })}`);
+    }
+    if (d.type === 'delTs') {
+      const x = M.tl.sets.find((v) => v.id === d.id);
+      return dlgShell(`Delete ${x.name}?`, `<p style="margin:0">The toolset ${x.name} is removed from the list.</p>`, `${btn('Cancel', { act: 'close' })}${btn(`Delete ${x.name}`, { kind: 'danger', icon: 'trash-2', act: 'doDelTs' })}`);
     }
     if (d.type === 'key') {
       const p = M.providers.find((v) => v.name === d.name);
@@ -526,7 +741,9 @@
     if (S.page === 'remote' && S.tab === 'share' && !ph() && (S.screen === 'settings' || S.screen === 'share' || S.screen === 'pair')) sims.push(chip('simfail', 1, 'Tunnel failure', M.fail), chip('simother', 1, 'Other host shared', M.other));
     if (S.screen === 'tray') sims.push(...['running', 'stopped', 'error'].map((v) => chip('hs', v, 'Host ' + v, M.hostState === v)), chip('chatsT', 1, '2 chats waiting', M.chats > 0), chip('hostKeep', 1, 'Host keeps running', M.hostKeep));
     if ((S.screen === 'settings' || S.screen === 'tray') && !ph()) sims.push(chip('toastT', 1, 'First window close', M.toast));
-    const sim = sims.length ? grp('Simulate', sims) : '';
+    const views = [];
+    if (S.screen === 'settings') (VIEWS[curPage()] || []).forEach(([v, l]) => views.push(chip('view', v, l, M.view === v)));
+    const sim = (views.length ? grp('State', views) : '') + (sims.length ? grp('Simulate', sims) : '');
     return `<div class="bar-row"><div class="tabs" role="tablist" aria-label="Screens">${scr}</div><span class="grow"></span>
       ${grp('Theme', [['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => chip('pref', v, l, M.pref === v)))}
       ${grp('Frame', [['desktop', 'Desktop 1280×800'], ['phone', 'Phone 390×844']].map(([v, l]) => chip('size', v, l, (fixed || S.size) === v, !!fixed)))}</div>
@@ -586,6 +803,7 @@
   function writeHash() {
     const parts = ['screen', 'size', 'page', 'ppage', 'tab'].filter((k) => S[k] && S[k] !== { screen: 'settings', size: 'desktop', page: 'general', ppage: 'list', tab: 'share' }[k]).map((k) => k + '=' + S[k]);
     if (M.pref !== 'light') parts.push('theme=' + M.pref);
+    if (M.view) parts.push('state=' + M.view);
     try { history.replaceState(null, '', '#' + parts.join('&')); } catch (e) { /* file:// may refuse */ }
   }
 
@@ -612,10 +830,73 @@
     if (id === 'tray') { M.tmenu = true; S.size = 'desktop'; }
   };
 
+  const VIEWS = {
+    tools: [['tools-list', 'Toolsets'], ['tools-approvals', 'Approvals'], ['tools-editor', 'Toolset editor'], ['tools-partial', 'Partial category'], ['tools-builtin', 'Built-in toolset'], ['tools-error', 'Name error']],
+    mcp: [['mcp-list', 'Server list'], ['mcp-expanded', 'Expanded server'], ['mcp-stopped', 'Stopped server'], ['mcp-error', 'Error server'], ['mcp-waiting', 'Waiting for sign-in'], ['mcp-signedin', 'Signed in'], ['mcp-expired', 'Sign-in expired'], ['mcp-add', 'Add server'], ['mcp-add-error', 'Add server, errors'], ['mcp-edit-cmd', 'Edit, command'], ['mcp-edit-url', 'Edit, URL'], ['mcp-edit-errors', 'Edit, errors'], ['mcp-remove', 'Remove server']],
+    skills: [['skills-list', 'Skills'], ['skills-empty', 'None found']],
+  };
+  const curPage = () => (S.screen !== 'settings' ? '' : ph() ? S.ppage : S.page);
+  function applyState(v) {
+    const pg = v.split('-')[0];
+    S.screen = 'settings'; S.page = pg; S.ppage = pg; S.sub = ''; M.dlg = null; M.srvOpen = new Set(); M.skillsNone = false; M.srvTry = false;
+    if (v.startsWith('tools-')) { M.tl = mkTl(); M.edClosed = new Set(); M.apOpen = new Set(); }
+    if (v === 'tools-approvals') ['Files', 'Web', 'github'].forEach((n) => M.apOpen.add(n));
+    if (v === 'tools-partial') { const x = M.tl.sets.find((q) => q.id === 'no-web'); x.tools = x.tools.filter((t) => t !== 'exec' && t !== 'cancel'); cats().forEach((c) => { if (c.name !== 'Commands') M.edClosed.add(c.name); }); ACT.openTs('no-web'); }
+    if (v === 'tools-editor') ACT.openTs('no-web');
+    if (v === 'tools-builtin') ACT.openTs('read-only');
+    if (v === 'tools-error') { ACT.openTs('no-web'); M.f.tsName = 'all'; }
+    if (v === 'mcp-expanded') M.srvOpen.add('filesystem');
+    if (v === 'mcp-stopped') M.srvOpen.add('sqlite');
+    if (v.startsWith('mcp-')) M.servers = mkServers();
+    if (v === 'mcp-error') M.srvOpen.add('garden-api');
+    if (v === 'mcp-waiting') M.servers.find((q) => q.id === 'docs').o = 'waiting';
+    if (v === 'mcp-signedin') M.srvOpen.add('github');
+    if (v === 'mcp-expired') { M.servers.find((q) => q.id === 'github').o = 'expired'; M.srvOpen.add('github'); }
+    if (v === 'mcp-add' || v === 'mcp-add-error') ACT.addSrv();
+    if (v === 'mcp-add-error') { Object.assign(M.f, { sname: 'filesystem', skind: 'url', surl: 'mcp.example.com/github', sauth: 'none', stimeout: '0' }); M.hdrs = [ent('X Org', 'value', 'garden')]; M.srvTry = true; }
+    if (v === 'mcp-edit-cmd') ACT.editSrv('filesystem');
+    if (v === 'mcp-edit-url') ACT.editSrv('github');
+    if (v === 'mcp-edit-errors') { ACT.editSrv('github'); Object.assign(M.f, { sauth: 'token', stimeout: '0' }); M.toks = [ent('', 'var', '')]; M.hdrs = [ent('X Org', 'value', 'garden'), ent('X-Team', 'var', '1TEAM')]; }
+    if (v === 'mcp-remove') M.dlg = { type: 'delSrv', id: 'filesystem' };
+    if (v === 'skills-empty') M.skillsNone = true;
+    M.view = v;
+  }
   const ACT = {
     tab: (v) => goTab(v),
-    page: (v) => { S.page = v; S.sub = ''; },
-    ppage: (v) => { S.ppage = v; S.sub = ''; },
+    page: (v) => { S.page = v; S.sub = ''; M.view = ''; },
+    ppage: (v) => { S.ppage = v; S.sub = ''; M.view = ''; },
+    view: (v) => applyState(v),
+    openTs: (v) => { M.tl.edit = v; M.f.tsName = tsName(v); S.sub = 'toolset'; M.view = ''; },
+    newTs: () => { let n = 1; while (M.tl.sets.some((x) => x.name === 'toolset-' + n)) n++; const x = { id: 'ts' + (++uid), name: 'toolset-' + n, builtin: false, tools: [] }; M.tl.sets.push(x); ACT.openTs(x.id); },
+    tsTool: (v) => { const x = M.tl.sets.find((q) => q.id === M.tl.edit); x.tools = x.tools.includes(v) ? x.tools.filter((t) => t !== v) : x.tools.concat(v); },
+    edTog: (v) => { if (M.edClosed.has(v)) M.edClosed.delete(v); else M.edClosed.add(v); },
+    apTog: (v) => { if (M.apOpen.has(v)) M.apOpen.delete(v); else M.apOpen.add(v); },
+    catSet: (v) => { const x = M.tl.sets.find((q) => q.id === M.tl.edit), ids = cats().find((c) => c.name === v).ids, all = ids.every((i) => x.tools.includes(i)); x.tools = all ? x.tools.filter((t) => !ids.includes(t)) : x.tools.concat(ids.filter((i) => !x.tools.includes(i))); },
+    catAppr: (v) => { const [n, val] = v.split('|'); cats().find((c) => c.name === n).ids.forEach((i) => { M.tl.appr[i] = val; }); },
+    doDelTs: () => { const id = M.dlg.id; M.tl.sets = M.tl.sets.filter((x) => x.id !== id); M.dlg = null; S.sub = ''; },
+    appr: (v) => { const [t, val] = v.split('|'); M.tl.appr[t] = val; },
+    srvOpen: (v) => { if (M.srvOpen.has(v)) M.srvOpen.delete(v); else M.srvOpen.add(v); M.view = ''; },
+    srvOn: (v) => { const x = M.servers.find((q) => q.id === v); x.on = !x.on; },
+    srvTool: (v) => { const [id, n] = v.split('|'); const t = M.servers.find((q) => q.id === id).tools.find((q) => q[0] === n); t[1] = !t[1]; },
+    skillOn: (v) => { const x = M.skills.find((q) => q.id === v); x.on = !x.on; },
+    addSrv: () => { loadForm(null); M.srvTry = false; openDlg({ type: 'addSrv' }); },
+    editSrv: (v) => { loadForm(M.servers.find((q) => q.id === v)); M.srvTry = true; openDlg({ type: 'addSrv', edit: v }); },
+    srvKind: (v) => { M.f.skind = v; },
+    srvAuth: (v) => { M.f.sauth = v; },
+    envAdd: () => { M.envs.push(ent('', 'value', '')); },
+    hdrAdd: () => { M.hdrs.push(ent('', 'value', '')); },
+    kvDel: (v) => { const [k, i] = v.split('|'); (k === 'env' ? M.envs : M.hdrs).splice(+i, 1); },
+    srvAdd: () => {
+      M.srvTry = true;
+      if (hasErr(srvErrors(true))) return;
+      const n = M.f.sname.trim();
+      M.servers.push(Object.assign({ id: n, on: true, error: '', tools: [], o: 'needed', account: '' }, formToServer()));
+      M.dlg = null; M.srvTry = false;
+    },
+    doDelSrv: () => { const id = M.dlg.id; M.servers = M.servers.filter((q) => q.id !== id); M.srvOpen.delete(id); M.dlg = null; },
+    srvSignIn: (v) => { const x = M.servers.find((q) => q.id === v); x.o = 'waiting'; later(() => { if (x.o === 'waiting') { x.o = 'in'; x.account = x.id === 'github' ? 'maya@example.com' : ''; x.tools = x.tools.length ? x.tools : [['search_docs', true], ['get_page', true]]; } }, 2500); },
+    srvCancel: (v) => { M.servers.find((q) => q.id === v).o = 'needed'; },
+    srvSignOut: (v) => { M.servers.find((q) => q.id === v).o = 'needed'; },
     sub: (v) => { S.sub = v; M.f.licq = ''; },
     subBack: () => { S.sub = ''; },
     coreMode: (v) => { M.coreMode = v; },
@@ -711,18 +992,24 @@
     else if (ROUTE[a]) ROUTE[a](v, el);
     else if (ACT[a]) ACT[a](v);
     else return;
+    syncEdit();
     writeHash();
     render();
   });
   document.addEventListener('input', (ev) => {
     const k = ev.target.dataset && ev.target.dataset.k;
     if (!k) return;
+    const kv = /^(env|hdr|tok):(\d+):([nvm])$/.exec(k);
+    if (kv) { const en = { env: M.envs, hdr: M.hdrs, tok: M.toks }[kv[1]][+kv[2]]; en[kv[3]] = ev.target.value; if (kv[3] === 'm') en.v = ''; syncEdit(); render(); return; }
     M.f[k] = ev.target.value;
+    if (k === 'tsName' && !tsError()) { M.tl.sets.find((x) => x.id === M.tl.edit).name = M.f.tsName.trim(); }
+    syncEdit();
     // fields that gate a button or message re-render in place
-    if (['token', 'addCode', 'pass1', 'pass2', 'keySecret', 'apiKey', 'pairName', 'hostname', 'licq'].includes(k)) render();
+    if (['token', 'addCode', 'pass1', 'pass2', 'keySecret', 'apiKey', 'pairName', 'hostname', 'licq', 'tsName', 'sname', 'scmd', 'sargs', 'surl', 'scwd', 'stimeout'].includes(k)) render();
   });
   document.addEventListener('change', (ev) => {
     const k = ev.target.dataset && ev.target.dataset.k;
+    if (k === 'mainSet') { M.tl.main = ev.target.value; render(); }
     if (k === 'zone') { M.f.zone = ev.target.value; render(); }
   });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && M.dlg) { ACT.close(); render(); } });
@@ -732,6 +1019,7 @@
   if (H.other === '1') M.other = true;
   if (H.coreMode) M.coreMode = H.coreMode;
   if (H.lic) M.licOpen.add(H.lic);
+  if (H.state) { if (H.size === 'phone') S.size = 'phone'; applyState(H.state); }
   writeHash();
   render();
 })();
