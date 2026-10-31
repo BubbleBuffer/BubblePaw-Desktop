@@ -254,7 +254,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-core"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.6.0#bfaec9beec2a8afa0a5f4b80a867b1eb828dce57"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.7.0#1cf1da3e8c8dbe7cd0799541b221e8dd5a4feccb"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -275,13 +275,15 @@ dependencies = [
 [[package]]
 name = "bubblepaw-mcp"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.6.0#bfaec9beec2a8afa0a5f4b80a867b1eb828dce57"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.7.0#1cf1da3e8c8dbe7cd0799541b221e8dd5a4feccb"
 dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.23.1",
  "bubblepaw-core",
  "bubblepaw-process",
+ "fs2",
+ "rand_core 0.6.4",
  "reqwest",
  "serde",
  "serde_json",
@@ -292,7 +294,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-process"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.6.0#bfaec9beec2a8afa0a5f4b80a867b1eb828dce57"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.7.0#1cf1da3e8c8dbe7cd0799541b221e8dd5a4feccb"
 dependencies = [
  "libc",
  "tokio",
@@ -302,7 +304,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-runner"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.6.0#bfaec9beec2a8afa0a5f4b80a867b1eb828dce57"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.7.0#1cf1da3e8c8dbe7cd0799541b221e8dd5a4feccb"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -339,7 +341,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-sdk"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.6.0#bfaec9beec2a8afa0a5f4b80a867b1eb828dce57"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.7.0#1cf1da3e8c8dbe7cd0799541b221e8dd5a4feccb"
 dependencies = [
  "anyhow",
  "bubblepaw-core",
@@ -428,7 +430,7 @@ checksum = "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
 dependencies = [
  "cfg-if",
  "cpufeatures",
- "rand_core",
+ "rand_core 0.10.1",
 ]
 
 [[package]]
@@ -903,7 +905,7 @@ dependencies = [
  "js-sys",
  "libc",
  "r-efi 6.0.0",
- "rand_core",
+ "rand_core 0.10.1",
  "wasm-bindgen",
 ]
 
@@ -1787,7 +1789,16 @@ checksum = "65c9fb96cbc91e3478eaae79a69fcd3f1ae4ad052e471fe6732fff548984b4af"
 dependencies = [
  "chacha20",
  "getrandom 0.4.3",
- "rand_core",
+ "rand_core 0.10.1",
+]
+
+[[package]]
+name = "rand_core"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
+dependencies = [
+ "getrandom 0.2.17",
 ]
 
 [[package]]
@@ -1802,7 +1813,7 @@ version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "caa0f4137e1c0a72f4c651489402276c8e8e1cf081f3b0ba156d2cbeef09e86a"
 dependencies = [
- "rand_core",
+ "rand_core 0.10.1",
 ]
 
 [[package]]

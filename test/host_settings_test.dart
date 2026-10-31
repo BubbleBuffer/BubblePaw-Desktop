@@ -115,4 +115,66 @@ void main() {
       throwsA(isA<HostSettingsException>()),
     );
   });
+
+  test('tools reads the catalog from tools.list', () async {
+    final transport = _Transport()
+      ..reply = {
+        'tools': [
+          {
+            'name': 'read',
+            'category': 'files',
+            'description': 'Read a file.',
+            'source': 'builtin',
+            'server': null,
+            'read_only': true,
+          },
+          {
+            'name': 'mcp__github__list_issues',
+            'category': 'mcp:github',
+            'description': '',
+            'source': 'mcp',
+            'server': 'github',
+            'read_only': false,
+          },
+          {'category': 'files'},
+        ],
+      };
+    final tools = await TransportHostSettings(transport).tools();
+    expect(transport.calls.single.$1, 'tools.list');
+    expect(transport.calls.single.$2, isEmpty);
+    expect(tools.map((t) => t.name), ['read', 'mcp__github__list_issues']);
+    expect(tools.first.readOnly, isTrue);
+    expect(tools.first.isMcp, isFalse);
+    expect(tools.last.server, 'github');
+    expect(tools.last.isMcp, isTrue);
+  });
+
+  test('skills reads the catalog from skills.list', () async {
+    final transport = _Transport()
+      ..reply = {
+        'enabled': true,
+        'skills': [
+          {
+            'name': 'release-notes',
+            'description': 'Draft release notes.',
+            'source': 'workspace',
+            'path': '/w/.claude/skills/release-notes/SKILL.md',
+            'enabled': false,
+          },
+        ],
+      };
+    final skills = await TransportHostSettings(transport).skills();
+    expect(transport.calls.single.$1, 'skills.list');
+    expect(skills.enabled, isTrue);
+    expect(skills.skills.single.name, 'release-notes');
+    expect(skills.skills.single.enabled, isFalse);
+    expect(skills.skills.single.source, 'workspace');
+  });
+
+  test('a host that lists no tools or skills says so', () async {
+    final transport = _Transport()..reply = {'version': '0.7.0'};
+    final settings = TransportHostSettings(transport);
+    expect(settings.tools(), throwsA(isA<HostSettingsException>()));
+    expect(settings.skills(), throwsA(isA<HostSettingsException>()));
+  });
 }

@@ -8,7 +8,7 @@ mod frb_generated;
 mod host_setup;
 
 /// The Core release this build embeds (the `tag` of `bubblepaw-sdk` in Cargo.toml).
-pub const CORE_VERSION: &str = "0.6.0";
+pub const CORE_VERSION: &str = "0.7.0";
 
 #[cfg(test)]
 mod tests {

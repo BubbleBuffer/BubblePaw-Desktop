@@ -9,7 +9,7 @@ main.dart            flags (--scripted, --hidden, --config-dir), builds the cont
                      and the DesktopIntegration, registers the font licences
 BubblePawApp         WidgetsApp + BbThemeScope (above the navigator; follows the theme preference)
  AppShell            draws HostController's state
-  SettingsShell      General, Models, Feedback, About (+ Licences); lib/src/settings/
+  SettingsShell      General, Models, Tools, Skills, Feedback, About (+ Licences); lib/src/settings/
   Notice             failure, stopped and starting states (Restart, Settings)
   Workbench          AgentWorkbench + DiffReview overlay
   TrayNotice         the one-time "still running in the tray" notice
@@ -112,7 +112,7 @@ cause (a locked store, a bad config).
 
 - **Settings** (`lib/src/settings/`): `SettingsShell` shows a 240 px section list beside
   the page at medium and expanded widths, and the list as the first screen with pushed
-  pages at compact width. There is no Remote access item yet.
+  pages at compact width. There are no MCP servers or Remote access items yet.
   - **General**: theme (System, Light, Dark), Open at login, Start in the tray (on only
     with Open at login), Keep running in the tray when the window is closed. These are
     app preferences in `preferences.json` (`AppPrefs`), beside `config.json`, and apply
@@ -127,6 +127,8 @@ cause (a locked store, a bad config).
     reply shows "Saved as <model>. Applies after restart." and the page keeps showing the model
     the host runs. A refusal shows the error line "Could not make <model> the default." The key is an environment variable the host
     reads, so the app has no Edit key action.
+  - **Tools** (Core v0.7.0, `tools_page.dart`, rules in `toolsets.dart`): the toolsets, the toolset the main chat uses, and the approvals. `tools.list` gives the tools and their categories (`files`, `commands`, `web`, `agents`, `history`, `other`, `mcp:<server>`); the page reads `toolsets`, `agent.toolset` and `approvals` with `config.get`. A toolset is `toolsets.<name>.tools`: the editor saves a fully selected category as `category:<id>` and a partial one as tool names, and keeps entries that match no published tool. `read-only` and `all` are built in and cannot be edited, renamed or deleted; the toolset the main chat uses cannot be deleted. The main chat's choice is `agent.toolset` (live). Approvals are Ask, Allow and Deny per tool or per category: Ask and Allow write `approvals.tools.<tool>`, Deny adds the tool to `approvals.deny` and Ask or Allow takes it out again; a tool with no entry is Allow, an MCP tool Ask (`approvals.confirm`), and a mode the page does not offer (such as `auto`) shows no mark. Each change is one `config.set` per key, then the page reads the settings again. A refusal shows the host's reason; a `restart_required` reply shows "Applies after restart." Child toolsets are not built, so the page does not say a subagent picks one.
+  - **Skills** (Core v0.7.0, `skills_page.dart`): `skills.list` gives each skill's name, description, source (Project for a workspace skill, User for one under `~/.config/bubblepaw/skills`) and the folder it was found in, shown from its `SKILL.md` path. The switch writes `skills.<name>.enabled` and applies at the next turn. With no skills the page names the three folders the host looks in.
   - **About**: Updates (BubblePaw state, Channel Stable or Nightly, "Check automatically",
     Last checked with Review update and Check now), then the versions of the app, agent
     kit, the embedded Core and protocol. Core has no update row: it ships with the app. See
@@ -183,16 +185,18 @@ dark setting, and the form factor is always desktop.
 | `test/guarded_backend_test.dart` | The host-exit detector |
 | `test/config_test.dart` | Config file and app-support paths; old fields ignored on load |
 | `test/host_controller_test.dart` | First run, start failure with the host's text, restart, switching workspace, attach versus embed |
-| `test/host_settings_test.dart` | `config.get` and `config.set` over the kit transport: request shapes, live and restart_required replies, refusals |
+| `test/host_settings_test.dart` | `config.get` and `config.set` over the kit transport: request shapes, live and restart_required replies, refusals, `tools.list` and `skills.list` |
 | `test/ffi_transport_test.dart` | The FFI transport on a fake `NativeHost`: round trip, RPC error mapping, notifications, close, lost session, failed open |
 | `test/native_host_test.dart` | Tag `native`: the transport against the built crate (`session.list` on a temp data dir) |
 | `test/crew_test.dart` | Crew: the ledger lists a running and a finished child, a child's open question shows in the parent and is answered (reaches `answerChildQuestion`), no answer action without the capability; rail: 2000 chats, rows build lazily and the last is reachable |
 | `test/host_controls_test.dart` | Core v0.3.1 on the scripted backend: providers section (list, missing key, Make default through config.set, restart_required, a refusal, no capability), the composer's default-model pick, rail paging, crew Cancel and its heading |
 | `test/workspace_switch_test.dart` | Recent workspaces (order, repeats, cap of 8, JSON), the rail menu, switching restarts the host with the same data directory, Open folder, a cancelled picker |
+| `test/tools_page_test.dart` | The toolset rules (grouping, `category:<id>` entries, kept entries, approvals read from the config) and the Tools page: counts, editing a toolset, rename, new, delete, the main chat's toolset, Ask, Allow and Deny writes, refusals |
+| `test/skills_page_test.dart` | The skill folder shown from a path, the list, the switch writing `skills.<name>.enabled`, the empty state, a refusal, no host |
 | `test/settings_test.dart` | General switches and theme, Models, About (versions, Core row, Updates, Licences search and expand), the tray notice, version constants |
 | `test/semver_test.dart`, `test/download_test.dart`, `test/updates_test.dart`, `test/update_dialog_test.dart` | Versions, the verified download, app updates and the dialog; see [core-and-updates.md](core-and-updates.md) |
 | `test/tray_test.dart` | The tray menu model, icon file choice, and the integration against fake tray, window and login adapters (close-to-tray, quit, waiting count, login entry) |
-| `test/golden_test.dart` | Main screen, General, Models, Feedback (page, sheet, chat attached, saved), About (with updates), the update dialog states, Licences, a failure notice, plan, question, crew (with Cancel) and the context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
+| `test/golden_test.dart` | Main screen, General, Models, Tools (list, editor, a partial category, a built-in toolset), Skills (list, empty), Feedback (page, sheet, chat attached, saved), About (with updates), the update dialog states, Licences, a failure notice, plan, question, crew (with Cancel) and the context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
 | `test/feedback_test.dart`, `test/feedback_ui_test.dart` | Local feedback: redaction, report and chat files, storage, the sheet and the Feedback page (see [feedback.md](feedback.md)) |
 
 Goldens are rendered on Linux with the bundled fonts and the Flutter version CI
