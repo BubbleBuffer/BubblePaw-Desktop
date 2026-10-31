@@ -21,7 +21,7 @@ Version 0.1. The wiki is in [`docs/`](docs/README.md).
 
 - **Chat with a BubblePaw agent.** Chats run in the agent kit's workbench: the session list, the transcript, the composer, approvals, and a diff review for edits.
 - **A host inside the app.** Core is linked into the app as a Rust library (`native/`, on `bubblepaw-sdk`) and reached through flutter_rust_bridge. If a BubblePaw host is already running on the same data directory, the app attaches to it; otherwise it embeds one. Switching workspace starts a new host. A failed or stopped host shows a notice with Restart and Settings.
-- **Settings.** General (theme, start at login, tray), Models (the host's providers and default model; keys are never shown), About (versions, updates and licences), and Feedback.
+- **Settings.** General (theme, start at login, tray), Models (the host's providers and default model; keys are never shown), Tools (toolsets and approvals), Skills (what the host found, with a switch each), About (versions, updates and licences), and Feedback.
 - **Local feedback.** Ctrl+Shift+F opens a sheet that saves a report, a screenshot and redacted diagnostics in a folder on this computer. Nothing is sent anywhere.
 - **Tray and background.** A tray menu with Open BubblePaw, the host's status, the number of chats waiting for you, Restart host and Quit. With "Keep running in the tray" on, closing the window hides it.
 - **App updates.** The Stable and Nightly channels read `update.json` manifests from GitHub Releases, and each download is checked against its SHA-256. Windows updates run the Inno installer. On Linux the app shows where the tarball is.
@@ -39,7 +39,7 @@ flowchart LR
 | --- | --- | --- |
 | `bubblepaw_desktop` | [`lib/`](lib) | The desktop app shell for BubblePaw on the agent kit: the host's lifetime, settings, tray, feedback, updates |
 | `agent_kit` | [`packages/agent_kit`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit) | Flutter widgets for the agent kit: theme, status, transcript, composer, chrome, workspace |
-| `bubblepaw_desktop_native` | [`native/`](native) | Rust crate on `bubblepaw-sdk` (Core `v0.6.0`): open, call, notifications and close, as JSON-RPC text. [`rust_builder/`](rust_builder) is the Cargokit glue that builds it with the app |
+| `bubblepaw_desktop_native` | [`native/`](native) | Rust crate on `bubblepaw-sdk` (Core `v0.7.0`): open, call, notifications and close, as JSON-RPC text. [`rust_builder/`](rust_builder) is the Cargokit glue that builds it with the app |
 | `agent_kit_core` | [`packages/agent_kit_core`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit_core) | Pure Dart agent UI core: view models, the `AgentBackend` port, the event reducer and a scripted fake backend |
 | `agent_kit_bubblepaw` | [`packages/agent_kit_bubblepaw`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit_bubblepaw) | Pure Dart BubblePaw stdio JSON-RPC backend for the agent kit |
 | `bb_ui` | [`packages/bb_ui`](https://github.com/BubbleBuffer/bb-ui/tree/v0.6.0/packages/bb_ui) | BubbleBuffer UI primitives for Flutter without Material |
@@ -50,7 +50,7 @@ You need Flutter **3.47.7** (stable) and a Rust toolchain (stable, installed wit
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on GitHub-hosted `ubuntu-latest` and `windows-latest`. Linux: format, analyze, tests, goldens, the crate's fmt, Clippy and tests, the FFI transport test against the built crate, and a debug build. Windows: the crate's tests, the same FFI test and a debug build.
 
-The embedded Core is `bubblepaw-sdk` at tag `v0.6.0` (`native/Cargo.toml`; `CORE_VERSION` in `native/src/lib.rs` must match, and a test checks it). The Dart bindings in `lib/src/rust/` and `native/src/frb_generated.rs` are generated and committed: after changing `native/src/api/`, run `flutter_rust_bridge_codegen generate` (version 2.13.0, the same as the `flutter_rust_bridge` package).
+The embedded Core is `bubblepaw-sdk` at tag `v0.7.0` (`native/Cargo.toml`; `CORE_VERSION` in `native/src/lib.rs` must match, and a test checks it). The Dart bindings in `lib/src/rust/` and `native/src/frb_generated.rs` are generated and committed: after changing `native/src/api/`, run `flutter_rust_bridge_codegen generate` (version 2.13.0, the same as the `flutter_rust_bridge` package).
 
 ```sh
 flutter pub get

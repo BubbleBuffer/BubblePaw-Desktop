@@ -24,6 +24,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
+import 'tools_samples.dart';
 
 /// A scene: the controller to start and what to do once the app is up.
 typedef Scene = ({
@@ -367,6 +368,61 @@ void main() {
         settings: FakeHostSettings(values: {'model.main': 'demo/scripted'}),
       ).controller(),
       after: (tester) => openSettings(tester, 'models'),
+    ),
+    // Core v0.7.0: Tools lists the toolsets, the main chat's choice and the
+    // approvals; a toolset opens in an editor; Skills lists what the host found.
+    'settings_tools': (
+      controller: () => Played(settings: sampleToolSettings()).controller(),
+      after: (tester) => openSettings(tester, 'tools'),
+    ),
+    'settings_tools_editor': (
+      controller: () => Played(settings: sampleToolSettings()).controller(),
+      after: (tester) async {
+        await openSettings(tester, 'tools');
+        await tester.tap(find.byKey(const ValueKey('toolset-no-web')));
+        await settle(tester);
+      },
+    ),
+    'settings_tools_partial': (
+      controller: () => Played(
+        settings: sampleToolSettings(
+          extra: {
+            'toolsets.no-web.tools': [
+              'category:files',
+              'poll',
+              'wait',
+              'jobs',
+              'category:agents',
+              'category:history',
+              'category:other',
+              'category:mcp:filesystem',
+              'category:mcp:github',
+            ],
+          },
+        ),
+      ).controller(),
+      after: (tester) async {
+        await openSettings(tester, 'tools');
+        await tester.tap(find.byKey(const ValueKey('toolset-no-web')));
+        await settle(tester);
+      },
+    ),
+    'settings_tools_builtin': (
+      controller: () => Played(settings: sampleToolSettings()).controller(),
+      after: (tester) async {
+        await openSettings(tester, 'tools');
+        await tester.tap(find.byKey(const ValueKey('toolset-read-only')));
+        await settle(tester);
+      },
+    ),
+    'settings_skills': (
+      controller: () => Played(settings: sampleToolSettings()).controller(),
+      after: (tester) => openSettings(tester, 'skills'),
+    ),
+    'settings_skills_empty': (
+      controller: () =>
+          Played(settings: sampleToolSettings(skills: false)).controller(),
+      after: (tester) => openSettings(tester, 'skills'),
     ),
     'settings_about': (
       controller: () => HostController(

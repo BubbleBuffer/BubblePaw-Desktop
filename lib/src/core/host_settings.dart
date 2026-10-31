@@ -1,6 +1,7 @@
 // The host's settings, read and written through the host API methods
-// `config.get` and `config.set` (Core v0.6.0), over the same transport the
-// agent kit's backend uses.
+// `config.get` and `config.set` (Core v0.6.0), and its tool and skill
+// catalogs through `tools.list` and `skills.list` (Core v0.7.0), over the
+// same transport the agent kit's backend uses.
 
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 
@@ -36,6 +37,66 @@ class SettingChange {
   final SettingApplied applied;
 }
 
+/// One tool the host publishes, as `tools.list` reports it.
+class HostTool {
+  const HostTool({
+    required this.name,
+    required this.category,
+    this.description = '',
+    this.source = 'builtin',
+    this.server,
+    this.readOnly = false,
+  });
+
+  /// The registered name, such as `read` or `mcp__github__list_issues`.
+  final String name;
+
+  /// `files`, `commands`, `web`, `agents`, `history`, `other` or
+  /// `mcp:<server>`.
+  final String category;
+  final String description;
+
+  /// `builtin` or `mcp`.
+  final String source;
+
+  /// The MCP server that provides the tool; null for a built-in one.
+  final String? server;
+
+  /// Whether the built-in `read-only` toolset includes the tool.
+  final bool readOnly;
+
+  bool get isMcp => source == 'mcp';
+}
+
+/// One skill the host discovered, as `skills.list` reports it.
+class HostSkill {
+  const HostSkill({
+    required this.name,
+    required this.description,
+    required this.source,
+    required this.path,
+    required this.enabled,
+  });
+
+  final String name;
+  final String description;
+
+  /// `workspace` or `user`.
+  final String source;
+
+  /// The skill's `SKILL.md` file.
+  final String path;
+  final bool enabled;
+}
+
+/// The skills catalog: the host's master switch and the skills found.
+class HostSkills {
+  const HostSkills({required this.enabled, required this.skills});
+
+  final bool enabled;
+  final List<HostSkill> skills;
+}
+
 /// A refused or failed settings call. [message] is safe to show.
 class HostSettingsException implements Exception {
   const HostSettingsException(this.message);
@@ -53,6 +114,12 @@ abstract interface class HostSettings {
 
   /// Sets one leaf key; a null [value] removes it from the config file.
   Future<SettingChange> set(String key, Object? value);
+
+  /// Every tool the host publishes (`tools.list`).
+  Future<List<HostTool>> tools();
+
+  /// The skills the host found (`skills.list`).
+  Future<HostSkills> skills();
 }
 
 /// [HostSettings] over a [BubblePawTransport].
@@ -109,5 +176,51 @@ class TransportHostSettings implements HostSettings {
       ),
     };
     return SettingChange(key: key, applied: applied);
+  }
+
+  @override
+  Future<List<HostTool>> tools() async {
+    final result = await _call('tools.list', const {});
+    final list = result['tools'];
+    if (list is! List) {
+      throw const HostSettingsException('This host does not list its tools.');
+    }
+    return [
+      for (final entry in list)
+        if (entry is Map<String, Object?> &&
+            entry['name'] is String &&
+            entry['category'] is String)
+          HostTool(
+            name: entry['name']! as String,
+            category: entry['category']! as String,
+            description: entry['description'] as String? ?? '',
+            source: entry['source'] as String? ?? 'builtin',
+            server: entry['server'] as String?,
+            readOnly: entry['read_only'] == true,
+          ),
+    ];
+  }
+
+  @override
+  Future<HostSkills> skills() async {
+    final result = await _call('skills.list', const {});
+    final list = result['skills'];
+    if (list is! List) {
+      throw const HostSettingsException('This host does not list its skills.');
+    }
+    return HostSkills(
+      enabled: result['enabled'] != false,
+      skills: [
+        for (final entry in list)
+          if (entry is Map<String, Object?> && entry['name'] is String)
+            HostSkill(
+              name: entry['name']! as String,
+              description: entry['description'] as String? ?? '',
+              source: entry['source'] as String? ?? 'workspace',
+              path: entry['path'] as String? ?? '',
+              enabled: entry['enabled'] != false,
+            ),
+      ],
+    );
   }
 }

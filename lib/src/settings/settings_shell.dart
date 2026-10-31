@@ -1,4 +1,5 @@
-// Settings: General, Models, Feedback and About. At expanded and medium width a
+// Settings: General, Models, Tools, Skills, Feedback and About. At expanded and
+// medium width a
 // section list sits on the left and the page beside it; at compact width the
 // list is the first screen and a section is pushed over it.
 // Remote access joins the list with the remote work.
@@ -20,6 +21,8 @@ import 'licences_page.dart';
 import 'models_page.dart';
 import 'settings_section.dart';
 import 'settings_widgets.dart';
+import 'skills_page.dart';
+import 'tools_page.dart';
 
 class SettingsShell extends StatefulWidget {
   const SettingsShell({
@@ -80,6 +83,8 @@ class _SettingsShellState extends State<SettingsShell> {
   String _summary(SettingsSection section) => switch (section) {
     SettingsSection.general => themeSummary(widget.controller.prefs.theme),
     SettingsSection.models => 'Default model and providers',
+    SettingsSection.tools => 'Toolsets and approvals',
+    SettingsSection.skills => 'Discovered skills',
     SettingsSection.feedback => switch (widget.feedback.reports.length) {
       0 => 'No reports saved',
       1 => '1 report saved',
@@ -91,6 +96,8 @@ class _SettingsShellState extends State<SettingsShell> {
   LucideGlyph _glyph(SettingsSection section) => switch (section) {
     SettingsSection.general => glyphSliders,
     SettingsSection.models => glyphLayers,
+    SettingsSection.tools => glyphWrench,
+    SettingsSection.skills => glyphBookOpen,
     SettingsSection.feedback => glyphMessageSquareText,
     SettingsSection.about => glyphInfo,
   };
@@ -106,6 +113,16 @@ class _SettingsShellState extends State<SettingsShell> {
       SettingsSection.models => ModelsPage(
         key: const ValueKey('page-models'),
         backend: host.phase == HostPhase.running ? host.backend : null,
+        settings: host.phase == HostPhase.running ? host.settings : null,
+        onBack: onBack,
+      ),
+      SettingsSection.tools => ToolsPage(
+        key: const ValueKey('page-tools'),
+        settings: host.phase == HostPhase.running ? host.settings : null,
+        onBack: onBack,
+      ),
+      SettingsSection.skills => SkillsPage(
+        key: const ValueKey('page-skills'),
         settings: host.phase == HostPhase.running ? host.settings : null,
         onBack: onBack,
       ),

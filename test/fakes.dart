@@ -95,7 +95,16 @@ class FakeHostSettings implements HostSettings {
     Map<String, Object?>? values,
     this.restartOnly = const {},
     this.failWith,
+    this.toolList = const [],
+    this.skillList = const [],
   }) : values = {...?values};
+
+  /// What `tools.list` reports.
+  final List<HostTool> toolList;
+
+  /// What `skills.list` reports; a skill's switch is its
+  /// `skills.<name>.enabled` value when one is set.
+  final List<HostSkill> skillList;
 
   final Map<String, Object?> values;
 
@@ -126,7 +135,31 @@ class FakeHostSettings implements HostSettings {
     if (restartOnly.contains(key)) {
       return SettingChange(key: key, applied: SettingApplied.restartRequired);
     }
-    values[key] = value;
+    if (value == null) {
+      values.remove(key);
+    } else {
+      values[key] = value;
+    }
     return SettingChange(key: key, applied: SettingApplied.live);
   }
+
+  @override
+  Future<List<HostTool>> tools() async => toolList;
+
+  @override
+  Future<HostSkills> skills() async => HostSkills(
+    enabled: true,
+    skills: [
+      for (final skill in skillList)
+        HostSkill(
+          name: skill.name,
+          description: skill.description,
+          source: skill.source,
+          path: skill.path,
+          enabled: values['skills.${skill.name}.enabled'] is bool
+              ? values['skills.${skill.name}.enabled']! as bool
+              : skill.enabled,
+        ),
+    ],
+  );
 }

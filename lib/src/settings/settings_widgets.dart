@@ -476,3 +476,20 @@ class GroupCard extends StatelessWidget {
     );
   }
 }
+
+// Glyphs for the Tools and Skills pages.
+const LucideGlyph glyphWrench = (
+  LucideIcons.wrench300,
+  LucideIcons.wrench,
+  LucideIcons.wrench500,
+);
+const LucideGlyph glyphBookOpen = (
+  LucideIcons.bookOpen300,
+  LucideIcons.bookOpen,
+  LucideIcons.bookOpen500,
+);
+const LucideGlyph glyphMinus = (
+  LucideIcons.minus300,
+  LucideIcons.minus,
+  LucideIcons.minus500,
+);
