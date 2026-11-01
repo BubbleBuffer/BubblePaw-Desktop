@@ -106,7 +106,7 @@ pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
 }
 
-/// The Core release this build embeds, such as `0.7.2`.
+/// The Core release this build embeds, such as `0.7.3`.
 #[frb(sync)]
 pub fn core_version() -> String {
     crate::CORE_VERSION.to_owned()

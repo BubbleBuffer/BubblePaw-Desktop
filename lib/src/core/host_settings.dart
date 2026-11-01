@@ -2,7 +2,7 @@
 // `config.get` and `config.set` (Core v0.6.0), and its tool and skill
 // catalogs through `tools.list` and `skills.list` (Core v0.7.0), and its MCP
 // servers through `mcp.servers.list`, `mcp.auth.*` and `mcp.headers.set` (Core
-// v0.7.2), over the same transport the agent kit's backend uses.
+// v0.7.3), over the same transport the agent kit's backend uses.
 
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 
@@ -200,13 +200,18 @@ class McpServerStatus {
 
 /// A refused or failed settings call. [message] is safe to show.
 class HostSettingsException implements Exception {
-  const HostSettingsException(this.message, {this.code});
+  const HostSettingsException(this.message, {this.code, this.key});
 
   final String message;
 
   /// The host's refusal code (`-32010` unknown key, `-32011` wrong type,
   /// `-32012` invalid value, `-32013` write failed); null for other failures.
   final int? code;
+
+  /// The full dotted config key the refusal is about, when the host names one
+  /// (`data.key` of the typed error, such as `mcp.servers.docs.url`); null when
+  /// no single key is to blame.
+  final String? key;
 
   @override
   String toString() => 'HostSettingsException: $message';
@@ -267,6 +272,10 @@ class TransportHostSettings implements HostSettings {
       throw HostSettingsException(
         error.rpcMessage ?? error.message,
         code: error.rpcCode,
+        key: switch (error.rpcData) {
+          {'key': final String key} => key,
+          _ => null,
+        },
       );
     }
     if (result is! Map<String, Object?>) {

@@ -758,12 +758,54 @@ class McpApplyResult {
   bool get ok => message == null;
 }
 
-/// Runs [ops] against [settings] for [server], in order, until one fails.
+/// The form field a refusal about the config [key] belongs to, for server
+/// [server]: the key's leaf under the entry, mapped onto the field the owner
+/// edits. [fallback] (the op's own field) when the key is missing, is not under
+/// this server, or is a leaf the form has no field for. [form] decides between
+/// the token and the headers for `headers_from`, which holds both.
+String mcpFieldForKey(
+  String? key,
+  String server,
+  String fallback, {
+  McpServerForm? form,
+}) {
+  final prefix = 'mcp.servers.$server.';
+  if (key == null || !key.startsWith(prefix)) return fallback;
+  switch (key.substring(prefix.length).split('.').first) {
+    case 'command':
+      return 'command';
+    case 'args':
+      return 'args';
+    case 'cwd':
+      return 'cwd';
+    case 'url':
+      return 'url';
+    case 'call_timeout_secs':
+      return 'timeout';
+    case 'env' || 'env_from':
+      return 'env';
+    case 'headers_from':
+      final tokenFromEnv =
+          form != null &&
+          form.auth == McpAuth.token &&
+          form.token.source == EntrySource.env;
+      final headerFromEnv =
+          form != null &&
+          form.headers.any((e) => e.source == EntrySource.env && !e.blank);
+      return tokenFromEnv && !headerFromEnv ? 'token' : 'headers';
+  }
+  return fallback;
+}
+
+/// Runs [ops] against [settings] for [server], in order, until one fails. A
+/// refusal the host ties to one key lands on that key's form field (see
+/// [mcpFieldForKey]); [form] is the form the ops were planned from.
 Future<McpApplyResult> applyOps(
   HostSettings settings,
   String server,
-  List<McpOp> ops,
-) async {
+  List<McpOp> ops, {
+  McpServerForm? form,
+}) async {
   var restart = false;
   for (final op in ops) {
     try {
@@ -775,7 +817,9 @@ Future<McpApplyResult> applyOps(
       }
     } on HostSettingsException catch (error) {
       return McpApplyResult(
-        field: op.field,
+        field: op.header
+            ? op.field
+            : mcpFieldForKey(error.key, server, op.field, form: form),
         message: error.message,
         restart: restart,
       );

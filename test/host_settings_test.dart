@@ -267,6 +267,35 @@ void main() {
     expect(seen.single.removed, isTrue);
   });
 
+  test(
+    'a typed refusal keeps the key its data names, and only a string',
+    () async {
+      Future<String?> keyOf(Object? data) async {
+        final transport = _Transport()
+          ..error = BubblePawException(
+            'rpcError',
+            'The BubblePaw host rejected the request.',
+            rpcCode: -32012,
+            rpcMessage: 'url must be a valid HTTP endpoint',
+            rpcData: data,
+          );
+        try {
+          await TransportHostSettings(transport)
+              .set('mcp.servers.x', {'url': ''});
+        } on HostSettingsException catch (e) {
+          return e.key;
+        }
+        return 'no refusal';
+      }
+
+      expect(await keyOf({'key': 'mcp.servers.x.url'}), 'mcp.servers.x.url');
+      expect(await keyOf(null), isNull);
+      expect(await keyOf({'other': 1}), isNull);
+      expect(await keyOf({'key': 7}), isNull);
+      expect(await keyOf('text'), isNull);
+    },
+  );
+
   test('a typed host refusal keeps its message and code', () async {
     final transport = _Transport()
       ..error = const BubblePawException(
