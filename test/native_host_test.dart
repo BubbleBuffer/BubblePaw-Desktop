@@ -187,7 +187,15 @@ void main() {
     final settings = TransportHostSettings(transport);
 
     await settings.set('toolsets.no-web.tools', ['category:files', 'exec']);
-    await settings.set('agent.toolset', 'no-web');
+    final seen = await settings.get('toolsets');
+    try {
+      await settings.set('agent.toolset', 'no-web');
+    } on HostSettingsException catch (e) {
+      fail(
+        '${e.message}; toolsets read back: '
+        '${seen.map((x) => '${x.key}=${x.value}').toList()}',
+      );
+    }
     await settings.set('approvals.tools.edit', 'allow');
     await settings.set('approvals.deny', ['exec']);
 
@@ -223,7 +231,8 @@ void main() {
         args: '-y "a b"',
         timeout: '30',
       );
-      expect((await applyOps(settings, 'files', planAdd(files))).ok, isTrue);
+      final filesResult = await applyOps(settings, 'files', planAdd(files));
+      expect(filesResult.message, isNull, reason: '${filesResult.field}');
 
       final wiki = McpServerForm(
         name: 'wiki',
@@ -231,7 +240,8 @@ void main() {
         url: 'http://127.0.0.1:9/mcp',
         headers: [McpEntry(name: 'X-Org', value: 'garden')],
       );
-      expect((await applyOps(settings, 'wiki', planAdd(wiki))).ok, isTrue);
+      final wikiResult = await applyOps(settings, 'wiki', planAdd(wiki));
+      expect(wikiResult.message, isNull, reason: '${wikiResult.field}');
 
       final parsed = McpServerConfig.parse(await settings.get('mcp.servers'));
       expect(parsed.keys, containsAll(['files', 'wiki']));
