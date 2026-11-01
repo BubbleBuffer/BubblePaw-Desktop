@@ -506,14 +506,18 @@ String tokenHeaderValue(String token) {
   return t.contains(RegExp(r'\s')) ? t : 'Bearer $t';
 }
 
-/// The settings of a new server, in the order they are written. The server
-/// starts disabled so it is not started half-configured, and is enabled once
-/// every setting is in; its stored headers follow.
+/// The settings of a new server, in the order they are written. Core refuses
+/// an entry with neither a command nor a URL, so that is written first; the
+/// server is then switched off so it is not restarted for each remaining
+/// setting, and switched on once every setting is in. Its stored headers
+/// follow.
 List<McpOp> planAdd(McpServerForm form) {
   final p = 'mcp.servers.${form.name.trim()}';
+  final leaves = _kindLeaves(p, form, null);
   return [
+    leaves.first,
     McpOp.config('$p.enabled', false, 'general'),
-    ..._kindLeaves(p, form, null),
+    ...leaves.skip(1),
     ..._timeout(p, form, null),
     McpOp.config('$p.enabled', true, 'general'),
     ..._headerSets(form, null),
@@ -531,41 +535,27 @@ List<McpOp> planEdit({
 }) {
   final p = 'mcp.servers.$name';
   final changedKind = before.kind != after.kind;
-  final ops = <McpOp>[];
-  final off = changedKind && wasEnabled != false;
-  if (off) ops.add(McpOp.config('$p.enabled', false, 'general'));
   if (changedKind) {
-    ops.addAll(_removeKind(p, before));
-    ops.addAll(_headerRemovals(before, null));
-    ops.addAll(_kindLeaves(p, after, null));
-  } else {
-    ops.addAll(_headerRemovals(before, after));
-    ops.addAll(_kindLeaves(p, after, before));
+    // Core needs exactly one of command and url at every write, so a leaf
+    // cannot swap one for the other: the server is removed and written again
+    // (its stored headers and sign-in go with it).
+    final add = planAdd(after.copy()..name = name);
+    return [
+      McpOp.config(p, null, 'general'),
+      for (final op in add)
+        if (!(wasEnabled == false &&
+            op.key == '$p.enabled' &&
+            op.value == true))
+          op,
+    ];
   }
-  ops.addAll(_timeout(p, after, before));
-  if (off) {
-    ops.add(
-      McpOp.config('$p.enabled', wasEnabled == null ? null : true, 'general'),
-    );
-  }
-  ops.addAll(_headerSets(after, changedKind ? null : before));
-  return ops;
+  return [
+    ..._headerRemovals(before, after),
+    ..._kindLeaves(p, after, before),
+    ..._timeout(p, after, before),
+    ..._headerSets(after, before),
+  ];
 }
-
-List<McpOp> _removeKind(String p, McpServerForm before) =>
-    before.kind == McpKind.command
-    ? [
-        McpOp.config('$p.command', null, 'command'),
-        McpOp.config('$p.args', null, 'args'),
-        McpOp.config('$p.cwd', null, 'cwd'),
-        McpOp.config('$p.env', null, 'general'),
-        McpOp.config('$p.env_from', null, 'general'),
-      ]
-    : [
-        McpOp.config('$p.url', null, 'url'),
-        McpOp.config('$p.oauth', null, 'general'),
-        McpOp.config('$p.headers_from', null, 'general'),
-      ];
 
 /// The leaves of the form's kind. With [before] only what changed is written.
 List<McpOp> _kindLeaves(String p, McpServerForm f, McpServerForm? before) {

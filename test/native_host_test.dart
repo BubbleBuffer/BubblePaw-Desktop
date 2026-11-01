@@ -209,7 +209,9 @@ void main() {
     final narrow = ToolsConfig.parse(await settings.get('toolsets'));
     expect(narrow.toolsets['no-web'], ['category:files', 'exec']);
 
-    // Removing a toolset removes its entry.
+    // Removing a toolset removes its entry; Core refuses it while the main
+    // chat uses it.
+    await settings.set('agent.toolset', 'all');
     await settings.set('toolsets.no-web', null);
     final after = ToolsConfig.parse(await settings.get());
     expect(after.toolsets.containsKey('no-web'), isFalse);

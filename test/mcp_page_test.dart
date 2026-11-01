@@ -261,8 +261,8 @@ void main() {
       await _type(tester, 'env-0-value', 'info');
       await _tap(tester, 'srv-save');
       expect(_written(settings), [
-        'mcp.servers.files.enabled=false',
         'mcp.servers.files.command="npx"',
+        'mcp.servers.files.enabled=false',
         'mcp.servers.files.args=["-y","pkg"]',
         'mcp.servers.files.env={"LOG":"info"}',
         'mcp.servers.files.enabled=true',
@@ -283,8 +283,8 @@ void main() {
       await _type(tester, 'hdr-0-value', 'garden');
       await _tap(tester, 'srv-save');
       expect(_written(settings), [
-        'mcp.servers.wiki.enabled=false',
         'mcp.servers.wiki.url="https://mcp.example.com/wiki"',
+        'mcp.servers.wiki.enabled=false',
         'mcp.servers.wiki.oauth=true',
         'mcp.servers.wiki.enabled=true',
       ]);
@@ -305,7 +305,7 @@ void main() {
       await _type(tester, 'srv-command', 'npx');
       await _tap(tester, 'srv-save');
       expect(
-        find.text('Could not save. mcp.servers.files.command: not allowed'),
+        find.text('mcp.servers.files.command: not allowed'),
         findsOneWidget,
       );
       expect(_written(settings).last, 'mcp.servers.files=null');

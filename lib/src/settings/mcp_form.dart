@@ -416,7 +416,9 @@ class _McpServerDialogState extends State<McpServerDialog> {
     return [
       _Labeled(
         label: 'Command',
-        error: errors.command,
+        error: errors.command.isNotEmpty
+            ? errors.command
+            : _refused['command'] ?? '',
         child: _TextBox(
           controller: _command,
           fieldKey: const ValueKey('srv-command'),

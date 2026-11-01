@@ -252,7 +252,7 @@ void main() {
   });
 
   group('adding a server', () {
-    test('a command server: off, its settings, on', () {
+    test('a command server: command, off, its settings, on', () {
       final form = McpServerForm(
         name: 'files',
         command: ' npx ',
@@ -265,8 +265,8 @@ void main() {
         timeout: '90',
       );
       expect(_ops(planAdd(form)), [
-        'mcp.servers.files.enabled=false',
         'mcp.servers.files.command=npx',
+        'mcp.servers.files.enabled=false',
         'mcp.servers.files.args=[-y, a b]',
         'mcp.servers.files.cwd=/work',
         'mcp.servers.files.env={LOG: info}',
@@ -279,16 +279,16 @@ void main() {
     test('settings left at their defaults are not written', () {
       final form = McpServerForm(name: 'files', command: 'npx');
       expect(_ops(planAdd(form)), [
-        'mcp.servers.files.enabled=false',
         'mcp.servers.files.command=npx',
+        'mcp.servers.files.enabled=false',
         'mcp.servers.files.enabled=true',
       ]);
     });
 
     test('an OAuth server writes oauth, never a header', () {
       expect(_ops(planAdd(_urlForm(auth: McpAuth.oauth))), [
-        'mcp.servers.docs.enabled=false',
         'mcp.servers.docs.url=https://mcp.example.com/docs',
+        'mcp.servers.docs.enabled=false',
         'mcp.servers.docs.oauth=true',
         'mcp.servers.docs.enabled=true',
       ]);
@@ -308,8 +308,8 @@ void main() {
         ],
       );
       expect(_ops(planAdd(form)), [
-        'mcp.servers.docs.enabled=false',
         'mcp.servers.docs.url=https://mcp.example.com/docs',
+        'mcp.servers.docs.enabled=false',
         'mcp.servers.docs.headers_from={X-Team: TEAM_TOKEN}',
         'mcp.servers.docs.enabled=true',
         'header X-Org=garden',
@@ -421,7 +421,7 @@ void main() {
       ]);
     });
 
-    test('changing the type turns the server off while it is rewritten', () {
+    test('changing the type removes the server and writes it again', () {
       final before = McpServerForm.from(_config('filesystem'), null);
       final after = McpServerForm(
         name: 'filesystem',
@@ -430,14 +430,11 @@ void main() {
         timeout: '60',
       );
       expect(_ops(planEdit(name: 'filesystem', before: before, after: after)), [
-        'mcp.servers.filesystem.enabled=false',
-        'mcp.servers.filesystem.command=null',
-        'mcp.servers.filesystem.args=null',
-        'mcp.servers.filesystem.cwd=null',
-        'mcp.servers.filesystem.env=null',
-        'mcp.servers.filesystem.env_from=null',
+        'mcp.servers.filesystem=null',
         'mcp.servers.filesystem.url=http://127.0.0.1:8080/mcp',
-        'mcp.servers.filesystem.enabled=null',
+        'mcp.servers.filesystem.enabled=false',
+        'mcp.servers.filesystem.call_timeout_secs=60',
+        'mcp.servers.filesystem.enabled=true',
       ]);
     });
 
@@ -456,7 +453,8 @@ void main() {
           wasEnabled: false,
         ),
       );
-      expect(ops.where((o) => o.contains('.enabled')), isEmpty);
+      expect(ops.first, 'mcp.servers.sqlite=null');
+      expect(ops.where((o) => o.endsWith('.enabled=true')), isEmpty);
     });
   });
 
