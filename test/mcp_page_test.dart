@@ -317,7 +317,7 @@ void main() {
       await _type(tester, 'srv-command', 'npx');
       await _tap(tester, 'srv-save');
       expect(
-        find.text('mcp.servers.files.command: not allowed'),
+        find.text('Could not save. mcp.servers.files.command: not allowed'),
         findsOneWidget,
       );
       expect(_written(settings).last, 'mcp.servers.files=null');
