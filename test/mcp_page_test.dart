@@ -247,9 +247,7 @@ void main() {
       expect(find.text('A server named github already exists.'), findsOne);
     });
 
-    testWidgets('writes a command server, off until it is complete', (
-      tester,
-    ) async {
+    testWidgets('writes a command server as one whole entry', (tester) async {
       final settings = sampleMcpSettings();
       await _openMcp(tester, settings);
       await _tap(tester, 'add-server');
@@ -261,16 +259,15 @@ void main() {
       await _type(tester, 'env-0-value', 'info');
       await _tap(tester, 'srv-save');
       expect(_written(settings), [
-        'mcp.servers.files.command="npx"',
-        'mcp.servers.files.enabled=false',
-        'mcp.servers.files.args=["-y","pkg"]',
-        'mcp.servers.files.env={"LOG":"info"}',
-        'mcp.servers.files.enabled=true',
+        'mcp.servers.files='
+            '{"command":"npx","args":["-y","pkg"],"env":{"LOG":"info"}}',
       ]);
       expect(find.byKey(const ValueKey('srv-save')), findsNothing);
     });
 
-    testWidgets('writes a URL server with a stored header', (tester) async {
+    testWidgets('writes a URL server off, stores its header, then enables', (
+      tester,
+    ) async {
       final settings = sampleMcpSettings();
       await _openMcp(tester, settings);
       await _tap(tester, 'add-server');
@@ -283,12 +280,25 @@ void main() {
       await _type(tester, 'hdr-0-value', 'garden');
       await _tap(tester, 'srv-save');
       expect(_written(settings), [
-        'mcp.servers.wiki.url="https://mcp.example.com/wiki"',
-        'mcp.servers.wiki.enabled=false',
-        'mcp.servers.wiki.oauth=true',
+        'mcp.servers.wiki={"enabled":false,'
+            '"url":"https://mcp.example.com/wiki","oauth":true}',
         'mcp.servers.wiki.enabled=true',
       ]);
       expect(settings.mcpCalls, ['header:wiki:X-Org=garden']);
+    });
+
+    testWidgets('a URL server without headers is one write', (tester) async {
+      final settings = sampleMcpSettings();
+      await _openMcp(tester, settings);
+      await _tap(tester, 'add-server');
+      await _tap(tester, 'srv-kind-url');
+      await _type(tester, 'srv-name', 'wiki');
+      await _type(tester, 'srv-url', 'https://mcp.example.com/wiki');
+      await _tap(tester, 'srv-save');
+      expect(_written(settings), [
+        'mcp.servers.wiki={"url":"https://mcp.example.com/wiki"}',
+      ]);
+      expect(settings.mcpCalls, isEmpty);
     });
 
     testWidgets('a refusal shows the host reason and removes the leftovers', (
@@ -305,7 +315,7 @@ void main() {
       await _type(tester, 'srv-command', 'npx');
       await _tap(tester, 'srv-save');
       expect(
-        find.text('mcp.servers.files.command: not allowed'),
+        find.text('Could not save. mcp.servers.files.command: not allowed'),
         findsOneWidget,
       );
       expect(_written(settings).last, 'mcp.servers.files=null');
@@ -355,13 +365,37 @@ void main() {
       expect(find.byKey(const ValueKey('srv-save')), findsNothing);
     });
 
-    testWidgets('Done writes only what changed', (tester) async {
+    testWidgets('Done writes the whole entry once, keeping other keys', (
+      tester,
+    ) async {
       final settings = sampleMcpSettings();
       await _openMcp(tester, settings);
       await _tap(tester, 'server-edit-filesystem');
       await _type(tester, 'srv-command', 'bunx');
       await _tap(tester, 'srv-save');
-      expect(_written(settings), ['mcp.servers.filesystem.command="bunx"']);
+      expect(_written(settings), [
+        'mcp.servers.filesystem={"exclude_tools":["edit_file"],'
+            '"command":"bunx",'
+            '"args":["-y","@modelcontextprotocol/server-filesystem",'
+            '"/home/maya/projects/garden-api"],'
+            '"cwd":"/home/maya/projects/garden-api",'
+            '"env":{"LOG_LEVEL":"info"},'
+            '"env_from":{"API_TOKEN":"GARDEN_TOKEN"},'
+            '"call_timeout_secs":60}',
+      ]);
+    });
+
+    testWidgets('changing the type is one write and no delete', (tester) async {
+      final settings = sampleMcpSettings();
+      await _openMcp(tester, settings);
+      await _tap(tester, 'server-edit-filesystem');
+      await _tap(tester, 'srv-kind-url');
+      await _type(tester, 'srv-url', 'http://127.0.0.1:8080/mcp');
+      await _tap(tester, 'srv-save');
+      expect(_written(settings), [
+        'mcp.servers.filesystem={"exclude_tools":["edit_file"],'
+            '"url":"http://127.0.0.1:8080/mcp","call_timeout_secs":60}',
+      ]);
     });
 
     testWidgets('a bad value is refused and nothing is written', (

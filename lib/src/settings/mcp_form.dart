@@ -187,7 +187,7 @@ class _McpServerDialogState extends State<McpServerDialog> {
             name: _serverName,
             before: _before,
             after: _form,
-            wasEnabled: widget.config!.enabled,
+            raw: widget.config!.raw,
           )
         : planAdd(_form);
     if (ops.isEmpty) {
