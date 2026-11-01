@@ -8,6 +8,8 @@
 // (`mcp.headers.set`), a value read from an environment variable is a name in
 // `headers_from` (HTTP) or `env_from` (command).
 
+import 'dart:convert';
+
 import '../core/host_settings.dart';
 
 /// How the host reaches a server.
@@ -71,6 +73,7 @@ class McpServerConfig {
     this.enabled,
     this.include,
     this.exclude = const [],
+    this.raw = const {},
   });
 
   final String name;
@@ -92,6 +95,10 @@ class McpServerConfig {
 
   /// `exclude_tools`.
   final List<String> exclude;
+
+  /// Every key of the entry as the config holds it, so a whole-entry write
+  /// keeps the ones the form does not edit (`approval`, `startup_timeout_secs`...).
+  final Map<String, Object?> raw;
 
   McpKind get kind => url.isNotEmpty ? McpKind.url : McpKind.command;
 
@@ -169,6 +176,7 @@ class McpServerConfig {
               : null,
           include: list(e.value['include_tools']),
           exclude: list(e.value['exclude_tools']) ?? const [],
+          raw: e.value,
         ),
     };
   }
@@ -506,122 +514,96 @@ String tokenHeaderValue(String token) {
   return t.contains(RegExp(r'\s')) ? t : 'Bearer $t';
 }
 
-/// The settings of a new server, in the order they are written. Core refuses
-/// an entry with neither a command nor a URL, so that is written first; the
-/// server is then switched off so it is not restarted for each remaining
-/// setting, and switched on once every setting is in. Its stored headers
-/// follow.
+/// The config keys the form edits. A whole-entry write rebuilds these from
+/// the form and keeps every other key of the entry as it was.
+const _formKeys = {
+  'command',
+  'args',
+  'cwd',
+  'env',
+  'env_from',
+  'url',
+  'oauth',
+  'headers_from',
+  'call_timeout_secs',
+};
+
+/// The whole `mcp.servers.<name>` entry the form describes, on top of [raw]
+/// (the entry as the config holds it). Core validates it complete, so one
+/// `config.set` replaces the entry and a server never exists half-written.
+/// [enabled] sets the `enabled` key when given.
+Map<String, Object?> mcpEntry(
+  McpServerForm f, {
+  Map<String, Object?> raw = const {},
+  bool? enabled,
+}) {
+  final entry = <String, Object?>{
+    for (final e in raw.entries)
+      if (!_formKeys.contains(e.key)) e.key: e.value,
+  };
+  if (enabled != null) entry['enabled'] = enabled;
+  if (f.kind == McpKind.command) {
+    entry['command'] = f.command.trim();
+    final args = splitArgs(f.args);
+    if (args.isNotEmpty) entry['args'] = args;
+    if (f.cwd.trim().isNotEmpty) entry['cwd'] = f.cwd.trim();
+    final (env, envFrom) = _kindLeavesEnv(f);
+    if (env != null) entry['env'] = env;
+    if (envFrom != null) entry['env_from'] = envFrom;
+  } else {
+    entry['url'] = f.url.trim();
+    if (f.auth == McpAuth.oauth) entry['oauth'] = true;
+    final from = _headersFrom(f);
+    if (from != null) entry['headers_from'] = from;
+  }
+  final timeout = int.tryParse(f.timeout.trim());
+  final kept = raw['call_timeout_secs'];
+  if (timeout == null) {
+    if (kept != null) entry['call_timeout_secs'] = kept;
+  } else if (timeout != defaultCallTimeout) {
+    entry['call_timeout_secs'] = timeout;
+  }
+  return entry;
+}
+
+/// The calls that add a new server: one write of the whole entry, then its
+/// stored headers. With headers to store the entry is written switched off and
+/// switched on after them, so the server does not start without its headers.
 List<McpOp> planAdd(McpServerForm form) {
   final p = 'mcp.servers.${form.name.trim()}';
-  final leaves = _kindLeaves(p, form, null);
+  final headers = _headerSets(form, null);
   return [
-    leaves.first,
-    McpOp.config('$p.enabled', false, 'general'),
-    ...leaves.skip(1),
-    ..._timeout(p, form, null),
-    McpOp.config('$p.enabled', true, 'general'),
-    ..._headerSets(form, null),
+    McpOp.config(
+      p,
+      mcpEntry(form, enabled: headers.isEmpty ? null : false),
+      'general',
+    ),
+    ...headers,
+    if (headers.isNotEmpty) McpOp.config('$p.enabled', true, 'general'),
   ];
 }
 
 /// The calls that turn [before] into [after] on server [name] (the form read
-/// from the config, and what the owner left). [wasEnabled] is the server's
-/// `enabled` leaf as the config has it.
+/// from the config, and what the owner left). [raw] is the entry as the config
+/// holds it: the keys the form does not edit, `enabled` among them, are kept.
+/// A change of type needs no extra step: the entry is replaced whole and its
+/// stored headers stay (unused on a command server).
 List<McpOp> planEdit({
   required String name,
   required McpServerForm before,
   required McpServerForm after,
-  bool? wasEnabled,
+  Map<String, Object?> raw = const {},
 }) {
   final p = 'mcp.servers.$name';
-  final changedKind = before.kind != after.kind;
-  if (changedKind) {
-    // Core needs exactly one of command and url at every write, so a leaf
-    // cannot swap one for the other: the server is removed and written again
-    // (its stored headers and sign-in go with it).
-    final add = planAdd(after.copy()..name = name);
-    return [
-      McpOp.config(p, null, 'general'),
-      for (final op in add)
-        if (!(wasEnabled == false &&
-            op.key == '$p.enabled' &&
-            op.value == true))
-          op,
-    ];
-  }
+  final entry = mcpEntry(after, raw: raw);
+  final changed = jsonEncode(entry) != jsonEncode(mcpEntry(before, raw: raw));
+  final url = after.kind == McpKind.url;
+  // Removals come first, while the server is still the one that holds them.
   return [
-    ..._headerRemovals(before, after),
-    ..._kindLeaves(p, after, before),
-    ..._timeout(p, after, before),
+    if (url) ..._headerRemovals(before, after),
+    if (changed) McpOp.config(p, entry, 'general'),
     ..._headerSets(after, before),
   ];
-}
-
-/// The leaves of the form's kind. With [before] only what changed is written.
-List<McpOp> _kindLeaves(String p, McpServerForm f, McpServerForm? before) {
-  final ops = <McpOp>[];
-  bool changed(Object? a, Object? b) => before == null || a != b;
-  if (f.kind == McpKind.command) {
-    if (changed(f.command.trim(), before?.command.trim())) {
-      ops.add(McpOp.config('$p.command', f.command.trim(), 'command'));
-    }
-    final args = splitArgs(f.args);
-    if (changed(
-          args.join('\u0000'),
-          before == null ? null : splitArgs(before.args).join('\u0000'),
-        ) &&
-        (before != null || args.isNotEmpty)) {
-      ops.add(McpOp.config('$p.args', args.isEmpty ? null : args, 'args'));
-    }
-    if (changed(f.cwd.trim(), before?.cwd.trim()) &&
-        (before != null || f.cwd.trim().isNotEmpty)) {
-      ops.add(
-        McpOp.config(
-          '$p.cwd',
-          f.cwd.trim().isEmpty ? null : f.cwd.trim(),
-          'cwd',
-        ),
-      );
-    }
-    final env = _table([
-      for (final e in f.env)
-        if (e.source == EntrySource.value && !e.blank)
-          MapEntry(e.name.trim(), e.value.trim()),
-    ]);
-    final envFrom = _table([
-      for (final e in f.env)
-        if (e.source == EntrySource.env && !e.blank)
-          MapEntry(e.name.trim(), e.value.trim()),
-    ]);
-    final beforeEnv = before == null ? null : _kindLeavesEnv(before);
-    if (before == null ? env != null : '$env' != '${beforeEnv!.$1}') {
-      ops.add(McpOp.config('$p.env', env, 'general'));
-    }
-    if (before == null ? envFrom != null : '$envFrom' != '${beforeEnv!.$2}') {
-      ops.add(McpOp.config('$p.env_from', envFrom, 'general'));
-    }
-  } else {
-    if (changed(f.url.trim(), before?.url.trim())) {
-      ops.add(McpOp.config('$p.url', f.url.trim(), 'url'));
-    }
-    final oauth = f.auth == McpAuth.oauth;
-    final wasOauth = before?.auth == McpAuth.oauth;
-    if (before == null ? oauth : oauth != wasOauth) {
-      ops.add(McpOp.config('$p.oauth', oauth ? true : null, 'general'));
-    }
-    final from = _table([
-      for (final e in f.headers)
-        if (e.source == EntrySource.env && !e.blank)
-          MapEntry(e.name.trim(), e.value.trim()),
-      if (f.auth == McpAuth.token && f.token.source == EntrySource.env)
-        MapEntry(_headerName, f.token.value.trim()),
-    ]);
-    final beforeFrom = before == null ? null : _headersFrom(before);
-    if (before == null ? from != null : '$from' != '$beforeFrom') {
-      ops.add(McpOp.config('$p.headers_from', from, 'general'));
-    }
-  }
-  return ops;
 }
 
 (Map<String, Object?>?, Map<String, Object?>?) _kindLeavesEnv(
@@ -646,22 +628,6 @@ Map<String, Object?>? _headersFrom(McpServerForm f) => _table([
   if (f.auth == McpAuth.token && f.token.source == EntrySource.env)
     MapEntry(_headerName, f.token.value.trim()),
 ]);
-
-List<McpOp> _timeout(String p, McpServerForm f, McpServerForm? before) {
-  final now = int.tryParse(f.timeout.trim());
-  if (now == null) return const [];
-  final was = before == null
-      ? defaultCallTimeout
-      : int.tryParse(before.timeout.trim());
-  if (now == was) return const [];
-  return [
-    McpOp.config(
-      '$p.call_timeout_secs',
-      now == defaultCallTimeout ? null : now,
-      'timeout',
-    ),
-  ];
-}
 
 /// The stored header values (name to value) a form wants: headers and the
 /// token when their value is typed in.

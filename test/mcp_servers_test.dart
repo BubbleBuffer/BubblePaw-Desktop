@@ -252,7 +252,7 @@ void main() {
   });
 
   group('adding a server', () {
-    test('a command server: command, off, its settings, on', () {
+    test('a command server is one write of the whole entry', () {
       final form = McpServerForm(
         name: 'files',
         command: ' npx ',
@@ -265,32 +265,20 @@ void main() {
         timeout: '90',
       );
       expect(_ops(planAdd(form)), [
-        'mcp.servers.files.command=npx',
-        'mcp.servers.files.enabled=false',
-        'mcp.servers.files.args=[-y, a b]',
-        'mcp.servers.files.cwd=/work',
-        'mcp.servers.files.env={LOG: info}',
-        'mcp.servers.files.env_from={TOKEN: MY_TOKEN}',
-        'mcp.servers.files.call_timeout_secs=90',
-        'mcp.servers.files.enabled=true',
+        'mcp.servers.files={command: npx, args: [-y, a b], cwd: /work, '
+            'env: {LOG: info}, env_from: {TOKEN: MY_TOKEN}, '
+            'call_timeout_secs: 90}',
       ]);
     });
 
     test('settings left at their defaults are not written', () {
       final form = McpServerForm(name: 'files', command: 'npx');
-      expect(_ops(planAdd(form)), [
-        'mcp.servers.files.command=npx',
-        'mcp.servers.files.enabled=false',
-        'mcp.servers.files.enabled=true',
-      ]);
+      expect(_ops(planAdd(form)), ['mcp.servers.files={command: npx}']);
     });
 
     test('an OAuth server writes oauth, never a header', () {
       expect(_ops(planAdd(_urlForm(auth: McpAuth.oauth))), [
-        'mcp.servers.docs.url=https://mcp.example.com/docs',
-        'mcp.servers.docs.enabled=false',
-        'mcp.servers.docs.oauth=true',
-        'mcp.servers.docs.enabled=true',
+        'mcp.servers.docs={url: https://mcp.example.com/docs, oauth: true}',
       ]);
     });
 
@@ -307,13 +295,14 @@ void main() {
           ),
         ],
       );
+      // Written off, so the server does not start without its headers.
       expect(_ops(planAdd(form)), [
-        'mcp.servers.docs.url=https://mcp.example.com/docs',
-        'mcp.servers.docs.enabled=false',
-        'mcp.servers.docs.headers_from={X-Team: TEAM_TOKEN}',
-        'mcp.servers.docs.enabled=true',
+        'mcp.servers.docs={enabled: false, '
+            'url: https://mcp.example.com/docs, '
+            'headers_from: {X-Team: TEAM_TOKEN}}',
         'header X-Org=garden',
         'header Authorization=Bearer abc123',
+        'mcp.servers.docs.enabled=true',
       ]);
     });
 
@@ -328,8 +317,8 @@ void main() {
         token: McpEntry(source: EntrySource.env, value: 'DOCS_TOKEN'),
       );
       expect(
-        _ops(planAdd(form)),
-        contains('mcp.servers.docs.headers_from={Authorization: DOCS_TOKEN}'),
+        _ops(planAdd(form)).single,
+        contains('headers_from: {Authorization: DOCS_TOKEN}'),
       );
     });
 
@@ -351,25 +340,41 @@ void main() {
       );
     });
 
-    test('only what changed is written', () {
-      final before = McpServerForm.from(_config('filesystem'), null);
+    test('a change writes the whole entry once, keeping other keys', () {
+      final config = _config('filesystem');
+      final before = McpServerForm.from(config, null);
       final after = before.copy()
         ..command = 'bunx'
         ..timeout = '30'
         ..args = '-y x';
-      expect(_ops(planEdit(name: 'filesystem', before: before, after: after)), [
-        'mcp.servers.filesystem.command=bunx',
-        'mcp.servers.filesystem.args=[-y, x]',
-        'mcp.servers.filesystem.call_timeout_secs=30',
-      ]);
+      final ops = planEdit(
+        name: 'filesystem',
+        before: before,
+        after: after,
+        raw: {...config.raw, 'approval': 'none', 'enabled': false},
+      );
+      expect(ops, hasLength(1));
+      expect(ops.single.key, 'mcp.servers.filesystem');
+      final entry = ops.single.value! as Map<String, Object?>;
+      expect(entry['command'], 'bunx');
+      expect(entry['args'], ['-y', 'x']);
+      expect(entry['call_timeout_secs'], 30);
+      expect(entry['approval'], 'none');
+      expect(entry['enabled'], false);
     });
 
-    test('a timeout back at the default removes the key', () {
-      final before = McpServerForm.from(_config('filesystem'), null);
+    test('a timeout back at the default leaves the key out', () {
+      final config = _config('filesystem');
+      final before = McpServerForm.from(config, null);
       final after = before.copy()..timeout = '$defaultCallTimeout';
-      expect(_ops(planEdit(name: 'filesystem', before: before, after: after)), [
-        'mcp.servers.filesystem.call_timeout_secs=null',
-      ]);
+      final ops = planEdit(
+        name: 'filesystem',
+        before: before,
+        after: after,
+        raw: config.raw,
+      );
+      final entry = ops.single.value! as Map<String, Object?>;
+      expect(entry.containsKey('call_timeout_secs'), isFalse);
     });
 
     test('a stored header the owner leaves alone is not rewritten', () {
@@ -417,44 +422,67 @@ void main() {
       final after = before.copy()..auth = McpAuth.oauth;
       expect(_ops(planEdit(name: 'docs', before: before, after: after)), [
         'header Authorization=null',
-        'mcp.servers.docs.oauth=true',
+        'mcp.servers.docs={url: https://mcp.example.com/docs, oauth: true}',
       ]);
     });
 
-    test('changing the type removes the server and writes it again', () {
-      final before = McpServerForm.from(_config('filesystem'), null);
+    test('changing the type replaces the entry in one write', () {
+      final config = _config('filesystem');
+      final before = McpServerForm.from(config, null);
       final after = McpServerForm(
         name: 'filesystem',
         kind: McpKind.url,
         url: 'http://127.0.0.1:8080/mcp',
         timeout: '60',
       );
-      expect(_ops(planEdit(name: 'filesystem', before: before, after: after)), [
-        'mcp.servers.filesystem=null',
-        'mcp.servers.filesystem.url=http://127.0.0.1:8080/mcp',
-        'mcp.servers.filesystem.enabled=false',
-        'mcp.servers.filesystem.call_timeout_secs=60',
-        'mcp.servers.filesystem.enabled=true',
+      final ops = planEdit(
+        name: 'filesystem',
+        before: before,
+        after: after,
+        raw: {...config.raw, 'approval': 'none'},
+      );
+      // No delete, so stored headers and sign-in are not lost.
+      expect(_ops(ops), [
+        'mcp.servers.filesystem={exclude_tools: [edit_file], approval: none, '
+            'url: http://127.0.0.1:8080/mcp, call_timeout_secs: 60}',
       ]);
     });
 
     test('a server that was off stays off through a type change', () {
-      final before = McpServerForm.from(_config('sqlite'), null);
+      final config = _config('sqlite');
+      final before = McpServerForm.from(config, null);
       final after = McpServerForm(
         name: 'sqlite',
         kind: McpKind.url,
         url: 'http://127.0.0.1:8080/mcp',
       );
-      final ops = _ops(
-        planEdit(
-          name: 'sqlite',
-          before: before,
-          after: after,
-          wasEnabled: false,
-        ),
+      final ops = planEdit(
+        name: 'sqlite',
+        before: before,
+        after: after,
+        raw: {...config.raw, 'enabled': false},
       );
-      expect(ops.first, 'mcp.servers.sqlite=null');
-      expect(ops.where((o) => o.endsWith('.enabled=true')), isEmpty);
+      final entry = ops.single.value! as Map<String, Object?>;
+      expect(entry['enabled'], false);
+      expect(entry.containsKey('command'), isFalse);
+    });
+
+    test('switching to a command server removes no stored header', () {
+      const status = McpServerStatus(
+        name: 'docs',
+        transport: 'http',
+        headers: ['X-Org'],
+      );
+      final before = McpServerForm.from(
+        const McpServerConfig(
+          name: 'docs',
+          url: 'https://mcp.example.com/docs',
+        ),
+        status,
+      );
+      final after = McpServerForm(name: 'docs', command: 'npx');
+      final ops = planEdit(name: 'docs', before: before, after: after);
+      expect(_ops(ops), ['mcp.servers.docs={command: npx}']);
     });
   });
 

@@ -269,6 +269,65 @@ void main() {
     },
   );
 
+  // Core v0.7.2: one object `config.set` writes a whole entry, so a server
+  // starts disabled and switches type without losing its stored header.
+  test(
+    'a disabled MCP server switches between URL and command keeping its header',
+    () async {
+      final transport = await open();
+      addTearDown(transport.dispose);
+      final settings = TransportHostSettings(transport);
+
+      final url = McpServerForm(
+        name: 'swap',
+        kind: McpKind.url,
+        url: 'http://127.0.0.1:9/mcp',
+      );
+      final written = await settings.set(
+        'mcp.servers.swap',
+        mcpEntry(url, enabled: false),
+      );
+      expect(written.applied, SettingApplied.live);
+
+      Future<McpServerStatus> status() async => {
+        for (final s in await settings.mcpServers()) s.name: s,
+      }['swap']!;
+      expect((await status()).enabled, isFalse);
+      expect((await status()).state, 'stopped');
+      expect((await settings.mcpSetHeader('swap', 'X-Org', 'garden')).headers, [
+        'X-Org',
+      ]);
+
+      Future<void> edit(McpServerForm after) async {
+        final config = McpServerConfig.parse(
+          await settings.get('mcp.servers'),
+        )['swap']!;
+        final before = McpServerForm.from(config, await status());
+        final result = await applyOps(
+          settings,
+          'swap',
+          planEdit(
+            name: 'swap',
+            before: before,
+            after: after,
+            raw: config.raw,
+          ),
+        );
+        expect(result.message, isNull, reason: '${result.field}');
+      }
+
+      await edit(McpServerForm(name: 'swap', command: 'bp-no-such-command'));
+      expect((await status()).transport, 'stdio');
+      expect((await status()).enabled, isFalse);
+
+      await edit(url);
+      final back = await status();
+      expect(back.transport, 'http');
+      expect(back.enabled, isFalse);
+      expect(back.headers, ['X-Org'], reason: 'the stored header survived');
+    },
+  );
+
   test('a refused MCP setting carries the host reason and code', () async {
     final transport = await open();
     addTearDown(transport.dispose);

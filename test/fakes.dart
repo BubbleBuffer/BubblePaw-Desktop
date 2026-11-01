@@ -163,6 +163,15 @@ class FakeHostSettings implements HostSettings {
       if (key.startsWith('mcp.servers.') && !key.substring(12).contains('.')) {
         _removed.add(key.substring(12));
       }
+    } else if (value is Map &&
+        key.startsWith('mcp.servers.') &&
+        !key.substring(12).contains('.')) {
+      // An object on a map entry replaces the whole entry.
+      values.removeWhere((k, _) => k.startsWith('$key.'));
+      for (final e in value.entries) {
+        values['$key.${e.key}'] = e.value;
+      }
+      _removed.remove(key.substring(12));
     } else {
       values[key] = value;
     }

@@ -2,7 +2,7 @@
 // `config.get` and `config.set` (Core v0.6.0), and its tool and skill
 // catalogs through `tools.list` and `skills.list` (Core v0.7.0), and its MCP
 // servers through `mcp.servers.list`, `mcp.auth.*` and `mcp.headers.set` (Core
-// v0.7.1), over the same transport the agent kit's backend uses.
+// v0.7.2), over the same transport the agent kit's backend uses.
 
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 
