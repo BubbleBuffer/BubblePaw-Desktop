@@ -97,7 +97,29 @@ class FakeHostSettings implements HostSettings {
     this.failWith,
     this.toolList = const [],
     this.skillList = const [],
+    this.mcpList = const [],
   }) : values = {...?values};
+
+  /// What `mcp.servers.list` reports. A server's `enabled` and its tools'
+  /// states follow the `enabled` and `exclude_tools` values written since.
+  final List<McpServerStatus> mcpList;
+
+  /// The MCP calls received, such as `sign-in:docs` or `header:github:X-Org`.
+  final mcpCalls = <String>[];
+
+  /// The header values the host stores, by server then header.
+  final headerValues = <String, Map<String, String>>{};
+
+  /// The address `mcp.auth.start` answers with.
+  String signInUrl = 'https://auth.example.com/authorize';
+
+  /// Makes `mcp.auth.start` fail when given.
+  HostSettingsException? signInFails;
+
+  final _statusUpdates = StreamController<McpServerStatus>.broadcast();
+
+  /// Pushes an `mcp.server` notification.
+  void pushStatus(McpServerStatus status) => _statusUpdates.add(status);
 
   /// What `tools.list` reports.
   final List<HostTool> toolList;
@@ -137,6 +159,10 @@ class FakeHostSettings implements HostSettings {
     }
     if (value == null) {
       values.remove(key);
+      values.removeWhere((k, _) => k.startsWith('$key.'));
+      if (key.startsWith('mcp.servers.') && !key.substring(12).contains('.')) {
+        _removed.add(key.substring(12));
+      }
     } else {
       values[key] = value;
     }
@@ -162,4 +188,81 @@ class FakeHostSettings implements HostSettings {
         ),
     ],
   );
+
+  @override
+  Future<List<McpServerStatus>> mcpServers() async => [
+    for (final server in mcpList)
+      if (!_removed.contains(server.name)) _current(server),
+  ];
+
+  final _removed = <String>{};
+
+  /// The sign-in state a call changed, by server.
+  final _auth = <String, McpAuthState>{};
+
+  McpServerStatus _current(McpServerStatus server) {
+    final enabled = values['mcp.servers.${server.name}.enabled'];
+    final excluded = values['mcp.servers.${server.name}.exclude_tools'];
+    return McpServerStatus(
+      name: server.name,
+      transport: server.transport,
+      enabled: enabled is bool ? enabled : server.enabled,
+      state: server.state,
+      error: server.error,
+      auth: _auth[server.name] ?? server.auth,
+      authError: server.authError,
+      headers: [...server.headers, ...?headerValues[server.name]?.keys],
+      tools: [
+        for (final tool in server.tools)
+          McpTool(
+            name: tool.name,
+            enabled: excluded is List
+                ? !excluded.contains(tool.name) && tool.enabled
+                : tool.enabled,
+          ),
+      ],
+    );
+  }
+
+  @override
+  Future<String> mcpSignIn(String server) async {
+    mcpCalls.add('sign-in:$server');
+    final failure = signInFails;
+    if (failure != null) throw failure;
+    _auth[server] = McpAuthState.waiting;
+    return signInUrl;
+  }
+
+  @override
+  Future<McpServerStatus> mcpSignOut(String server) async {
+    mcpCalls.add('sign-out:$server');
+    _auth[server] = McpAuthState.needsSignIn;
+    return _current(mcpList.firstWhere((s) => s.name == server));
+  }
+
+  @override
+  Future<McpServerStatus> mcpSetHeader(
+    String server,
+    String header,
+    String? value,
+  ) async {
+    mcpCalls.add('header:$server:$header=${value ?? 'null'}');
+    final failure = failWith;
+    if (failure != null) throw failure;
+    final stored = headerValues.putIfAbsent(server, () => {});
+    if (value == null) {
+      stored.remove(header);
+    } else {
+      stored[header] = value;
+    }
+    return _current(
+      mcpList.firstWhere(
+        (s) => s.name == server,
+        orElse: () => McpServerStatus(name: server),
+      ),
+    );
+  }
+
+  @override
+  Stream<McpServerStatus> mcpUpdates() => _statusUpdates.stream;
 }

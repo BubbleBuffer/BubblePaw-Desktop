@@ -488,6 +488,11 @@ const LucideGlyph glyphBookOpen = (
   LucideIcons.bookOpen,
   LucideIcons.bookOpen500,
 );
+const LucideGlyph glyphPlug = (
+  LucideIcons.plug300,
+  LucideIcons.plug,
+  LucideIcons.plug500,
+);
 const LucideGlyph glyphMinus = (
   LucideIcons.minus300,
   LucideIcons.minus,

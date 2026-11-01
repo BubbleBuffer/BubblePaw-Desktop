@@ -1,6 +1,8 @@
 // config.get and config.set over the agent kit's transport: the request
 // shapes, and how the replies and refusals read.
 
+import 'dart:async';
+
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,8 +23,10 @@ class _Transport implements BubblePawTransport {
     return reply;
   }
 
+  final pushed = StreamController<Map<String, Object?>>.broadcast();
+
   @override
-  Stream<Map<String, Object?>> get notifications => const Stream.empty();
+  Stream<Map<String, Object?>> get notifications => pushed.stream;
 
   @override
   Future<void> dispose() async {}
@@ -176,5 +180,112 @@ void main() {
     final settings = TransportHostSettings(transport);
     expect(settings.tools(), throwsA(isA<HostSettingsException>()));
     expect(settings.skills(), throwsA(isA<HostSettingsException>()));
+  });
+
+  test('mcpServers reads each status, with its tools and headers', () async {
+    final transport = _Transport()
+      ..reply = {
+        'servers': [
+          {
+            'name': 'github',
+            'transport': 'http',
+            'enabled': true,
+            'state': 'running',
+            'auth': {'state': 'signed_in'},
+            'headers': ['X-Org'],
+            'tool_count': 2,
+            'tools': [
+              {'name': 'list_issues', 'enabled': true},
+              {'name': 'create_issue', 'enabled': false},
+            ],
+          },
+          {
+            'name': 'docs',
+            'transport': 'http',
+            'enabled': true,
+            'state': 'error',
+            'error': 'refused',
+            'auth': {'state': 'needs_sign_in'},
+          },
+          {'transport': 'stdio'},
+        ],
+      };
+    final servers = await TransportHostSettings(transport).mcpServers();
+    expect(transport.calls.single.$1, 'mcp.servers.list');
+    expect(servers.map((s) => s.name), ['github', 'docs']);
+    expect(servers.first.auth, McpAuthState.signedIn);
+    expect(servers.first.headers, ['X-Org']);
+    expect(servers.first.tools.map((t) => t.enabled), [true, false]);
+    expect(servers.last.state, 'error');
+    expect(servers.last.error, 'refused');
+    expect(servers.last.auth, McpAuthState.needsSignIn);
+  });
+
+  test('sign-in, sign-out and headers send the documented params', () async {
+    final transport = _Transport()
+      ..reply = {'url': 'https://auth.example.com/authorize'};
+    final settings = TransportHostSettings(transport);
+    expect(
+      await settings.mcpSignIn('docs'),
+      'https://auth.example.com/authorize',
+    );
+    expect(transport.calls.last.$1, 'mcp.auth.start');
+    expect(transport.calls.last.$2, {'server': 'docs'});
+
+    transport.reply = {'name': 'docs', 'state': 'running'};
+    await settings.mcpSignOut('docs');
+    expect(transport.calls.last.$1, 'mcp.auth.sign_out');
+    expect(transport.calls.last.$2, {'server': 'docs'});
+
+    await settings.mcpSetHeader('docs', 'X-Org', 'garden');
+    expect(transport.calls.last.$1, 'mcp.headers.set');
+    expect(transport.calls.last.$2, {
+      'server': 'docs',
+      'header': 'X-Org',
+      'value': 'garden',
+    });
+    await settings.mcpSetHeader('docs', 'X-Org', null);
+    expect(transport.calls.last.$2['value'], isNull);
+    expect(transport.calls.last.$2.containsKey('value'), isTrue);
+  });
+
+  test('mcpUpdates yields the mcp.server notifications only', () async {
+    final transport = _Transport();
+    final seen = <McpServerStatus>[];
+    final sub = TransportHostSettings(transport).mcpUpdates().listen(seen.add);
+    transport.pushed.add({
+      'method': 'session.event',
+      'params': {'name': 'other'},
+    });
+    transport.pushed.add({
+      'method': 'mcp.server',
+      'params': {'name': 'docs', 'state': 'removed'},
+    });
+    await Future<void>.delayed(Duration.zero);
+    await sub.cancel();
+    expect(seen.map((s) => s.name), ['docs']);
+    expect(seen.single.removed, isTrue);
+  });
+
+  test('a typed host refusal keeps its message and code', () async {
+    final transport = _Transport()
+      ..error = const BubblePawException(
+        'rpcError',
+        'The BubblePaw host rejected the request.',
+        rpcCode: -32012,
+        rpcMessage: 'mcp.servers.x.command: must not be empty',
+      );
+    await expectLater(
+      TransportHostSettings(transport).set('mcp.servers.x.command', ''),
+      throwsA(
+        isA<HostSettingsException>()
+            .having(
+              (e) => e.message,
+              'message',
+              'mcp.servers.x.command: must not be empty',
+            )
+            .having((e) => e.code, 'code', -32012),
+      ),
+    );
   });
 }

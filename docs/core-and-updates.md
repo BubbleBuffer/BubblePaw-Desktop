@@ -1,7 +1,7 @@
 # Core and updates
 
 Core is part of the app. `native/` is a Rust crate (`bubblepaw_desktop_native`) that
-depends on `bubblepaw-sdk` at Core tag `v0.7.0`; flutter_rust_bridge exposes it to Dart.
+depends on `bubblepaw-sdk` at Core tag `v0.7.1`; flutter_rust_bridge exposes it to Dart.
 The app also checks for new versions of itself. Code: `native/`, `rust_builder/`,
 `lib/src/rust/` (generated), `lib/src/core/ffi_transport.dart`, `lib/src/updates/`,
 `lib/src/platform/download.dart`, `lib/src/semver.dart`.
@@ -29,7 +29,7 @@ providers and models are set there. A `ConfigError` (an unreadable file, a bad k
 `startFailed` error whose text the failure notice shows. No provider is not a config error:
 since Core v0.5.1 the host starts without one, and a run that needs a model returns the typed
 error `no_provider_configured` (code -32004). `HostCallError` passes it on as an `rpc` error
-with that code; agent-kit 0.16.3 maps it to `KitNeedsSetup`, and `GuardedBackend` reports it
+with that code; agent-kit 0.16.4 maps it to `KitNeedsSetup`, and `GuardedBackend` reports it
 so the app shows the notice that opens Settings > Models.
 
 `cargo test` covers `session.list` on a fresh temp data dir, host errors keeping their
