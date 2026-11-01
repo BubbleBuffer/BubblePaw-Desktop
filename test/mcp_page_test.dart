@@ -247,9 +247,7 @@ void main() {
       expect(find.text('A server named github already exists.'), findsOne);
     });
 
-    testWidgets('writes a command server as one whole entry', (
-      tester,
-    ) async {
+    testWidgets('writes a command server as one whole entry', (tester) async {
       final settings = sampleMcpSettings();
       await _openMcp(tester, settings);
       await _tap(tester, 'add-server');

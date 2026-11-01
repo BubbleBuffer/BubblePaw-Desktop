@@ -289,9 +289,8 @@ void main() {
       );
       expect(written.applied, SettingApplied.live);
 
-      Future<McpServerStatus> status() async => {
-        for (final s in await settings.mcpServers()) s.name: s,
-      }['swap']!;
+      Future<McpServerStatus> status() async =>
+          {for (final s in await settings.mcpServers()) s.name: s}['swap']!;
       expect((await status()).enabled, isFalse);
       expect((await status()).state, 'stopped');
       expect((await settings.mcpSetHeader('swap', 'X-Org', 'garden')).headers, [
@@ -306,12 +305,7 @@ void main() {
         final result = await applyOps(
           settings,
           'swap',
-          planEdit(
-            name: 'swap',
-            before: before,
-            after: after,
-            raw: config.raw,
-          ),
+          planEdit(name: 'swap', before: before, after: after, raw: config.raw),
         );
         expect(result.message, isNull, reason: '${result.field}');
       }
