@@ -18,6 +18,7 @@ import 'about_page.dart';
 import 'feedback_page.dart';
 import 'general_page.dart';
 import 'licences_page.dart';
+import 'mcp_page.dart';
 import 'models_page.dart';
 import 'settings_section.dart';
 import 'settings_widgets.dart';
@@ -84,6 +85,7 @@ class _SettingsShellState extends State<SettingsShell> {
     SettingsSection.general => themeSummary(widget.controller.prefs.theme),
     SettingsSection.models => 'Default model and providers',
     SettingsSection.tools => 'Toolsets and approvals',
+    SettingsSection.mcp => 'Servers and sign-in',
     SettingsSection.skills => 'Discovered skills',
     SettingsSection.feedback => switch (widget.feedback.reports.length) {
       0 => 'No reports saved',
@@ -97,6 +99,7 @@ class _SettingsShellState extends State<SettingsShell> {
     SettingsSection.general => glyphSliders,
     SettingsSection.models => glyphLayers,
     SettingsSection.tools => glyphWrench,
+    SettingsSection.mcp => glyphPlug,
     SettingsSection.skills => glyphBookOpen,
     SettingsSection.feedback => glyphMessageSquareText,
     SettingsSection.about => glyphInfo,
@@ -119,6 +122,12 @@ class _SettingsShellState extends State<SettingsShell> {
       SettingsSection.tools => ToolsPage(
         key: const ValueKey('page-tools'),
         settings: host.phase == HostPhase.running ? host.settings : null,
+        onBack: onBack,
+      ),
+      SettingsSection.mcp => McpPage(
+        key: const ValueKey('page-mcp'),
+        settings: host.phase == HostPhase.running ? host.settings : null,
+        services: widget.services,
         onBack: onBack,
       ),
       SettingsSection.skills => SkillsPage(

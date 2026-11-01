@@ -8,11 +8,13 @@ import 'dart:io';
 
 import 'package:agent_kit_core/fake.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
+import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/feedback/feedback_controller.dart';
 import 'package:bubblepaw_desktop/src/feedback/feedback_sheet.dart';
 import 'package:bubblepaw_desktop/src/feedback/log_buffer.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/platform/download.dart';
+import 'package:bubblepaw_desktop/src/platform/releases.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
 import 'package:bubblepaw_desktop/src/semver.dart';
 import 'package:bubblepaw_desktop/src/updates/update_controller.dart';
@@ -45,6 +47,32 @@ Future<void> openSettings(WidgetTester tester, String section) async {
   await tester.tap(find.byKey(ValueKey('settings-nav-$section')));
   await settle(tester);
 }
+
+/// Taps the widget with [key], scrolled into view first.
+Future<void> tapVisible(WidgetTester tester, String key) async {
+  final finder = find.byKey(ValueKey(key));
+  await tester.ensureVisible(finder);
+  await tester.tap(finder);
+  await settle(tester);
+}
+
+/// MCP servers opened on the approved mockups' five servers: [open] servers
+/// expanded, [servers] to show instead, then [after].
+Scene _mcpScene({
+  List<String> open = const [],
+  List<McpServerStatus> servers = sampleMcpServers,
+  Future<void> Function(WidgetTester tester)? after,
+}) => (
+  controller: () =>
+      Played(settings: sampleMcpSettings(servers: servers)).controller(),
+  after: (tester) async {
+    await openSettings(tester, 'mcp');
+    for (final name in open) {
+      await tapVisible(tester, 'server-open-$name');
+    }
+    if (after != null) await after(tester);
+  },
+);
 
 /// Fixed licences, so the page does not depend on the packages in the build.
 Stream<LicenseEntry> sampleLicences() => Stream.fromIterable([
@@ -424,6 +452,99 @@ void main() {
           Played(settings: sampleToolSettings(skills: false)).controller(),
       after: (tester) => openSettings(tester, 'skills'),
     ),
+    // Core v0.7.1: MCP servers lists the servers and their status; a server
+    // opens to its tools; Add server and Edit open the form.
+    'settings_mcp': _mcpScene(),
+    'settings_mcp_expanded': _mcpScene(open: ['filesystem']),
+    'settings_mcp_stopped': _mcpScene(open: ['sqlite']),
+    'settings_mcp_error': _mcpScene(open: ['garden-api']),
+    'settings_mcp_waiting': _mcpScene(
+      after: (tester) async {
+        await tapVisible(tester, 'sign-in-docs');
+      },
+    ),
+    'settings_mcp_signed_in': _mcpScene(open: ['github']),
+    'settings_mcp_expired': _mcpScene(
+      open: ['github'],
+      servers: [
+        sampleMcpServers[0],
+        const McpServerStatus(
+          name: 'github',
+          transport: 'http',
+          auth: McpAuthState.expired,
+          headers: ['X-Org'],
+        ),
+        ...sampleMcpServers.skip(2),
+      ],
+    ),
+    'settings_mcp_add': _mcpScene(
+      after: (tester) => tapVisible(tester, 'add-server'),
+    ),
+    'settings_mcp_add_error': _mcpScene(
+      after: (tester) async {
+        await tapVisible(tester, 'add-server');
+        await tapVisible(tester, 'srv-kind-url');
+        await tester.enterText(
+          find.byKey(const ValueKey('srv-name')),
+          'filesystem',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('srv-url')),
+          'mcp.example.com/github',
+        );
+        await tester.enterText(find.byKey(const ValueKey('srv-timeout')), '0');
+        await tapVisible(tester, 'hdr-add');
+        await tester.enterText(
+          find.byKey(const ValueKey('hdr-0-name')),
+          'X Org',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('hdr-0-value')),
+          'garden',
+        );
+        await tapVisible(tester, 'srv-save');
+      },
+    ),
+    'settings_mcp_edit_command': _mcpScene(
+      after: (tester) => tapVisible(tester, 'server-edit-filesystem'),
+    ),
+    'settings_mcp_edit_url': _mcpScene(
+      after: (tester) => tapVisible(tester, 'server-edit-github'),
+    ),
+    'settings_mcp_edit_errors': _mcpScene(
+      after: (tester) async {
+        await tapVisible(tester, 'server-edit-github');
+        await tapVisible(tester, 'srv-auth-header token');
+        await tapVisible(tester, 'hdr-add');
+        await tester.enterText(find.byKey(const ValueKey('srv-timeout')), '0');
+        await tester.enterText(
+          find.byKey(const ValueKey('hdr-0-name')),
+          'X Org',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('hdr-1-name')),
+          'X-Team',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('hdr-1-value')),
+          '1TEAM',
+        );
+        await tapVisible(tester, 'hdr-1-source');
+        await tester.tap(find.byKey(const ValueKey('option-From env var')));
+        await settle(tester);
+        await tester.enterText(
+          find.byKey(const ValueKey('hdr-1-value')),
+          '1TEAM',
+        );
+        await tapVisible(tester, 'srv-save');
+      },
+    ),
+    'settings_mcp_remove': _mcpScene(
+      after: (tester) async {
+        await tapVisible(tester, 'server-edit-filesystem');
+        await tapVisible(tester, 'srv-remove');
+      },
+    ),
     'settings_about': (
       controller: () => HostController(
         store: MemoryConfigStore(sampleConfig),
@@ -471,6 +592,8 @@ void main() {
             size: size.value,
             brightness: theme.value,
             licenceSource: sampleLicences,
+            // A sign-in opens nothing in a golden.
+            services: PlatformServices(open: (_) async {}),
           );
           await scene.value.after?.call(tester);
           await expectLater(

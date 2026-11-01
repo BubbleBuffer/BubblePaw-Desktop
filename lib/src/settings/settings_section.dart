@@ -1,9 +1,10 @@
-// The sections of Settings. MCP servers and Remote access join with their work.
+// The sections of Settings. Remote access joins with its work.
 
 enum SettingsSection {
   general('General'),
   models('Models'),
   tools('Tools'),
+  mcp('MCP servers'),
   skills('Skills'),
   feedback('Feedback'),
   about('About');
