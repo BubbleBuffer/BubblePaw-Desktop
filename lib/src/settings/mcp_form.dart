@@ -198,7 +198,12 @@ class _McpServerDialogState extends State<McpServerDialog> {
       _busy = true;
       _refused.clear();
     });
-    final result = await applyOps(widget.settings, _serverName, ops);
+    final result = await applyOps(
+      widget.settings,
+      _serverName,
+      ops,
+      form: _form,
+    );
     if (!mounted) return;
     if (result.ok) {
       Navigator.of(context).pop(McpFormResult(restart: result.restart));
@@ -215,9 +220,23 @@ class _McpServerDialogState extends State<McpServerDialog> {
     if (!mounted) return;
     setState(() {
       _busy = false;
-      _refused[result.field ?? 'general'] = result.message ?? 'Could not save.';
+      var field = result.field ?? 'general';
+      // A message must not land on a field this form is not showing.
+      if (field != 'general' && !_shown.contains(field)) field = 'general';
+      _refused[field] = result.message ?? 'Could not save.';
     });
   }
+
+  /// The refusable fields on screen for the form's current type.
+  Set<String> get _shown => _form.kind == McpKind.command
+      ? const {'command', 'args', 'cwd', 'env', 'timeout'}
+      : {
+          'url',
+          'headers',
+          'timeout',
+          if (_form.auth == McpAuth.token) 'token',
+          for (var i = 0; i < _form.headers.length; i++) 'hdr:$i',
+        };
 
   Future<void> _remove() async {
     if (_busy) return;
@@ -349,7 +368,9 @@ class _McpServerDialogState extends State<McpServerDialog> {
                       placeholder: '$defaultCallTimeout',
                       label: 'Request timeout',
                       mono: true,
-                      invalid: errors.timeout.isNotEmpty,
+                      invalid:
+                          errors.timeout.isNotEmpty ||
+                          _refused['timeout'] != null,
                     ),
                   ),
                   if (_refused['general'] != null)
@@ -425,7 +446,7 @@ class _McpServerDialogState extends State<McpServerDialog> {
           placeholder: 'npx',
           label: 'Command',
           mono: true,
-          invalid: errors.command.isNotEmpty,
+          invalid: errors.command.isNotEmpty || _refused['command'] != null,
         ),
       ),
       _Labeled(
@@ -438,6 +459,7 @@ class _McpServerDialogState extends State<McpServerDialog> {
           placeholder: '-y @modelcontextprotocol/server-filesystem .',
           label: 'Arguments',
           mono: true,
+          invalid: _refused['args'] != null,
         ),
       ),
       _Labeled(
@@ -450,6 +472,7 @@ class _McpServerDialogState extends State<McpServerDialog> {
           placeholder: '/home/maya/projects/garden-api',
           label: 'Working folder',
           mono: true,
+          invalid: _refused['cwd'] != null,
         ),
       ),
       _Labeled(
@@ -457,6 +480,7 @@ class _McpServerDialogState extends State<McpServerDialog> {
         hint:
             'Values are hidden. Choose From env var to read the value from a '
             'variable instead.',
+        error: _refused['env'] ?? '',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -503,7 +527,7 @@ class _McpServerDialogState extends State<McpServerDialog> {
           placeholder: 'https://mcp.example.com/github',
           label: 'URL',
           mono: true,
-          invalid: errors.url.isNotEmpty,
+          invalid: errors.url.isNotEmpty || _refused['url'] != null,
         ),
       ),
       _Labeled(
@@ -558,6 +582,7 @@ class _McpServerDialogState extends State<McpServerDialog> {
         hint:
             'Values are hidden. Choose From env var to read the value from a '
             'variable instead.',
+        error: _refused['headers'] ?? '',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

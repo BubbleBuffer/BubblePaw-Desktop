@@ -322,6 +322,76 @@ void main() {
       expect(find.byKey(const ValueKey('srv-save')), findsOneWidget);
     });
 
+    testWidgets('a refusal that names the URL shows under the URL field', (
+      tester,
+    ) async {
+      const reason = 'url must use https unless it points at this machine';
+      final settings = sampleMcpSettings()
+        ..failWith = const HostSettingsException(
+          reason,
+          code: -32012,
+          key: 'mcp.servers.wiki.url',
+        );
+      await _openMcp(tester, settings);
+      await _tap(tester, 'add-server');
+      await _type(tester, 'srv-name', 'wiki');
+      await _tap(tester, 'srv-kind-url');
+      await _type(tester, 'srv-url', 'http://mcp.example.com/wiki');
+      await _tap(tester, 'srv-save');
+      // The message as is, once, under the field; nothing on the general line.
+      expect(find.text(reason), findsOneWidget);
+      expect(find.byKey(const ValueKey('srv-error')), findsNothing);
+      expect(find.textContaining('Could not save.'), findsNothing);
+      // It sits between the URL box and the request timeout.
+      final top = tester
+          .getBottomLeft(find.byKey(const ValueKey('srv-url')))
+          .dy;
+      final message = tester.getTopLeft(find.text(reason)).dy;
+      final next = tester
+          .getTopLeft(find.byKey(const ValueKey('srv-timeout')))
+          .dy;
+      expect(message, greaterThan(top));
+      expect(message, lessThan(next));
+      expect(_written(settings).last, 'mcp.servers.wiki=null');
+    });
+
+    testWidgets('a refusal that names the command shows under the command', (
+      tester,
+    ) async {
+      const reason = 'exactly one of command or url is required';
+      final settings = sampleMcpSettings()
+        ..failWith = const HostSettingsException(
+          reason,
+          code: -32012,
+          key: 'mcp.servers.files.command',
+        );
+      await _openMcp(tester, settings);
+      await _tap(tester, 'add-server');
+      await _type(tester, 'srv-name', 'files');
+      await _type(tester, 'srv-command', 'npx');
+      await _tap(tester, 'srv-save');
+      expect(find.text(reason), findsOneWidget);
+      expect(find.byKey(const ValueKey('srv-error')), findsNothing);
+    });
+
+    testWidgets(
+      'a refusal naming a field the form does not show stays general',
+      (tester) async {
+        final settings = sampleMcpSettings()
+          ..failWith = const HostSettingsException(
+            'oauth requires url',
+            code: -32012,
+            key: 'mcp.servers.files.oauth',
+          );
+        await _openMcp(tester, settings);
+        await _tap(tester, 'add-server');
+        await _type(tester, 'srv-name', 'files');
+        await _type(tester, 'srv-command', 'npx');
+        await _tap(tester, 'srv-save');
+        expect(find.text('Could not save. oauth requires url'), findsOneWidget);
+      },
+    );
+
     testWidgets('Cancel closes without writing', (tester) async {
       final settings = sampleMcpSettings();
       await _openMcp(tester, settings);

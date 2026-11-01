@@ -5,6 +5,7 @@ import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/settings/mcp_servers.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'fakes.dart';
 import 'tools_samples.dart';
 
 /// The calls as `key=value` text, header calls marked.
@@ -328,6 +329,69 @@ void main() {
       );
       final op = planAdd(form).firstWhere((o) => o.header);
       expect(op.field, 'hdr:0');
+    });
+  });
+
+  group('a refusal that names a key', () {
+    final url = _urlForm();
+    final ops = [
+      McpOp.config('mcp.servers.docs', {'x': 1}, 'general'),
+    ];
+    Future<String?> field(String? key, {McpServerForm? form}) async {
+      final result = await applyOps(
+        FakeHostSettings(
+          failWith: HostSettingsException('no', code: -32012, key: key),
+        ),
+        'docs',
+        ops,
+        form: form,
+      );
+      return result.field;
+    }
+
+    test('lands on the form field of the leaf under the entry', () async {
+      for (final (leaf, expected) in [
+        ('command', 'command'),
+        ('args', 'args'),
+        ('cwd', 'cwd'),
+        ('url', 'url'),
+        ('call_timeout_secs', 'timeout'),
+        ('env', 'env'),
+        ('env_from', 'env'),
+        ('headers_from', 'headers'),
+      ]) {
+        expect(await field('mcp.servers.docs.$leaf'), expected, reason: leaf);
+      }
+    });
+
+    test('headers_from is the token when only the token reads an env var', () {
+      final token = _urlForm(
+        auth: McpAuth.token,
+        token: McpEntry(source: EntrySource.env, value: 'DOCS_TOKEN'),
+      );
+      String of(McpServerForm form) => mcpFieldForKey(
+        'mcp.servers.docs.headers_from',
+        'docs',
+        'general',
+        form: form,
+      );
+      expect(of(token), 'token');
+      expect(of(url), 'headers');
+      expect(
+        of(
+          _urlForm(
+            headers: [McpEntry(name: 'X-Org', value: 'v')],
+          ),
+        ),
+        'headers',
+      );
+    });
+
+    test('a missing, foreign or unknown key keeps the op field', () async {
+      expect(await field(null), 'general');
+      expect(await field('mcp.servers.other.url'), 'general');
+      expect(await field('mcp.servers.docs.oauth'), 'general');
+      expect(await field('mcp.servers.docs'), 'general');
     });
   });
 

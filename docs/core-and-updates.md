@@ -1,7 +1,7 @@
 # Core and updates
 
 Core is part of the app. `native/` is a Rust crate (`bubblepaw_desktop_native`) that
-depends on `bubblepaw-sdk` at Core tag `v0.7.2`; flutter_rust_bridge exposes it to Dart.
+depends on `bubblepaw-sdk` at Core tag `v0.7.3`; flutter_rust_bridge exposes it to Dart.
 The app also checks for new versions of itself. Code: `native/`, `rust_builder/`,
 `lib/src/rust/` (generated), `lib/src/core/ffi_transport.dart`, `lib/src/updates/`,
 `lib/src/platform/download.dart`, `lib/src/semver.dart`.

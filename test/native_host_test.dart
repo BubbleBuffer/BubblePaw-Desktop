@@ -322,6 +322,28 @@ void main() {
     },
   );
 
+  // Core v0.7.3: a refused whole-entry write names the failing leaf, and the
+  // form puts the message on that field.
+  test('a refused URL write names the URL field', () async {
+    final transport = await open();
+    addTearDown(transport.dispose);
+    final settings = TransportHostSettings(transport);
+    final form = McpServerForm(
+      name: 'bad',
+      kind: McpKind.url,
+      url: 'http://example.com/mcp',
+    );
+    final result = await applyOps(settings, 'bad', planAdd(form), form: form);
+    expect(result.field, 'url');
+    expect(result.message, contains('https'));
+    final empty = McpServerForm(name: 'bad', command: '');
+    final none = await applyOps(settings, 'bad', planAdd(empty), form: empty);
+    expect(none.field, 'command');
+    // The host holds nothing for the refused server.
+    final held = McpServerConfig.parse(await settings.get('mcp.servers'));
+    expect(held.containsKey('bad'), isFalse);
+  });
+
   test('a refused MCP setting carries the host reason and code', () async {
     final transport = await open();
     addTearDown(transport.dispose);
