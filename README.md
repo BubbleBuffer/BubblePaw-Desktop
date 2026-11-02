@@ -50,7 +50,7 @@ You need Flutter **3.47.7** (stable) and a Rust toolchain (stable, installed wit
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on GitHub-hosted `ubuntu-latest` and `windows-latest`. Linux: format, analyze, tests, goldens, the crate's fmt, Clippy and tests, the FFI transport test against the built crate, and a debug build. Windows: the crate's tests, the same FFI test and a debug build.
 
-The embedded Core is `bubblepaw-sdk` at tag `v0.7.3` (`native/Cargo.toml`; `CORE_VERSION` in `native/src/lib.rs` must match, and a test checks it). The Dart bindings in `lib/src/rust/` and `native/src/frb_generated.rs` are generated and committed: after changing `native/src/api/`, run `flutter_rust_bridge_codegen generate` (version 2.13.0, the same as the `flutter_rust_bridge` package).
+The embedded Core is `bubblepaw-sdk` at tag `v0.10.0` (`native/Cargo.toml`; `CORE_VERSION` in `native/src/lib.rs` must match, and a test checks it). The Dart bindings in `lib/src/rust/` and `native/src/frb_generated.rs` are generated and committed: after changing `native/src/api/`, run `flutter_rust_bridge_codegen generate` (version 2.13.0, the same as the `flutter_rust_bridge` package).
 
 ```sh
 flutter pub get

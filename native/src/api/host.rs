@@ -2,7 +2,7 @@
 
 use std::{
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, Weak},
     time::Duration,
 };
 
@@ -12,6 +12,8 @@ use serde_json::Value;
 
 use crate::frb_generated::StreamSink;
 use crate::host_setup;
+
+use super::remote::Shared as RemoteShared;
 
 /// The host-API error code of `no_provider_configured`.
 const NO_PROVIDER_CONFIGURED: i64 = -32004;
@@ -99,6 +101,8 @@ impl From<ClientError> for HostCallError {
 pub struct BubblePawHost {
     client: Mutex<Option<Arc<Client>>>,
     attached: bool,
+    /// Remote shares made for this host; `close` stops them first.
+    shares: Mutex<Vec<Weak<RemoteShared>>>,
 }
 
 #[frb(init)]
@@ -164,6 +168,12 @@ impl BubblePawHost {
     /// Calls still in flight finish first; if they take longer than a few
     /// seconds, the host stops in the background when the last one returns.
     pub async fn close(&self) -> Result<(), HostCallError> {
+        // Stop sharing first: a share holds the client, and closing waits for
+        // every other holder to let go.
+        let shares = std::mem::take(&mut *self.shares.lock().unwrap());
+        for share in shares.into_iter().filter_map(|share| share.upgrade()) {
+            share.release().await;
+        }
         let Some(mut shared) = self.client.lock().unwrap().take() else {
             return Ok(());
         };
@@ -208,10 +218,19 @@ impl BubblePawHost {
         Self {
             client: Mutex::new(Some(Arc::new(client))),
             attached,
+            shares: Mutex::new(Vec::new()),
         }
     }
 
-    fn current(&self) -> Result<Arc<Client>, HostCallError> {
+    #[frb(ignore)]
+    pub(crate) fn register_share(&self, share: Weak<RemoteShared>) {
+        let mut shares = self.shares.lock().unwrap();
+        shares.retain(|share| share.strong_count() > 0);
+        shares.push(share);
+    }
+
+    #[frb(ignore)]
+    pub(crate) fn current(&self) -> Result<Arc<Client>, HostCallError> {
         self.client
             .lock()
             .unwrap()
