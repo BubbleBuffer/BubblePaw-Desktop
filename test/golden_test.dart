@@ -739,6 +739,12 @@ void main() {
             find.byType(BubblePawApp),
             matchesGoldenFile('goldens/$name.png'),
           );
+          // The pairing countdown ticks until its dialog closes.
+          final close = find.byKey(const ValueKey('dialog-close'));
+          if (close.evaluate().isNotEmpty) {
+            await tester.tap(close);
+            await settle(tester);
+          }
         });
       }
     }
