@@ -57,6 +57,10 @@ Future<(HostController, FakeHostLinks, _Started)> _open(
   );
   addTearDown(controller.close);
   await pumpApp(tester, controller, size: phone);
+  // The last host opens after start up; give it time.
+  for (var i = 0; i < 4; i++) {
+    await settle(tester);
+  }
   return (controller, links, started);
 }
 

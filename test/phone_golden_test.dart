@@ -13,7 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:bubblepaw_desktop/src/scripted.dart';
 
 import 'fake_remote.dart';
-import 'fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
 
@@ -117,6 +116,9 @@ void main() {
           size: _phone,
           brightness: theme.value,
         );
+        for (var i = 0; i < 4; i++) {
+          await settle(tester);
+        }
         await scene.value.after?.call(tester, links);
         await expectLater(
           find.byType(BubblePawApp),

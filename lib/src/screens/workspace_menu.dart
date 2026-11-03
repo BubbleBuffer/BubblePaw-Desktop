@@ -354,6 +354,7 @@ class HostSheet extends StatelessWidget {
       alignment: Alignment.bottomCenter,
       child: Semantics(
         container: true,
+        explicitChildNodes: true,
         scopesRoute: true,
         namesRoute: true,
         label: 'Hosts',
