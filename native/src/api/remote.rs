@@ -163,6 +163,8 @@ pub struct DeviceEntry {
     pub paired_at: Option<u64>,
     /// Unix seconds of its last accepted connection.
     pub last_seen: Option<u64>,
+    /// Whether this device may send model traffic through this computer.
+    pub egress: bool,
 }
 
 impl From<PairedDevice> for DeviceEntry {
@@ -174,6 +176,7 @@ impl From<PairedDevice> for DeviceEntry {
             kind: format!("{:?}", device.kind).to_lowercase(),
             paired_at: device.paired_at,
             last_seen: device.last_seen,
+            egress: device.egress,
         }
     }
 }
@@ -609,8 +612,9 @@ impl RemoteShare {
 
     /// Opens a pairing offer for a device that will get `profile` (`read`,
     /// `edit` or `full`). One offer is open at a time: a new one replaces the
-    /// last. Sharing must be online.
-    pub async fn pair(&self, profile: String) -> Result<PairOffer, ShareError> {
+    /// last. Sharing must be online. With `egress` the device may also send
+    /// its model traffic through this computer.
+    pub async fn pair(&self, profile: String, egress: bool) -> Result<PairOffer, ShareError> {
         let profile = match profile.as_str() {
             "read" => Profile::Read,
             "edit" => Profile::Edit,
@@ -625,7 +629,10 @@ impl RemoteShare {
         let server = guard
             .as_ref()
             .ok_or_else(|| ShareError::other("the host is not being shared"))?;
-        let offer = server.pair(profile).await.map_err(ShareError::other)?;
+        let offer = server
+            .pair_with_egress(profile, egress)
+            .await
+            .map_err(ShareError::other)?;
         Ok(PairOffer::new(offer))
     }
 

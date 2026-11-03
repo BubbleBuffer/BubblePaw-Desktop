@@ -83,7 +83,9 @@ abstract interface class RemoteAccess {
   Future<void> stop();
 
   /// Opens an offer for a device that will get [profile] (read, edit, full).
-  Future<PairingOffer> pair(String profile);
+  /// With [egress] the device may also send its model traffic through this
+  /// computer.
+  Future<PairingOffer> pair(String profile, {bool egress = false});
   Future<List<DeviceEntry>> devices();
 
   /// Removes the device and closes its live connection.
@@ -166,8 +168,8 @@ class NativeRemoteAccess implements RemoteAccess {
   Future<void> stop() => _share.stop();
 
   @override
-  Future<PairingOffer> pair(String profile) async =>
-      _NativeOffer(await _share.pair(profile: profile));
+  Future<PairingOffer> pair(String profile, {bool egress = false}) async =>
+      _NativeOffer(await _share.pair(profile: profile, egress: egress));
 
   @override
   Future<List<DeviceEntry>> devices() => _share.devices();

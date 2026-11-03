@@ -2,7 +2,7 @@
 
 Settings > Remote access shares the host this app runs, pairs devices with it,
 lists the hosts this device can open, and holds the device key. The rail menu
-switches between this computer and those hosts. Core `v0.10.2` does the work; the app is a thin page
+switches between this computer and those hosts. Core `v0.11.1` does the work; the app is a thin page
 over it.
 
 ## Where the code is
@@ -18,6 +18,7 @@ over it.
 | Interface and native implementation for it | `lib/src/remote/host_links.dart` |
 | Saved hosts and presence, the add flow | `lib/src/remote/hosts_controller.dart` |
 | "Hosts you can open" list and Add / Remove dialogs | `lib/src/settings/hosts_section.dart` |
+| Provider picker "Send model traffic through…" | `lib/src/settings/models_page.dart` (`_ViaPicker`) |
 | Rail host switcher | `lib/src/screens/workspace_menu.dart` (`HostMenu`), wired in `lib/src/app.dart` |
 | Chat list of a saved host (rows, backend wrapper, grouping, rail, workbench) | `lib/src/remote/remote_chats.dart`, `project_groups.dart`, `remote_rail.dart`, `remote_workbench.dart` |
 
@@ -135,6 +136,42 @@ dialog asks for it first: permissions, then a QR code and a 10-character code
 (valid 5 minutes), then the 6-digit number both sides compare, then done.
 Revoking a device closes its live connection.
 
+## Model traffic through a paired device
+
+Core 0.11.0 can send a provider's model requests through another paired
+computer, for a host whose network blocks the provider. It forwards bytes: the
+chat, tools, files and key stay on the device, and TLS ends there. The app only
+sets and shows the grant and the choice.
+
+- **Grant, on the sharing side.** The Pair a device dialog has "Allow this
+  device to send model traffic through this computer", off by default, with
+  one line under it: "The device's model requests pass through this computer.
+  Prompts and keys stay on the device." `PairingFlow.egress` goes to
+  `RemoteAccess.pair(profile, egress:)` and so to the SDK's
+  `RemoteServer::pair_with_egress`. The grant is separate from the read, edit
+  and full profiles. The Paired devices list shows "Model traffic allowed" under
+  a device that has it (`DeviceEntry.egress`). A device paired before Core 0.11
+  has none.
+- **Choice, on the device.** `SavedHostEntry.egress` says whether a saved host
+  granted this device model traffic. On each provider card in Settings > Models,
+  "Send model traffic through…" offers Direct and the saved hosts with
+  `egress` true, by name. The choice is the host setting
+  `providers.<name>.via` (a saved host's device ID, live), written with
+  `config.set`; Direct writes `null`, which removes it. The page reads
+  `providers` with `config.get` and selects the host whose ID is the saved
+  `via`. A `via` that names a host no longer saved here, or one that no longer
+  grants it, stays selected under its ID as "Unavailable", and the host's own
+  setting is not changed. Only codex, responses, chat-completions and
+  anthropic-messages providers with an https base URL on port 443 accept a
+  `via`; for any other provider the host refuses the write and the page shows
+  its reason as it is, under that provider's picker.
+- **Only this computer's host.** The saved hosts are this device's. With a saved
+  host open, the settings pages work against that host, whose own saved hosts
+  are not known here, so the picker is not shown.
+- **Errors.** The forwarding host must be sharing. A failed model call already
+  names the device and the reason in the provider's error text, so the app adds
+  nothing for it.
+
 ## Tests
 
 Pages run against `test/fake_remote.dart` (`FakeHostLinks` for the hosts
@@ -142,6 +179,11 @@ side, with `Played.hostLinks` and a `RemoteStarter`). Native tests run real Core
 process with a local relay: a test client pairs with the read profile, calls
 `session.list`, and revoke closes it; the app pairs with a second in-process
 host, opens it and lists its chats, and reads it offline once it stops sharing.
+Model traffic: `test/model_egress_test.dart` (picker, writes, unavailable
+`via`, refusal, the pair grant, the devices' state) and the native test
+`model_traffic_is_granted_only_when_the_host_owner_allows_it` (a real grant shows
+on the host's device list and on the saved host); goldens `settings_models_via*`,
+`settings_remote_pair_egress` and `settings_remote_devices_egress`.
 Chat list: `test/remote_chats_test.dart` runs scripted `session.list` rows through
 the kit's backend and the wrapper (statuses, folder names, snapshot path, grouping,
 `session.open` with a workspace, refusals, `waiting_for`);

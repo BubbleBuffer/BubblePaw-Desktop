@@ -152,6 +152,28 @@ FakeHostLinks _sampleHosts() => FakeHostLinks(
   presence: {'HOST-9Z8Y-7X6W-5V4U': HostPresenceKind.offline},
 );
 
+/// Two saved hosts that may carry model traffic and one that may not.
+FakeHostLinks _egressHosts() => FakeHostLinks(
+  hosts: [
+    fakeSavedHost(
+      id: 'OFFC-1111-2222-3333',
+      label: 'Office PC',
+      egress: true,
+    ),
+    fakeSavedHost(
+      id: 'STUD-4444-5555-6666',
+      label: 'Studio mini',
+      via: HostVia.direct,
+      profile: 'read',
+    ),
+    fakeSavedHost(
+      id: 'SHED-7777-8888-9999',
+      label: 'Shed laptop',
+      egress: true,
+    ),
+  ],
+);
+
 Future<void> _openHosts(WidgetTester tester) =>
     tapVisible(tester, 'remote-tab-hosts you can open');
 
@@ -164,13 +186,30 @@ final _sampleDevices = [
     kind: 'phone',
     pairedAt: BigInt.from(1700000000),
     lastSeen: BigInt.from(1700000100),
+    egress: false,
   ),
   const DeviceEntry(
     id: 'LAPT-OP12-3456-78CD',
     label: 'Work laptop',
     profile: 'read',
     kind: 'laptop',
+    egress: false,
   ),
+];
+
+/// The same devices, the phone allowed to send model traffic through this
+/// computer.
+final _egressDevices = [
+  DeviceEntry(
+    id: 'PHON-E123-4567-89AB',
+    label: "Maya's phone",
+    profile: 'edit',
+    kind: 'phone',
+    pairedAt: BigInt.from(1700000000),
+    lastSeen: BigInt.from(1700000100),
+    egress: true,
+  ),
+  _sampleDevices.last,
 ];
 
 /// Fixed licences, so the page does not depend on the packages in the build.
@@ -496,6 +535,38 @@ void main() {
       ).controller(),
       after: (tester) => openSettings(tester, 'models'),
     ),
+    // Core v0.11.0: a provider's model traffic can go through a saved host
+    // that granted this device that.
+    'settings_models_via': (
+      controller: () => Played(
+        capabilities: hostControlCapabilities,
+        providers: sampleProviders,
+        models: sampleModels,
+        settings: FakeHostSettings(
+          values: {
+            'model.main': 'demo/scripted',
+            'providers.openrouter.via': 'OFFC-1111-2222-3333',
+          },
+        ),
+        hostLinks: _egressHosts(),
+      ).controller(),
+      after: (tester) => openSettings(tester, 'models'),
+    ),
+    'settings_models_via_unavailable': (
+      controller: () => Played(
+        capabilities: hostControlCapabilities,
+        providers: sampleProviders,
+        models: sampleModels,
+        settings: FakeHostSettings(
+          values: {
+            'model.main': 'demo/scripted',
+            'providers.openrouter.via': 'GONE-0000-1111-2222',
+          },
+        ),
+        hostLinks: _egressHosts(),
+      ).controller(),
+      after: (tester) => openSettings(tester, 'models'),
+    ),
     // Core v0.7.0: Tools lists the toolsets, the main chat's choice and the
     // approvals; a toolset opens in an editor; Skills lists what the host found.
     'settings_tools': (
@@ -713,6 +784,19 @@ void main() {
         await tapVisible(tester, 'toggle-share');
         await tapVisible(tester, 'remote-pair');
       },
+    ),
+    'settings_remote_pair_egress': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'toggle-share');
+        await tapVisible(tester, 'remote-pair');
+        await tapVisible(tester, 'pair-egress');
+      },
+    ),
+    'settings_remote_devices_egress': _remoteScene(
+      access: (host) =>
+          FakeRemoteAccess(hostSettings: host, devices: _egressDevices),
+      after: (tester) => tapVisible(tester, 'toggle-share'),
     ),
     'settings_remote_pair_code': _remoteScene(
       access: (host) => FakeRemoteAccess(hostSettings: host),

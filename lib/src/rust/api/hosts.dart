@@ -165,6 +165,9 @@ class SavedHostEntry {
   /// Unix seconds of the last successful connection.
   final BigInt? lastConnected;
 
+  /// Whether this host let this device send model traffic through it.
+  final bool egress;
+
   const SavedHostEntry({
     required this.id,
     required this.label,
@@ -173,6 +176,7 @@ class SavedHostEntry {
     required this.profile,
     this.pairedAt,
     this.lastConnected,
+    required this.egress,
   });
 
   @override
@@ -183,7 +187,8 @@ class SavedHostEntry {
       via.hashCode ^
       profile.hashCode ^
       pairedAt.hashCode ^
-      lastConnected.hashCode;
+      lastConnected.hashCode ^
+      egress.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -196,5 +201,6 @@ class SavedHostEntry {
           via == other.via &&
           profile == other.profile &&
           pairedAt == other.pairedAt &&
-          lastConnected == other.lastConnected;
+          lastConnected == other.lastConnected &&
+          egress == other.egress;
 }

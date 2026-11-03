@@ -111,7 +111,7 @@ impl Fixture {
 
     /// Pairs a device the way two people comparing the same number would.
     async fn pair(&self, name: &str, profile: &str) -> (RemoteConnect, DeviceEntry) {
-        let offer = self.share.pair(profile.into()).await.unwrap();
+        let offer = self.share.pair(profile.into(), false).await.unwrap();
         let (pair, connect) = self.device(name, &offer.qr_payload());
         assert_eq!(pair.code, offer.code());
         let (pending, request) = tokio::join!(remote::pair(pair), offer.next_request());
@@ -201,7 +201,7 @@ async fn a_wrong_code_a_decline_and_a_cancel_store_nothing() {
     f.started().await;
 
     // A wrong code with the right shape: refused, the offer stays open.
-    let offer = f.share.pair("read".into()).await.unwrap();
+    let offer = f.share.pair("read".into(), false).await.unwrap();
     let (mut pair, _) = f.device("wrong", &offer.qr_payload());
     let first = if pair.code.starts_with('0') { '1' } else { '0' };
     pair.code = format!("{first}{}", &pair.code[1..]);
@@ -212,7 +212,7 @@ async fn a_wrong_code_a_decline_and_a_cancel_store_nothing() {
     offer.cancel();
 
     // Declined: the device learns it, nothing is stored.
-    let offer = f.share.pair("edit".into()).await.unwrap();
+    let offer = f.share.pair("edit".into(), false).await.unwrap();
     let (pair, _) = f.device("declined", &offer.qr_payload());
     let (pending, request) = tokio::join!(remote::pair(pair), offer.next_request());
     let pending = pending.unwrap();
@@ -224,7 +224,7 @@ async fn a_wrong_code_a_decline_and_a_cancel_store_nothing() {
     assert!(f.share.devices().await.unwrap().is_empty());
 
     // Cancelled: a waiting next_request returns None, so does a later one.
-    let offer = f.share.pair("read".into()).await.unwrap();
+    let offer = f.share.pair("read".into(), false).await.unwrap();
     let (waiting, ()) = tokio::join!(offer.next_request(), async {
         tokio::time::sleep(Duration::from_millis(100)).await;
         offer.cancel();
@@ -238,7 +238,7 @@ async fn a_wrong_code_a_decline_and_a_cancel_store_nothing() {
     );
     assert!(f.share.devices().await.unwrap().is_empty());
 
-    let bad = f.share.pair("root".into()).await.err().unwrap();
+    let bad = f.share.pair("root".into(), false).await.err().unwrap();
     assert_eq!(bad.kind, ShareErrorKind::Other);
 
     f.host.close().await.unwrap();
@@ -656,7 +656,12 @@ fn app_data(f: &Fixture) -> String {
 /// Pairs the app with the fixture's host as two people comparing the same
 /// number would, and returns the saved host.
 async fn pair_app(f: &Fixture, app: &str, profile: &str) -> SavedHostEntry {
-    let offer = f.share.pair(profile.into()).await.unwrap();
+    pair_app_with(f, app, profile, false).await
+}
+
+/// [`pair_app`], with the host's owner granting model traffic when `egress`.
+async fn pair_app_with(f: &Fixture, app: &str, profile: &str, egress: bool) -> SavedHostEntry {
+    let offer = f.share.pair(profile.into(), egress).await.unwrap();
     let link = offer.qr_payload();
     let (pairing, request) = tokio::join!(
         hosts::pair_with_host(app.to_owned(), link, "Test desktop".into()),
@@ -671,6 +676,37 @@ async fn pair_app(f: &Fixture, app: &str, profile: &str) -> SavedHostEntry {
     let device = stored.unwrap();
     assert_eq!(device.kind, "desktop");
     saved.unwrap()
+}
+
+#[tokio::test]
+async fn model_traffic_is_granted_only_when_the_host_owner_allows_it() {
+    let f = fixture().await;
+    f.started().await;
+    let app = app_data(&f);
+
+    // No grant by default: neither side reports one.
+    let plain = pair_app(&f, &app, "read").await;
+    assert!(!plain.egress);
+    let devices = f.share.devices().await.unwrap();
+    assert_eq!(devices.len(), 1);
+    assert!(!devices[0].egress);
+
+    // A grant shows on the host's device list and on the saved host, for a
+    // second device with its own data directory.
+    let other = f.root.path().join("other").join("data");
+    std::fs::create_dir_all(&other).unwrap();
+    let other = other.display().to_string();
+    let granted = pair_app_with(&f, &other, "read", true).await;
+    assert!(granted.egress);
+    let listed = hosts::list_saved_hosts(other).await.unwrap();
+    assert_eq!(listed.len(), 1);
+    assert!(listed[0].egress);
+    let devices = f.share.devices().await.unwrap();
+    assert_eq!(devices.len(), 2);
+    assert_eq!(devices.iter().filter(|d| d.egress).count(), 1);
+
+    f.host.close().await.unwrap();
+    f.relay.shutdown().await;
 }
 
 #[tokio::test]
@@ -859,7 +895,7 @@ async fn pairing_links_are_read_and_wrong_ones_are_refused() {
     let f = fixture().await;
     f.started().await;
     let app = app_data(&f);
-    let offer = f.share.pair("read".into()).await.unwrap();
+    let offer = f.share.pair("read".into(), false).await.unwrap();
     let target = hosts::parse_pairing_link(offer.qr_payload()).unwrap();
     assert_eq!(target.via, hosts::HostVia::Relay);
     assert_eq!(Some(target.host_id.clone()), f.share.state().await.host_id);

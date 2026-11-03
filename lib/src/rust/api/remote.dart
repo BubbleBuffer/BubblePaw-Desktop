@@ -122,8 +122,9 @@ abstract class RemoteShare implements RustOpaqueInterface {
 
   /// Opens a pairing offer for a device that will get `profile` (`read`,
   /// `edit` or `full`). One offer is open at a time: a new one replaces the
-  /// last. Sharing must be online.
-  Future<PairOffer> pair({required String profile});
+  /// last. Sharing must be online. With `egress` the device may also send
+  /// its model traffic through this computer.
+  Future<PairOffer> pair({required String profile, required bool egress});
 
   /// Replaces the key with a fresh one. Stops sharing first and leaves it
   /// stopped. Every pairing in both directions is cleared.
@@ -259,6 +260,9 @@ class DeviceEntry {
   /// Unix seconds of its last accepted connection.
   final BigInt? lastSeen;
 
+  /// Whether this device may send model traffic through this computer.
+  final bool egress;
+
   const DeviceEntry({
     required this.id,
     required this.label,
@@ -266,6 +270,7 @@ class DeviceEntry {
     required this.kind,
     this.pairedAt,
     this.lastSeen,
+    required this.egress,
   });
 
   @override
@@ -275,7 +280,8 @@ class DeviceEntry {
       profile.hashCode ^
       kind.hashCode ^
       pairedAt.hashCode ^
-      lastSeen.hashCode;
+      lastSeen.hashCode ^
+      egress.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -287,7 +293,8 @@ class DeviceEntry {
           profile == other.profile &&
           kind == other.kind &&
           pairedAt == other.pairedAt &&
-          lastSeen == other.lastSeen;
+          lastSeen == other.lastSeen &&
+          egress == other.egress;
 }
 
 /// What importing or regenerating the key did.

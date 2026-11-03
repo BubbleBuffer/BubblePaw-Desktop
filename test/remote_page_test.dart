@@ -20,6 +20,7 @@ final _phone = DeviceEntry(
   kind: 'phone',
   pairedAt: BigInt.from(1700000000),
   lastSeen: BigInt.from(1700000100),
+  egress: false,
 );
 
 Future<void> _openRemote(

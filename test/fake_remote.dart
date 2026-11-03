@@ -10,9 +10,12 @@ import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
 import 'fakes.dart';
 
 class FakeOffer implements PairingOffer {
-  FakeOffer(this.profile);
+  FakeOffer(this.profile, {this.egress = false});
 
   final String profile;
+
+  /// Whether the offer grants the device model traffic through this host.
+  final bool egress;
   final requests = StreamController<PairingRequest?>();
   bool cancelled = false;
 
@@ -36,10 +39,11 @@ class FakeOffer implements PairingOffer {
 }
 
 class FakeRequest implements PairingRequest {
-  FakeRequest(this.owner, this.profile);
+  FakeRequest(this.owner, this.profile, {this.egress = false});
 
   final FakeRemoteAccess owner;
   final String profile;
+  final bool egress;
   bool declined = false;
 
   @override
@@ -57,6 +61,7 @@ class FakeRequest implements PairingRequest {
       profile: profile,
       kind: 'phone',
       pairedAt: BigInt.from(1),
+      egress: egress,
     );
     owner.deviceList.add(entry);
     return entry;
@@ -115,6 +120,9 @@ class FakeRemoteAccess implements RemoteAccess {
   final calls = <String>[];
   final offers = <FakeOffer>[];
   FakeRequest? nextPairRequest;
+
+  /// The `egress` each `pair` call asked for, in order.
+  final pairGrants = <bool>[];
 
   void emit(ShareState next) {
     current = next;
@@ -178,9 +186,10 @@ class FakeRemoteAccess implements RemoteAccess {
   }
 
   @override
-  Future<PairingOffer> pair(String profile) async {
+  Future<PairingOffer> pair(String profile, {bool egress = false}) async {
     calls.add('pair:$profile');
-    final offer = FakeOffer(profile);
+    pairGrants.add(egress);
+    final offer = FakeOffer(profile, egress: egress);
     offers.add(offer);
     final request = nextPairRequest;
     if (request != null) offer.requests.add(request);
@@ -308,6 +317,7 @@ SavedHostEntry fakeSavedHost({
   HostVia via = HostVia.relay,
   String profile = 'edit',
   int? lastConnected,
+  bool egress = false,
 }) => SavedHostEntry(
   id: id,
   label: label,
@@ -316,6 +326,7 @@ SavedHostEntry fakeSavedHost({
   profile: profile,
   pairedAt: BigInt.from(1700000000),
   lastConnected: lastConnected == null ? null : BigInt.from(lastConnected),
+  egress: egress,
 );
 
 class FakeHostPairing implements HostPairingHandle {
