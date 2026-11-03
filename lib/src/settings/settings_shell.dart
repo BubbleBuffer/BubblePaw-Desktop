@@ -34,6 +34,7 @@ class SettingsShell extends StatefulWidget {
     required this.onSendFeedback,
     this.services = const PlatformServices(),
     this.onClose,
+    this.phone = false,
     this.licenceSource = LicencesPage.defaultSource,
   });
 
@@ -49,6 +50,9 @@ class SettingsShell extends StatefulWidget {
 
   /// Leave settings for the chat. Null when there is no chat to go back to.
   final VoidCallback? onClose;
+
+  /// The phone: no host of its own, so no sharing and no Feedback page.
+  final bool phone;
 
   final Stream<LicenseEntry> Function() licenceSource;
 
@@ -82,13 +86,19 @@ class _SettingsShellState extends State<SettingsShell> {
     _licences = false;
   });
 
+  List<SettingsSection> get _sections => [
+    for (final s in SettingsSection.values)
+      if (!(widget.phone && s == SettingsSection.feedback)) s,
+  ];
+
   String _summary(SettingsSection section) => switch (section) {
     SettingsSection.general => themeSummary(widget.controller.prefs.theme),
     SettingsSection.models => 'Default model and providers',
     SettingsSection.tools => 'Toolsets and approvals',
     SettingsSection.mcp => 'Servers and sign-in',
     SettingsSection.skills => 'Discovered skills',
-    SettingsSection.remote => 'Share this host and pair devices',
+    SettingsSection.remote =>
+      widget.phone ? 'Hosts and device key' : 'Share this host and pair devices',
     SettingsSection.feedback => switch (widget.feedback.reports.length) {
       0 => 'No reports saved',
       1 => '1 report saved',
@@ -115,6 +125,7 @@ class _SettingsShellState extends State<SettingsShell> {
         key: const ValueKey('page-general'),
         controller: host,
         onBack: onBack,
+        phone: widget.phone,
       ),
       SettingsSection.models => ModelsPage(
         key: const ValueKey('page-models'),
@@ -148,6 +159,7 @@ class _SettingsShellState extends State<SettingsShell> {
         deviceName: host.deviceName,
         addHostPending: host.addHostPending,
         onAddHostHandled: host.addHostHandled,
+        phone: widget.phone,
         services: widget.services,
         onBack: onBack,
       ),
@@ -194,7 +206,7 @@ class _SettingsShellState extends State<SettingsShell> {
               onBack: widget.onClose,
               backKey: const ValueKey('settings-back'),
               children: [
-                for (final s in SettingsSection.values)
+                for (final s in _sections)
                   _ListRow(
                     key: ValueKey('settings-nav-${s.name}'),
                     title: s.title,
@@ -214,6 +226,7 @@ class _SettingsShellState extends State<SettingsShell> {
                 glyphOf: _glyph,
                 onSelect: _select,
                 onClose: widget.onClose,
+                sections: _sections,
               ),
               Expanded(child: _page(section)),
             ],
@@ -230,8 +243,10 @@ class _Nav extends StatelessWidget {
     required this.glyphOf,
     required this.onSelect,
     required this.onClose,
+    required this.sections,
   });
 
+  final List<SettingsSection> sections;
   final SettingsSection selected;
   final LucideGlyph Function(SettingsSection) glyphOf;
   final ValueChanged<SettingsSection> onSelect;
@@ -280,7 +295,7 @@ class _Nav extends StatelessWidget {
                   ),
                 ),
               ),
-              for (final s in SettingsSection.values)
+              for (final s in sections)
                 _NavItem(
                   key: ValueKey('settings-nav-${s.name}'),
                   title: s.title,

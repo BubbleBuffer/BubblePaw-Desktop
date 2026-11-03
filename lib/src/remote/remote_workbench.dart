@@ -24,6 +24,7 @@ class RemoteWorkbench extends StatefulWidget {
     required this.state,
     required this.hostName,
     this.initialChatId,
+    this.startOnList = false,
     this.now,
     this.onSettings,
     this.onSwitchHost,
@@ -42,6 +43,10 @@ class RemoteWorkbench extends StatefulWidget {
 
   /// The chat to open; follows changes (a rewind makes a new chat).
   final String? initialChatId;
+
+  /// At compact width the chat list is shown first and a chat opens over it
+  /// (the phone's home); otherwise the first chat is open at the start.
+  final bool startOnList;
   final DateTime? now;
   final VoidCallback? onSettings;
   final VoidCallback? onSwitchHost;
@@ -76,6 +81,7 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
   void initState() {
     super.initState();
     _selected = widget.initialChatId;
+    if (widget.startOnList && widget.initialChatId == null) _rail.open = true;
     unawaited(_refresh());
   }
 

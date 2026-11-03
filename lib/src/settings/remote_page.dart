@@ -30,6 +30,7 @@ class RemotePage extends StatefulWidget {
     this.deviceName = '',
     this.addHostPending = false,
     this.onAddHostHandled,
+    this.phone = false,
   });
 
   /// The hosts this device can open; null when there is no such side.
@@ -42,6 +43,9 @@ class RemotePage extends StatefulWidget {
   /// hosts and the add dialog.
   final bool addHostPending;
   final VoidCallback? onAddHostHandled;
+
+  /// The phone has no host to share: the page is the device and the hosts.
+  final bool phone;
 
   /// Null while there is no host to share (not started, or stopped).
   final RemoteController? remote;
@@ -182,7 +186,7 @@ class _RemotePageState extends State<RemotePage> {
           ),
         ),
       _deviceSection(r),
-      if (widget.hosts != null)
+      if (widget.hosts != null && !widget.phone)
         Padding(
           padding: const EdgeInsets.only(bottom: 20),
           child: Align(
@@ -197,7 +201,7 @@ class _RemotePageState extends State<RemotePage> {
             ),
           ),
         ),
-      if (_hostsTab && widget.hosts != null)
+      if ((_hostsTab || widget.phone) && widget.hosts != null)
         _hostsSection()
       else ...[
         _sharingSection(r),

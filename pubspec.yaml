@@ -46,6 +46,9 @@ dependencies:
   lucide_icons_flutter: 3.1.25
   # The QR code of the pairing link, drawn from its modules.
   qr: ^3.0.2
+  # The phone build: its data directory and the QR scan of a pairing link.
+  path_provider: ^2.1.5
+  mobile_scanner: ^7.0.1
 
 dev_dependencies:
   flutter_test:

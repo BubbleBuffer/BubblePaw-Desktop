@@ -146,3 +146,40 @@ jobs:
       - name: windows build (debug)
         if: always()
         run: flutter build windows --debug
+
+  android:
+    name: phone app (arm64 debug APK)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+      - name: rust toolchain
+        run: rustup toolchain install stable --profile minimal && rustup default stable && rustup target add aarch64-linux-android
+      - name: cargo-ndk
+        run: cargo install cargo-ndk --locked
+      - run: flutter pub get
+      - name: android project
+        run: |
+          flutter create --platforms=android --org cc.breadcat --project-name bubblepaw_desktop .
+          python3 tool/android_setup.py
+      - name: native crate for arm64 (remote client only)
+        run: |
+          export ANDROID_NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          cargo ndk -t arm64-v8a -o android/app/src/main/jniLibs build --release --manifest-path native/Cargo.toml --no-default-features
+      - name: apk (debug-signed)
+        run: flutter build apk --debug -t lib/main_phone.dart --target-platform android-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bubblepaw-phone-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error

@@ -19,10 +19,18 @@ String themeSummary(ThemeSetting theme) => switch (theme) {
 };
 
 class GeneralPage extends StatelessWidget {
-  const GeneralPage({super.key, required this.controller, this.onBack});
+  const GeneralPage({
+    super.key,
+    required this.controller,
+    this.onBack,
+    this.phone = false,
+  });
 
   final HostController controller;
   final VoidCallback? onBack;
+
+  /// The phone shows the theme only: no startup, tray or data directory.
+  final bool phone;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +59,7 @@ class GeneralPage extends StatelessWidget {
             onChanged: (t) => set(prefs.copyWith(theme: t)),
           ),
         ),
+        if (!phone) ...[
         const SettingsHeading('Startup', top: 24),
         SwitchRow(
           id: 'open-at-login',
@@ -82,6 +91,7 @@ class GeneralPage extends StatelessWidget {
         ),
         const SettingsHeading('Storage', top: 24),
         _DataDirectoryRow(controller: controller),
+        ],
         if (controller.startupFailed)
           Padding(
             padding: const EdgeInsets.only(top: 8),

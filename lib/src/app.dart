@@ -30,6 +30,7 @@ import 'screens/diff_review.dart';
 import 'screens/host_open_notice.dart';
 import 'screens/needs_setup_notice.dart';
 import 'screens/notice.dart';
+import 'screens/phone_home.dart';
 import 'screens/saved_notice.dart';
 import 'screens/tray_notice.dart';
 import 'screens/update_dialog.dart';
@@ -263,6 +264,38 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
+  /// The phone: the open host's chats, or the empty home without one.
+  Widget _phone() {
+    final backend = controller.backend;
+    final hosts = controller.hosts;
+    if (backend == null) {
+      return ListenableBuilder(
+        listenable: hosts ?? controller,
+        builder: (context, _) => PhoneHome(
+          hostMenu: _hostMenu(),
+          onSettings: controller.openSettings,
+          hasHosts: hosts != null && hosts.hosts.isNotEmpty,
+          opening: controller.opening,
+        ),
+      );
+    }
+    return Workbench(
+      // A new host is a new workbench.
+      key: ObjectKey(backend),
+      backend: backend,
+      createdChats: controller.createdChats,
+      now: controller.now,
+      workspaceName: '',
+      initials: '',
+      onSettings: controller.openSettings,
+      hostMenu: _hostMenu(),
+      remoteRows: controller.remoteRows,
+      remoteRail: controller.remoteRail,
+      remoteName: controller.openHost?.label ?? 'Host',
+      phone: true,
+    );
+  }
+
   Widget _screen(BuildContext context) {
     final pickFolder = widget.pickFolder;
     final services = widget.services;
@@ -277,8 +310,10 @@ class _AppShellState extends State<AppShell> {
         onSendFeedback: () => unawaited(_sendFeedback()),
         licenceSource: licenceSource,
         onClose: controller.closeSettings,
+        phone: !controller.localHost,
       );
     }
+    if (!controller.localHost) return _phone();
     return switch (controller.phase) {
       HostPhase.stopped => Notice(
         title: 'The host is not running',
@@ -367,7 +402,12 @@ class Workbench extends StatefulWidget {
     this.remoteRows,
     this.remoteRail,
     this.remoteName = 'Host',
+    this.phone = false,
   });
+
+  /// A phone: the chat list is home, a chat opens over it, and the host menu
+  /// is a sheet from the bottom.
+  final bool phone;
 
   final GuardedBackend backend;
   final Stream<ChatSummary>? createdChats;
@@ -428,6 +468,11 @@ class _WorkbenchState extends State<Workbench> {
   }
 
   void _openWorkspaceMenu() {
+    if (widget.phone) {
+      final hosts = widget.hostMenu;
+      if (hosts != null) unawaited(showHostSheet(context, hosts: hosts));
+      return;
+    }
     final switchTo = widget.onSwitchWorkspace;
     if (switchTo == null) return;
     unawaited(
@@ -457,6 +502,7 @@ class _WorkbenchState extends State<Workbench> {
                 rows: widget.remoteRows!,
                 state: widget.remoteRail!,
                 hostName: widget.remoteName,
+                startOnList: widget.phone,
                 initialChatId: _openChatId,
                 now: widget.now,
                 onSettings: widget.onSettings,
@@ -509,13 +555,14 @@ class _WorkbenchState extends State<Workbench> {
 List<HostChoice> hostChoices(HostController controller, HostsController hosts) {
   final open = controller.openHostId;
   return [
-    HostChoice(
-      id: null,
-      name: 'This computer',
-      state: 'Running',
-      dot: true,
-      selected: open == null,
-    ),
+    if (controller.localHost)
+      HostChoice(
+        id: null,
+        name: 'This computer',
+        state: 'Running',
+        dot: true,
+        selected: open == null,
+      ),
     for (final h in hosts.hosts)
       HostChoice(
         id: h.id,

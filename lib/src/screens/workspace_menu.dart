@@ -2,7 +2,7 @@
 // popup under the rail header.
 
 import 'package:agent_kit/agent_kit.dart';
-import 'package:bb_ui/bb_ui.dart' show LucideGlyph, ts;
+import 'package:bb_ui/bb_ui.dart' show Ico, IconBtn, LucideGlyph, ts;
 import 'package:flutter/widgets.dart';
 
 import '../config.dart';
@@ -207,7 +207,11 @@ class _Row extends StatefulWidget {
     this.selected = false,
     this.dot,
     this.glyph,
+    this.tall = false,
   });
+
+  /// A touch-sized row (the phone's sheet).
+  final bool tall;
 
   /// A status dot before the title: lit or not; null for none.
   final bool? dot;
@@ -245,8 +249,13 @@ class _RowState extends State<_Row> {
           child: ColoredBox(
             color: _hover ? theme.railHover : const Color(0x00000000),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Row(
+              padding: EdgeInsets.symmetric(
+                horizontal: widget.tall ? 16 : 12,
+                vertical: widget.tall ? 10 : 6,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: widget.tall ? 28 : 0),
+                child: Row(
                 children: [
                   if (widget.glyph != null) ...[
                     glyphIcon(widget.glyph!, size: 15, color: theme.muted),
@@ -294,6 +303,118 @@ class _RowState extends State<_Row> {
                       'Open',
                       style: ts(theme.typeScale.uiSmall, theme.muted),
                     ),
+                ],
+              ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The phone's host switcher: a sheet from the bottom with the saved hosts
+/// and "Add a host". Picking a host or adding one closes it first.
+Future<void> showHostSheet(BuildContext context, {required HostMenu hosts}) =>
+    Navigator.of(context).push<void>(
+      RawDialogRoute<void>(
+        barrierDismissible: true,
+        barrierLabel: 'Close the host menu',
+        barrierColor: const Color(0x66000000),
+        pageBuilder: (context, animation, secondary) => HostSheet(
+          hosts: HostMenu(
+            listenable: hosts.listenable,
+            choices: hosts.choices,
+            onPick: (id) {
+              Navigator.of(context).pop();
+              hosts.onPick(id);
+            },
+            onAdd: () {
+              Navigator.of(context).pop();
+              hosts.onAdd();
+            },
+          ),
+        ),
+      ),
+    );
+
+class HostSheet extends StatelessWidget {
+  const HostSheet({super.key, required this.hosts});
+
+  final HostMenu hosts;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.bb;
+    final radius = BorderRadius.vertical(top: Radius.circular(theme.radii.sheet));
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Semantics(
+        container: true,
+        scopesRoute: true,
+        namesRoute: true,
+        label: 'Hosts',
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: theme.surface,
+            borderRadius: radius,
+            border: Border(top: BorderSide(color: theme.seam)),
+          ),
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.paddingOf(context).bottom + 8,
+            ),
+            child: ListenableBuilder(
+              listenable: hosts.listenable,
+              builder: (context, _) => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Semantics(
+                            header: true,
+                            child: Text(
+                              'Hosts',
+                              style: ts(
+                                theme.typeScale.h2,
+                                theme.ink,
+                                weight: 600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        IconBtn(
+                          Ico.close,
+                          key: const ValueKey('host-sheet-close'),
+                          size: 40,
+                          semanticLabel: 'Close',
+                          onTap: () => Navigator.of(context).maybePop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  for (final choice in hosts.choices())
+                    _Row(
+                      key: ValueKey('host-menu-item-${choice.id ?? 'local'}'),
+                      title: choice.name,
+                      detail: choice.state,
+                      dot: choice.dot,
+                      selected: choice.selected,
+                      tall: true,
+                      onTap: () => hosts.onPick(choice.id),
+                    ),
+                  _Row(
+                    key: const ValueKey('host-menu-add'),
+                    title: 'Add a host',
+                    glyph: glyphPlus,
+                    tall: true,
+                    onTap: hosts.onAdd,
+                  ),
                 ],
               ),
             ),

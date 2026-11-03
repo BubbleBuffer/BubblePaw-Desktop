@@ -65,6 +65,17 @@ flutter build linux --debug
 
 **Run it.** Scripted mode runs the kit's fake backend and does not start Core: `flutter run -d linux --dart-entrypoint-args=--scripted`, or `bubblepaw_desktop --scripted` for a built app. Real mode is `flutter run -d linux`; on first run the app saves default directories, starts the embedded host and opens Settings, and Settings > About shows the Core version it embeds.
 
+**Phone (Android).** `lib/main_phone.dart` is a remote-only client: it pairs with a host and opens it, with no host of its own, sharing or tray. The native crate builds for it with `--no-default-features` (no embedded Core). The Android project is not committed; CI generates it and builds a debug-signed arm64 APK, uploaded as the `bubblepaw-phone-debug-apk` artifact. To build one yourself (Android SDK and NDK, `cargo-ndk`, the `aarch64-linux-android` Rust target):
+
+```sh
+flutter create --platforms=android --org cc.breadcat --project-name bubblepaw_desktop .
+python3 tool/android_setup.py
+cargo ndk -t arm64-v8a -o android/app/src/main/jniLibs build --release --manifest-path native/Cargo.toml --no-default-features
+flutter build apk --debug -t lib/main_phone.dart --target-platform android-arm64
+```
+
+See [docs/phone-app.md](docs/phone-app.md).
+
 Config is `config.json` in the app-support directory: `%APPDATA%\BubblePaw Desktop` on Windows, or `$XDG_DATA_HOME/bubblepaw-desktop` (else `~/.local/share/bubblepaw-desktop`) on Linux. `--config-dir <dir>` replaces that directory for one launch. The app's own preferences are in `preferences.json` beside it. Release builds and the Windows installer are described in [docs/releases.md](docs/releases.md).
 
 ## Licence
