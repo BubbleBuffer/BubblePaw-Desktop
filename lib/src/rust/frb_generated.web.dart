@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/host.dart';
+import 'api/hosts.dart';
 import 'api/remote.dart';
 
 import 'dart:async';
@@ -29,6 +30,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost;
 
   CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_HostPairingPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing;
+
+  CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_PairOfferPtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer;
 
@@ -46,6 +51,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   BubblePawHost
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost(
+    dynamic raw,
+  );
+
+  @protected
+  HostPairing
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
     dynamic raw,
   );
 
@@ -74,6 +85,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  HostPairing
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    dynamic raw,
+  );
+
+  @protected
   PairOffer
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
     dynamic raw,
@@ -94,6 +111,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   BubblePawHost
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost(
+    dynamic raw,
+  );
+
+  @protected
+  HostPairing
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
     dynamic raw,
   );
 
@@ -158,6 +181,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   HostErrorKind dco_decode_host_error_kind(dynamic raw);
 
   @protected
+  HostLinkError dco_decode_host_link_error(dynamic raw);
+
+  @protected
+  HostLinkErrorKind dco_decode_host_link_error_kind(dynamic raw);
+
+  @protected
+  HostPresenceKind dco_decode_host_presence_kind(dynamic raw);
+
+  @protected
+  HostVia dco_decode_host_via(dynamic raw);
+
+  @protected
   int dco_decode_i_32(dynamic raw);
 
   @protected
@@ -170,6 +205,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyInfo dco_decode_key_info(dynamic raw);
 
   @protected
+  LinkTarget dco_decode_link_target(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
@@ -177,6 +215,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  List<SavedHostEntry> dco_decode_list_saved_host_entry(dynamic raw);
 
   @protected
   LoginPrompt dco_decode_login_prompt(dynamic raw);
@@ -198,6 +239,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   OtherShare dco_decode_other_share(dynamic raw);
+
+  @protected
+  SavedHostEntry dco_decode_saved_host_entry(dynamic raw);
 
   @protected
   ShareError dco_decode_share_error(dynamic raw);
@@ -242,6 +286,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  HostPairing
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   PairOffer
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
     SseDeserializer deserializer,
@@ -266,6 +316,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  HostPairing
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   PairOffer
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
     SseDeserializer deserializer,
@@ -286,6 +342,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   BubblePawHost
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  HostPairing
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
     SseDeserializer deserializer,
   );
 
@@ -354,6 +416,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   HostErrorKind sse_decode_host_error_kind(SseDeserializer deserializer);
 
   @protected
+  HostLinkError sse_decode_host_link_error(SseDeserializer deserializer);
+
+  @protected
+  HostLinkErrorKind sse_decode_host_link_error_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  HostPresenceKind sse_decode_host_presence_kind(SseDeserializer deserializer);
+
+  @protected
+  HostVia sse_decode_host_via(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
@@ -366,6 +442,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   KeyInfo sse_decode_key_info(SseDeserializer deserializer);
 
   @protected
+  LinkTarget sse_decode_link_target(SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
@@ -373,6 +452,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  List<SavedHostEntry> sse_decode_list_saved_host_entry(
+    SseDeserializer deserializer,
+  );
 
   @protected
   LoginPrompt sse_decode_login_prompt(SseDeserializer deserializer);
@@ -394,6 +478,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   OtherShare sse_decode_other_share(SseDeserializer deserializer);
+
+  @protected
+  SavedHostEntry sse_decode_saved_host_entry(SseDeserializer deserializer);
 
   @protected
   ShareError sse_decode_share_error(SseDeserializer deserializer);
@@ -443,6 +530,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    HostPairing self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
     PairOffer self,
     SseSerializer serializer,
@@ -471,6 +565,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    HostPairing self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
     PairOffer self,
     SseSerializer serializer,
@@ -494,6 +595,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost(
     BubblePawHost self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    HostPairing self,
     SseSerializer serializer,
   );
 
@@ -574,6 +682,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_host_error_kind(HostErrorKind self, SseSerializer serializer);
 
   @protected
+  void sse_encode_host_link_error(HostLinkError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_host_link_error_kind(
+    HostLinkErrorKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_host_presence_kind(
+    HostPresenceKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_host_via(HostVia self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
@@ -584,6 +710,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_key_info(KeyInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_link_target(LinkTarget self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
@@ -597,6 +726,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_saved_host_entry(
+    List<SavedHostEntry> self,
     SseSerializer serializer,
   );
 
@@ -621,6 +756,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_other_share(OtherShare self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_saved_host_entry(
+    SavedHostEntry self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_share_error(ShareError self, SseSerializer serializer);
@@ -677,6 +818,22 @@ class RustLibWire implements BaseWire {
     int ptr,
   ) => wasmModule
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost(
+        ptr,
+      );
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+        ptr,
+      );
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
         ptr,
       );
 
@@ -742,6 +899,16 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void
   rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost(
+    int ptr,
+  );
+
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
     int ptr,
   );
 

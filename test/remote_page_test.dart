@@ -205,6 +205,20 @@ void main() {
       expect(find.textContaining('T4WK-9HDB-2QXN-6MRE'), findsOneWidget);
     });
 
+    testWidgets('copies the pairing link for a host that pastes it', (
+      tester,
+    ) async {
+      final copied = <String>[];
+      final access = FakeRemoteAccess();
+      await _openRemote(tester, access, copied: copied);
+      await _tap(tester, 'toggle-share');
+      await _tap(tester, 'remote-pair');
+      await _tap(tester, 'pair-continue');
+      await _tap(tester, 'pair-copy-link');
+      expect(copied, ['bubblepaw://pair?c=K7M2QX9PD4']);
+      await _tap(tester, 'pair-cancel');
+    });
+
     testWidgets('pairs a device: profile, code, number, added', (tester) async {
       final access = FakeRemoteAccess();
       await _openRemote(tester, access);

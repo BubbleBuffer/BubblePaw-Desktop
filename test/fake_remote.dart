@@ -3,6 +3,8 @@
 
 import 'dart:async';
 
+import 'package:bubblepaw_desktop/src/core/ffi_transport.dart';
+import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
 
 import 'fakes.dart';
@@ -297,4 +299,114 @@ class FakeRemoteAccess implements RemoteAccess {
 
   @override
   Future<OtherShare> serveStatus() async => other;
+}
+
+/// A saved host for the fake.
+SavedHostEntry fakeSavedHost({
+  String id = 'HOST-A1B2-C3D4-E5F6',
+  String label = 'Maya desktop',
+  HostVia via = HostVia.relay,
+  String profile = 'edit',
+  int? lastConnected,
+}) => SavedHostEntry(
+  id: id,
+  label: label,
+  address: 'wss://relay.example.com',
+  via: via,
+  profile: profile,
+  pairedAt: BigInt.from(1700000000),
+  lastConnected: lastConnected == null ? null : BigInt.from(lastConnected),
+);
+
+class FakeHostPairing implements HostPairingHandle {
+  FakeHostPairing(this.owner, this.entry);
+
+  final FakeHostLinks owner;
+  final SavedHostEntry entry;
+  final _done = Completer<SavedHostEntry>();
+  bool cancelled = false;
+
+  @override
+  String get comparison => '482913';
+  @override
+  String get hostName => entry.label;
+  @override
+  String get hostId => entry.id;
+
+  /// The host's owner confirms.
+  void confirm() {
+    owner.saved.add(entry);
+    _done.complete(entry);
+  }
+
+  /// The host's owner declines.
+  void decline() => _done.completeError(
+    const HostLinkError(
+      kind: HostLinkErrorKind.declined,
+      message: 'the host declined',
+    ),
+  );
+
+  @override
+  Future<SavedHostEntry> finish() => _done.future;
+
+  @override
+  Future<void> cancel() async => cancelled = true;
+}
+
+/// The hosts this device can open, in memory.
+class FakeHostLinks implements HostLinks {
+  FakeHostLinks({
+    List<SavedHostEntry>? hosts,
+    Map<String, HostPresenceKind>? presence,
+  }) : saved = [...?hosts],
+       presence = {...?presence};
+
+  final List<SavedHostEntry> saved;
+  final Map<String, HostPresenceKind> presence;
+  final pairings = <FakeHostPairing>[];
+  final forgotten = <String>[];
+  final opened = <String>[];
+
+  /// Made to fail by the next pair, when set.
+  HostLinkError? pairFails;
+
+  /// The entry the next successful pair saves.
+  SavedHostEntry nextPairing = fakeSavedHost(
+    id: 'HOST-9Z8Y-7X6W-5V4U',
+    label: 'Studio mini',
+  );
+
+  @override
+  Future<List<SavedHostEntry>> list() async => [...saved];
+
+  @override
+  Future<bool> forget(String id) async {
+    forgotten.add(id);
+    final before = saved.length;
+    saved.removeWhere((h) => h.id == id);
+    return saved.length != before;
+  }
+
+  @override
+  Future<HostPresenceKind> probe(String id) async =>
+      presence[id] ?? HostPresenceKind.online;
+
+  @override
+  Future<HostPairingHandle> pair(String link, String deviceName) async {
+    final error = pairFails;
+    if (error != null) {
+      pairFails = null;
+      throw error;
+    }
+    final pairing = FakeHostPairing(this, nextPairing);
+    pairings.add(pairing);
+    return pairing;
+  }
+
+  @override
+  Future<NativeHost> open(String id) async {
+    opened.add(id);
+    throw StateError('the fake opens hosts through a RemoteStarter');
+  }
 }

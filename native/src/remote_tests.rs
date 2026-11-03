@@ -13,6 +13,7 @@ use bubblepaw_sdk::{
 use serde_json::json;
 
 use crate::api::host::BubblePawHost;
+use crate::api::hosts::{self, SavedHostEntry};
 use crate::api::remote::*;
 use crate::host_setup;
 
@@ -638,6 +639,201 @@ async fn an_attached_host_cannot_be_shared() {
     assert_eq!(error.kind, ShareErrorKind::NotEmbedded, "{error:?}");
     assert_eq!(share.state().await.status, ShareStatus::Off);
     attached.close().await.unwrap();
+    f.host.close().await.unwrap();
+    f.relay.shutdown().await;
+}
+
+// ------------------------------------------------------- hosts you can open
+
+/// The app's side of "Hosts you can open": its own data directory, apart from
+/// the data directory of the host it opens.
+fn app_data(f: &Fixture) -> String {
+    let dir = f.root.path().join("app").join("data");
+    std::fs::create_dir_all(&dir).unwrap();
+    dir.display().to_string()
+}
+
+/// Pairs the app with the fixture's host as two people comparing the same
+/// number would, and returns the saved host.
+async fn pair_app(f: &Fixture, app: &str, profile: &str) -> SavedHostEntry {
+    let offer = f.share.pair(profile.into()).await.unwrap();
+    let link = offer.qr_payload();
+    let (pairing, request) = tokio::join!(
+        hosts::pair_with_host(app.to_owned(), link, "Test desktop".into()),
+        offer.next_request()
+    );
+    let pairing = pairing.unwrap();
+    let request = request.expect("a pairing request");
+    assert_eq!(pairing.comparison(), request.comparison());
+    assert_eq!(request.device_name(), "Test desktop");
+    assert_eq!(pairing.host_name(), "Test PC");
+    let (saved, stored) = tokio::join!(pairing.finish(), request.approve(String::new()));
+    let device = stored.unwrap();
+    assert_eq!(device.kind, "desktop");
+    saved.unwrap()
+}
+
+#[tokio::test]
+async fn the_app_pairs_with_a_second_host_opens_it_and_lists_its_chats() {
+    let f = fixture().await;
+    f.started().await;
+    let app = app_data(&f);
+    assert!(hosts::list_saved_hosts(app.clone())
+        .await
+        .unwrap()
+        .is_empty());
+
+    // The second host has a chat of its own.
+    f.host
+        .call(
+            "session.open".into(),
+            json!({"title": "on the second host"}).to_string(),
+        )
+        .await
+        .unwrap();
+
+    let saved = pair_app(&f, &app, "edit").await;
+    assert_eq!(saved.label, "Test PC");
+    assert_eq!(saved.via, hosts::HostVia::Relay);
+    assert_eq!(saved.profile, "edit");
+    assert!(saved.paired_at.is_some());
+    assert!(saved.last_connected.is_none());
+    assert!(saved.address.starts_with("ws://127.0.0.1:"));
+    assert_eq!(
+        hosts::list_saved_hosts(app.clone()).await.unwrap(),
+        vec![saved.clone()]
+    );
+
+    // The relay says the host is online.
+    let presence = hosts::probe_saved_host(app.clone(), saved.id.clone(), 5)
+        .await
+        .unwrap();
+    assert_eq!(presence, hosts::HostPresenceKind::Online);
+
+    // Opening it gives the same calls as a local host, with its chats.
+    let remote_host = BubblePawHost::connect_saved(app.clone(), saved.id.clone())
+        .await
+        .unwrap();
+    assert!(remote_host.attached(), "a remote host counts as attached");
+    let listed = remote_host
+        .call("session.list".into(), String::new())
+        .await
+        .unwrap();
+    let listed: serde_json::Value = serde_json::from_str(&listed).unwrap();
+    assert_eq!(listed.as_array().unwrap().len(), 1, "{listed}");
+    assert!(listed.to_string().contains("on the second host"));
+    let after = hosts::list_saved_hosts(app.clone()).await.unwrap();
+    assert!(after[0].last_connected.is_some(), "a connect is recorded");
+    remote_host.close().await.unwrap();
+
+    // Revoking on the host: the app is refused, then forgets the host.
+    let devices = f.share.devices().await.unwrap();
+    assert!(f.share.revoke(devices[0].id.clone()).await.unwrap());
+    let refused = BubblePawHost::connect_saved(app.clone(), saved.id.clone()).await;
+    assert_eq!(
+        refused.err().map(|error| error.kind),
+        Some(hosts::HostLinkErrorKind::Refused)
+    );
+    assert!(hosts::forget_saved_host(app.clone(), saved.id.clone())
+        .await
+        .unwrap());
+    assert!(!hosts::forget_saved_host(app.clone(), saved.id.clone())
+        .await
+        .unwrap());
+    assert!(hosts::list_saved_hosts(app).await.unwrap().is_empty());
+
+    f.host.close().await.unwrap();
+    f.relay.shutdown().await;
+}
+
+#[tokio::test]
+async fn a_host_that_stopped_sharing_reads_offline_and_is_unreachable() {
+    let f = fixture().await;
+    f.started().await;
+    let app = app_data(&f);
+    let saved = pair_app(&f, &app, "read").await;
+    f.share.stop().await.unwrap();
+    // Wait for the relay to drop the registration.
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+    loop {
+        let presence = hosts::probe_saved_host(app.clone(), saved.id.clone(), 5)
+            .await
+            .unwrap();
+        if presence == hosts::HostPresenceKind::Offline {
+            break;
+        }
+        assert!(tokio::time::Instant::now() < deadline, "still {presence:?}");
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    let error = BubblePawHost::connect_saved(app.clone(), saved.id.clone())
+        .await
+        .err()
+        .expect("an offline host cannot be opened");
+    assert_eq!(
+        error.kind,
+        hosts::HostLinkErrorKind::Unreachable,
+        "{error:?}"
+    );
+
+    // An unknown ID is not paired.
+    let error = hosts::probe_saved_host(app, "K7MQ-2X9F-D4RT-8WHN".into(), 1)
+        .await
+        .unwrap_err();
+    assert_eq!(error.kind, hosts::HostLinkErrorKind::NotPaired);
+    f.host.close().await.unwrap();
+    f.relay.shutdown().await;
+}
+
+#[tokio::test]
+async fn pairing_links_are_read_and_wrong_ones_are_refused() {
+    let f = fixture().await;
+    f.started().await;
+    let app = app_data(&f);
+    let offer = f.share.pair("read".into()).await.unwrap();
+    let target = hosts::parse_pairing_link(offer.qr_payload()).unwrap();
+    assert_eq!(target.via, hosts::HostVia::Relay);
+    assert_eq!(Some(target.host_id.clone()), f.share.state().await.host_id);
+    assert_eq!(target.address, offer.address());
+
+    for text in ["", "not a link", "{\"v\":2}"] {
+        let error = hosts::parse_pairing_link(text.into()).unwrap_err();
+        assert_eq!(error.kind, hosts::HostLinkErrorKind::BadLink);
+        let error = hosts::pair_with_host(app.clone(), text.into(), "x".into())
+            .await
+            .err()
+            .unwrap();
+        assert_eq!(error.kind, hosts::HostLinkErrorKind::BadLink);
+    }
+
+    // A wrong code with the right shape is refused and nothing is saved.
+    let link = offer.qr_payload();
+    let mut value: serde_json::Value = serde_json::from_str(&link).unwrap();
+    let code = value["code"].as_str().unwrap().to_owned();
+    let first = if code.starts_with('0') { '1' } else { '0' };
+    value["code"] = json!(format!("{first}{}", &code[1..]));
+    let error = hosts::pair_with_host(app.clone(), value.to_string(), "x".into())
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(error.kind, hosts::HostLinkErrorKind::WrongCode, "{error:?}");
+    assert!(hosts::list_saved_hosts(app.clone())
+        .await
+        .unwrap()
+        .is_empty());
+
+    // Cancelling while waiting for the host ends the wait; nothing is saved.
+    let (pairing, request) = tokio::join!(
+        hosts::pair_with_host(app.clone(), offer.qr_payload(), "x".into()),
+        offer.next_request()
+    );
+    let pairing = pairing.unwrap();
+    let _request = request.unwrap();
+    let (finished, ()) = tokio::join!(pairing.finish(), async {
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        pairing.cancel();
+    });
+    assert!(finished.is_err());
+    assert!(hosts::list_saved_hosts(app).await.unwrap().is_empty());
     f.host.close().await.unwrap();
     f.relay.shutdown().await;
 }

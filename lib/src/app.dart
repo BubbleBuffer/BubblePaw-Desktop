@@ -18,10 +18,13 @@ import 'feedback/feedback_controller.dart';
 import 'feedback/feedback_sheet.dart';
 import 'guarded_backend.dart';
 import 'host_controller.dart';
+import 'remote/host_links.dart';
+import 'remote/hosts_controller.dart';
 import 'pick_folder.dart' as picker;
 import 'platform/releases.dart';
 import 'preferences.dart';
 import 'screens/diff_review.dart';
+import 'screens/host_open_notice.dart';
 import 'screens/needs_setup_notice.dart';
 import 'screens/notice.dart';
 import 'screens/saved_notice.dart';
@@ -215,6 +218,18 @@ class _AppShellState extends State<AppShell> {
                 onDismiss: feedback.dismissSaved,
               ),
             ),
+          if (controller.openError != null)
+            Positioned(
+              right: 16,
+              bottom:
+                  (controller.trayNoticePending ? 72 : 16) +
+                  (controller.needsSetupPending ? 56 : 0) +
+                  (feedback.savedId != null ? 56 : 0),
+              child: HostOpenNotice(
+                message: controller.openError!,
+                onDismiss: controller.dismissOpenError,
+              ),
+            ),
           if (controller.updates.dialogOpen)
             Positioned.fill(
               child: UpdateDialog(
@@ -226,6 +241,24 @@ class _AppShellState extends State<AppShell> {
       ),
     ),
   );
+
+  /// The hosts in the switcher; null when this app has no saved hosts side.
+  HostMenu? _hostMenu() {
+    final hosts = controller.hosts;
+    if (hosts == null) return null;
+    return HostMenu(
+      listenable: Listenable.merge([controller, hosts]),
+      choices: () => hostChoices(controller, hosts),
+      onPick: (id) {
+        if (id == null) {
+          unawaited(controller.openLocalHost());
+        } else {
+          unawaited(controller.openRemoteHost(id));
+        }
+      },
+      onAdd: controller.requestAddHost,
+    );
+  }
 
   Widget _screen(BuildContext context) {
     final pickFolder = widget.pickFolder;
@@ -304,6 +337,7 @@ class _AppShellState extends State<AppShell> {
         onSwitchWorkspace: (path) =>
             unawaited(controller.switchWorkspace(path)),
         pickFolder: pickFolder,
+        hostMenu: _hostMenu(),
       ),
     };
   }
@@ -319,6 +353,7 @@ class Workbench extends StatefulWidget {
     required this.onSettings,
     this.workspace = '',
     this.workspaces = const [],
+    this.hostMenu,
     this.onSwitchWorkspace,
     this.pickFolder,
     this.createdChats,
@@ -341,6 +376,9 @@ class Workbench extends StatefulWidget {
 
   /// Asks for a folder for "Open folder…".
   final Future<String?> Function()? pickFolder;
+
+  /// The hosts group of the rail menu; null for none.
+  final HostMenu? hostMenu;
 
   @override
   State<Workbench> createState() => _WorkbenchState();
@@ -382,6 +420,7 @@ class _WorkbenchState extends State<Workbench> {
         context,
         current: widget.workspace,
         workspaces: widget.workspaces,
+        hosts: widget.hostMenu,
         onPick: switchTo,
         onOpenFolder: () async {
           final path = await widget.pickFolder?.call();
@@ -430,3 +469,34 @@ class _WorkbenchState extends State<Workbench> {
     ],
   );
 }
+
+/// The rows of the host switcher: this computer, then each saved host with
+/// whether it answers.
+List<HostChoice> hostChoices(HostController controller, HostsController hosts) {
+  final open = controller.openHostId;
+  return [
+    HostChoice(
+      id: null,
+      name: 'This computer',
+      state: 'Running',
+      dot: true,
+      selected: open == null,
+    ),
+    for (final h in hosts.hosts)
+      HostChoice(
+        id: h.id,
+        name: h.label,
+        state: switch (hosts.presenceOf(h.id)) {
+          HostPresenceKind.online => 'Online · ${_via(h.via)}',
+          HostPresenceKind.offline => 'Offline',
+          HostPresenceKind.unknown => 'Not checked',
+          null => 'Checking',
+        },
+        dot: hosts.presenceOf(h.id) == HostPresenceKind.online,
+        selected: open == h.id,
+      ),
+  ];
+}
+
+String _via(HostVia via) =>
+    via == HostVia.relay ? 'Relay' : 'Cloudflare Tunnel';

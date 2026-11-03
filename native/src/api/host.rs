@@ -6,13 +6,17 @@ use std::{
     time::Duration,
 };
 
-use bubblepaw_sdk::{Client, ClientError, ConfigError, ConfigOptions, Notifications};
+use bubblepaw_sdk::{
+    remote::{Limits, RemoteConnect, RemotePaths},
+    Client, ClientError, ConfigError, ConfigOptions, Notifications,
+};
 use flutter_rust_bridge::frb;
 use serde_json::Value;
 
 use crate::frb_generated::StreamSink;
 use crate::host_setup;
 
+use super::hosts::{saved_host, HostLinkError, HostLinkErrorKind};
 use super::remote::Shared as RemoteShared;
 
 /// The host-API error code of `no_provider_configured`.
@@ -127,6 +131,31 @@ impl BubblePawHost {
             &PathBuf::from(workspace_dir),
         ))
         .await
+    }
+
+    /// Opens a host this device paired with (`list_saved_hosts`), through the
+    /// address it was paired at. The handle has the same calls and
+    /// notifications as a local one, limited by the profile the host granted;
+    /// it counts as attached, and closing it only ends this session.
+    pub async fn connect_saved(
+        data_dir: String,
+        host_id: String,
+    ) -> Result<BubblePawHost, HostLinkError> {
+        let paths = RemotePaths::in_data_dir(&PathBuf::from(data_dir));
+        let hosts = paths.hosts.clone();
+        let id = host_id.clone();
+        let host = tokio::task::spawn_blocking(move || saved_host(&hosts, &id))
+            .await
+            .map_err(|error| HostLinkError::new(HostLinkErrorKind::Other, error.to_string()))??;
+        let client = Client::connect_remote(RemoteConnect {
+            address: host.address,
+            host_id,
+            key_file: paths.key_file,
+            hosts: paths.hosts,
+            limits: Limits::default(),
+        })
+        .await?;
+        Ok(Self::wrap(client, true))
     }
 
     /// True when another process owns the host; closing then only ends this
