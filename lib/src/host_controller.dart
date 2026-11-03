@@ -16,6 +16,8 @@ import 'guarded_backend.dart';
 import 'host_failure.dart';
 import 'preferences.dart';
 import 'scripted.dart';
+import 'remote/host_links.dart';
+import 'remote/hosts_controller.dart';
 import 'remote/remote_access.dart';
 import 'remote/remote_controller.dart';
 import 'settings/settings_section.dart';
@@ -66,6 +68,35 @@ class StartedBackend {
 }
 
 typedef BackendStarter = Future<StartedBackend> Function(AppConfig config);
+
+/// Connects to the saved host [hostId]. Throws [HostLinkError] when it
+/// cannot.
+typedef RemoteStarter = Future<StartedBackend> Function(
+  HostLinks links,
+  String hostId,
+);
+
+/// Opens the saved host [hostId] as a backend of its own. Its chat list shows
+/// all of that host's projects, so it has no workspace of its own.
+Future<StartedBackend> startSavedHost(HostLinks links, String hostId) async {
+  final transport = await FfiBubblePawTransport.open(
+    dataDirectory: '',
+    workspaceDirectory: '',
+    opener: ({required dataDir, required workspaceDir}) => links.open(hostId),
+  );
+  final backend = await BubblePawBackend.connect(
+    transport,
+    workspaceDirectory: '',
+  );
+  return StartedBackend(
+    backend,
+    backend.dispose,
+    createdChats: backend.createdChats,
+    connectionLost: backend.connectionLost,
+    attached: true,
+    settings: TransportHostSettings(transport),
+  );
+}
 
 /// Opens the embedded BubblePaw host on the config's data directory, or
 /// attaches to the one already running there.
@@ -125,6 +156,8 @@ class HostController extends ChangeNotifier {
   HostController({
     required this.store,
     this.starter,
+    this.linksFactory,
+    this.remoteStarter,
     this.scripted = false,
     LogBuffer? log,
     UpdateController? updates,
@@ -146,6 +179,26 @@ class HostController extends ChangeNotifier {
 
   /// Starts a host from a config. Null starts the real one.
   final BackendStarter? starter;
+
+  /// Makes the saved-hosts side for a data directory. Null uses the native
+  /// one, except with the scripted backend or a [starter] (tests), which
+  /// have no hosts to open.
+  final HostLinksFactory? linksFactory;
+
+  /// Connects to a saved host. Null connects through the native crate.
+  final RemoteStarter? remoteStarter;
+
+  HostLinks? _links;
+  String? _linksDirectory;
+  HostsController? _hosts;
+  String? _openHostId;
+  bool _opening = false;
+  String? _openError;
+  GuardedBackend? _remoteBackend;
+  HostSettings? _remoteSettings;
+  Stream<ChatSummary>? _remoteCreatedChats;
+  Future<void> Function()? _remoteDispose;
+  int _remoteGeneration = 0;
 
   HostPhase _phase = HostPhase.starting;
   AppConfig? _config;
@@ -188,8 +241,11 @@ class HostController extends ChangeNotifier {
     return letters.join().toUpperCase();
   }
 
-  /// The project switcher's label: the workspace's folder name.
+  /// The project switcher's label: the workspace's folder name, or the name
+  /// of the host that is open.
   String get workspaceLabel {
+    final open = openHost;
+    if (open != null) return open.label;
     final path = (_config ?? store.defaults).workspaceDirectory;
     final parts = path.split(RegExp(r'[\\/]')).where((p) => p.isNotEmpty);
     return usingScripted || parts.isEmpty ? 'BubblePaw' : parts.last;
@@ -285,10 +341,152 @@ class HostController extends ChangeNotifier {
   SettingsSection? get settingsSection => _settingsSection;
 
   HostFailure? get failure => _failure;
-  GuardedBackend? get backend => _backend;
 
-  /// The running host's settings, or null when the backend has none.
-  HostSettings? get settings => _settings;
+  /// The backend the workbench draws: the open remote host's, or this
+  /// computer's.
+  GuardedBackend? get backend => _remoteBackend ?? _backend;
+
+  /// The running host's settings, or null when the backend has none. A
+  /// remote host's own settings while it is open.
+  HostSettings? get settings => _remoteSettings ?? _settings;
+
+  /// The hosts this device can open; null when there is no such side (the
+  /// scripted backend).
+  HostsController? get hosts {
+    final factory =
+        linksFactory ??
+        (scripted || starter != null ? null : (dir) => NativeHostLinks(dir));
+    if (factory == null) return null;
+    final dir = formConfig.dataDirectory;
+    if (_links == null || _linksDirectory != dir) {
+      _hosts?.dispose();
+      _links = factory(dir);
+      _linksDirectory = dir;
+      _hosts = HostsController(links: _links!, onForgotten: _hostForgotten);
+      unawaited(_hosts!.load());
+    }
+    return _hosts;
+  }
+
+  /// The saved host that is open, or null for this computer.
+  SavedHostEntry? get openHost {
+    final id = _openHostId;
+    return id == null ? null : _hosts?.byId(id);
+  }
+
+  /// The ID of the host being opened or open; null for this computer.
+  String? get openHostId => _openHostId;
+
+  /// A saved host is being connected to.
+  bool get opening => _opening;
+
+  /// Why the last host could not be opened; cleared by the next try.
+  String? get openError => _openError;
+
+  /// Switches the chat list to a saved host. The local host keeps running. A
+  /// host that cannot be reached leaves this computer open and says why.
+  Future<void> openRemoteHost(String id) async {
+    final links = _links;
+    if (links == null || _phase != HostPhase.running || _opening) return;
+    if (_openHostId == id && _remoteBackend != null) return;
+    final ticket = ++_remoteGeneration;
+    _opening = true;
+    _openError = null;
+    _notify();
+    try {
+      final started = await (remoteStarter ?? startSavedHost)(links, id);
+      if (ticket != _remoteGeneration || _disposed) {
+        await _quietly(started.dispose);
+        return;
+      }
+      await _closeRemote();
+      _openHostId = id;
+      _remoteDispose = started.dispose;
+      _remoteSettings = started.settings;
+      _remoteCreatedChats = started.createdChats;
+      _remoteBackend = GuardedBackend(
+        started.backend,
+        onFailure: (_) => _remoteLost(ticket),
+        onNeedsSetup: _needsSetup,
+      );
+      log.host('opened a saved host');
+      final lost = started.connectionLost;
+      if (lost != null) unawaited(lost.then((_) => _remoteLost(ticket)));
+    } on Object catch (error) {
+      if (ticket != _remoteGeneration) return;
+      _openError = _openMessage(error);
+      log.host('could not open a saved host');
+    }
+    _opening = false;
+    _notify();
+    unawaited(_hosts?.refreshPresence());
+  }
+
+  String _openMessage(Object error) {
+    if (error is HostLinkError) return hostLinkMessage(error);
+    final failure = HostFailure.from(error);
+    if (failure != null) return failure.message;
+    return 'The host could not be opened. Check that it is running and '
+        'shared.';
+  }
+
+  bool _addHostPending = false;
+
+  /// "Add a host" was chosen in the switcher: Settings opens on Remote
+  /// access with the add dialog.
+  bool get addHostPending => _addHostPending;
+
+  void requestAddHost() {
+    _addHostPending = true;
+    openSettings(SettingsSection.remote);
+  }
+
+  /// The settings page took the request.
+  void addHostHandled() => _addHostPending = false;
+
+  void dismissOpenError() {
+    if (_openError == null) return;
+    _openError = null;
+    _notify();
+  }
+
+  /// Back to this computer's own host.
+  Future<void> openLocalHost() async {
+    _remoteGeneration++;
+    _openError = null;
+    await _closeRemote();
+    _opening = false;
+    _notify();
+  }
+
+  void _remoteLost(int ticket) {
+    if (ticket != _remoteGeneration || _disposed || _remoteBackend == null) {
+      return;
+    }
+    final name = openHost?.label ?? 'The host';
+    unawaited(openLocalHost());
+    _openError = '$name stopped answering. This computer is open again.';
+    unawaited(_hosts?.refreshPresence());
+  }
+
+  Future<void> _closeRemote() async {
+    final dispose = _remoteDispose;
+    _remoteBackend?.closing();
+    _remoteBackend = null;
+    _remoteSettings = null;
+    _remoteCreatedChats = null;
+    _remoteDispose = null;
+    _openHostId = null;
+    if (dispose != null) await _quietly(dispose);
+  }
+
+  void _hostForgotten(String id) {
+    if (_openHostId == id) unawaited(openLocalHost());
+  }
+
+  /// What this device calls itself to the devices and hosts it pairs with.
+  String get deviceName =>
+      _prefs.deviceName.isNotEmpty ? _prefs.deviceName : Platform.localHostname;
 
   /// The sharing side of this host; null when it cannot be shared from here.
   RemoteController? get remote => _remote;
@@ -300,7 +498,8 @@ class HostController extends ChangeNotifier {
   /// when no host is running; a host error is thrown.
   Future<ChatSnapshot?> loadChatForFeedback(String chatId) async =>
       _backend?.loadChat(chatId);
-  Stream<ChatSummary>? get createdChats => _createdChats;
+  Stream<ChatSummary>? get createdChats =>
+      _remoteBackend != null ? _remoteCreatedChats : _createdChats;
 
   /// Replaces the wall clock for ages; null for a real host.
   DateTime? get now => _now;
@@ -454,9 +653,7 @@ class HostController extends ChangeNotifier {
     HostSettings? settings,
   ) {
     if (factory == null) return null;
-    final name = _prefs.deviceName.isNotEmpty
-        ? _prefs.deviceName
-        : Platform.localHostname;
+    final name = deviceName;
     final controller = RemoteController(
       access: factory(name),
       settings: settings,
@@ -494,6 +691,7 @@ class HostController extends ChangeNotifier {
     _backend = null;
     _settings = null;
     _dropRemote();
+    unawaited(openLocalHost());
     _dispose = null;
     _notify();
     if (dispose != null) unawaited(_quietly(dispose));
@@ -521,6 +719,7 @@ class HostController extends ChangeNotifier {
     _backend = null;
     _settings = null;
     _dropRemote();
+    await _closeRemote();
     _createdChats = null;
     _dispose = null;
     _attached = false;
@@ -554,6 +753,10 @@ class HostController extends ChangeNotifier {
     _backend?.closing();
     _dropRemote();
     _dispose = null;
+    _remoteBackend?.closing();
+    final remote = _remoteDispose;
+    if (remote != null) unawaited(_quietly(remote));
+    _hosts?.dispose();
     if (dispose != null) unawaited(_quietly(dispose));
     super.dispose();
   }

@@ -9,10 +9,12 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
 import '../platform/releases.dart';
+import '../remote/hosts_controller.dart';
 import '../remote/remote_access.dart';
 import '../remote/remote_controller.dart';
 import 'action_widgets.dart';
 import 'device_key_page.dart';
+import 'hosts_section.dart';
 import 'remote_dialogs.dart';
 import 'remote_glyphs.dart';
 import 'settings_widgets.dart';
@@ -24,7 +26,22 @@ class RemotePage extends StatefulWidget {
     required this.remote,
     required this.services,
     this.onBack,
+    this.hosts,
+    this.deviceName = '',
+    this.addHostPending = false,
+    this.onAddHostHandled,
   });
+
+  /// The hosts this device can open; null when there is no such side.
+  final HostsController? hosts;
+
+  /// What this device calls itself to a host it pairs with.
+  final String deviceName;
+
+  /// "Add a host" was chosen in the host switcher: the page opens on the
+  /// hosts and the add dialog.
+  final bool addHostPending;
+  final VoidCallback? onAddHostHandled;
 
   /// Null while there is no host to share (not started, or stopped).
   final RemoteController? remote;
@@ -43,6 +60,7 @@ class _RemotePageState extends State<RemotePage> {
   String? _zone;
   bool _key = false;
   bool _synced = false;
+  late bool _hostsTab = widget.addHostPending;
 
   RemoteController? get _r => widget.remote;
 
@@ -105,12 +123,22 @@ class _RemotePageState extends State<RemotePage> {
   @override
   Widget build(BuildContext context) {
     final r = _r;
-    if (r == null) return _frame(const [_NoHost()]);
+    if (r == null) {
+      return _frame([
+        const _NoHost(),
+        if (widget.hosts != null) _hostsSection(),
+      ]);
+    }
     if (_key) {
       return DeviceKeyPage(
         remote: r,
         services: widget.services,
-        onBack: () => setState(() => _key = false),
+        hostCount: widget.hosts?.hosts.length ?? 0,
+        onBack: () {
+          // A new key clears the pairings: read the saved hosts again.
+          unawaited(widget.hosts?.reload());
+          setState(() => _key = false);
+        },
       );
     }
     if (r.loadError != null) {
@@ -154,11 +182,37 @@ class _RemotePageState extends State<RemotePage> {
           ),
         ),
       _deviceSection(r),
-      _sharingSection(r),
-      _reachSection(r),
-      _pairedSection(r),
+      if (widget.hosts != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: SegmentedChoice<bool>(
+              idPrefix: 'remote-tab',
+              options: const [false, true],
+              value: _hostsTab,
+              labelOf: (hosts) =>
+                  hosts ? 'Hosts you can open' : 'Share this host',
+              onChanged: (hosts) => setState(() => _hostsTab = hosts),
+            ),
+          ),
+        ),
+      if (_hostsTab && widget.hosts != null)
+        _hostsSection()
+      else ...[
+        _sharingSection(r),
+        _reachSection(r),
+        _pairedSection(r),
+      ],
     ]);
   }
+
+  Widget _hostsSection() => HostsSection(
+    hosts: widget.hosts!,
+    deviceName: widget.deviceName,
+    openAtStart: widget.addHostPending,
+    onOpened: widget.onAddHostHandled,
+  );
 
   Widget _frame(List<Widget> children) => SettingsPage(
     title: 'Remote access',
@@ -740,7 +794,12 @@ class _RemotePageState extends State<RemotePage> {
           glyph: glyphPlus,
           onTap: r.wantOn
               ? () => unawaited(
-                  showPairDialog(context, remote: r, reachLabel: _reachLabel),
+                  showPairDialog(
+                    context,
+                    remote: r,
+                    reachLabel: _reachLabel,
+                    onCopy: widget.services.copy,
+                  ),
                 )
               : () {},
         ),

@@ -16,6 +16,7 @@ import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/platform/download.dart';
 import 'package:bubblepaw_desktop/src/platform/releases.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
+import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
 import 'package:bubblepaw_desktop/src/semver.dart';
 import 'package:bubblepaw_desktop/src/updates/update_controller.dart';
@@ -81,15 +82,18 @@ Scene _mcpScene({
 Scene _remoteScene({
   required FakeRemoteAccess Function(FakeHostSettings host) access,
   Map<String, Object?>? values,
+  FakeHostLinks Function()? links,
   Future<void> Function(WidgetTester tester)? after,
 }) => (
   // Each variant of the scene gets its own host and sharing state.
   controller: () {
     final host = FakeHostSettings(values: values);
     final fake = access(host);
+    _links = links?.call();
     return Played(
       settings: host,
       remote: (_) => fake,
+      hostLinks: _links,
     ).controller(prefs: const AppPrefs(shareAtStart: false));
   },
   after: (tester) async {
@@ -97,6 +101,26 @@ Scene _remoteScene({
     if (after != null) await after(tester);
   },
 );
+
+/// The hosts of the scene being built, for the steps that answer as a host.
+FakeHostLinks? _links;
+
+/// Two saved hosts: one answers, one does not.
+FakeHostLinks _sampleHosts() => FakeHostLinks(
+  hosts: [
+    fakeSavedHost(lastConnected: 1700000100),
+    fakeSavedHost(
+      id: 'HOST-9Z8Y-7X6W-5V4U',
+      label: 'Studio mini',
+      via: HostVia.direct,
+      profile: 'read',
+    ),
+  ],
+  presence: {'HOST-9Z8Y-7X6W-5V4U': HostPresenceKind.offline},
+);
+
+Future<void> _openHosts(WidgetTester tester) =>
+    tapVisible(tester, 'remote-tab-hosts you can open');
 
 /// Devices whose last-seen dates do not depend on the clock.
 final _sampleDevices = [
@@ -683,6 +707,98 @@ void main() {
       after: (tester) async {
         await tapVisible(tester, 'remote-manage-key');
         await tapVisible(tester, 'key-regenerate');
+      },
+    ),
+    'settings_remote_hosts': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: _sampleHosts,
+      after: _openHosts,
+    ),
+    'settings_remote_hosts_empty': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: FakeHostLinks.new,
+      after: _openHosts,
+    ),
+    'settings_remote_add_link': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: FakeHostLinks.new,
+      after: (tester) async {
+        await _openHosts(tester);
+        await tapVisible(tester, 'hosts-add');
+      },
+    ),
+    'settings_remote_add_compare': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: FakeHostLinks.new,
+      after: (tester) async {
+        await _openHosts(tester);
+        await tapVisible(tester, 'hosts-add');
+        await tester.enterText(
+          find.byKey(const ValueKey('add-host-link')),
+          'bubblepaw://pair?v=1&code=K7M2QX9PD4',
+        );
+        await settle(tester);
+        await tapVisible(tester, 'add-host-connect');
+      },
+    ),
+    'settings_remote_add_done': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: FakeHostLinks.new,
+      after: (tester) async {
+        await _openHosts(tester);
+        await tapVisible(tester, 'hosts-add');
+        await tester.enterText(
+          find.byKey(const ValueKey('add-host-link')),
+          'bubblepaw://pair?v=1&code=K7M2QX9PD4',
+        );
+        await settle(tester);
+        await tapVisible(tester, 'add-host-connect');
+        _links!.pairings.single.confirm();
+        await settle(tester);
+      },
+    ),
+    'settings_remote_add_error': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: () => FakeHostLinks()
+        ..pairFails = const HostLinkError(
+          kind: HostLinkErrorKind.expiredCode,
+          message: 'expired',
+        ),
+      after: (tester) async {
+        await _openHosts(tester);
+        await tapVisible(tester, 'hosts-add');
+        await tester.enterText(
+          find.byKey(const ValueKey('add-host-link')),
+          'bubblepaw://pair?v=1&code=K7M2QX9PD4',
+        );
+        await settle(tester);
+        await tapVisible(tester, 'add-host-connect');
+      },
+    ),
+    'settings_remote_remove_host': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: _sampleHosts,
+      after: (tester) async {
+        await _openHosts(tester);
+        await tapVisible(tester, 'host-remove-HOST-A1B2-C3D4-E5F6');
+      },
+    ),
+    'settings_remote_key_hosts': _remoteScene(
+      access: (host) =>
+          FakeRemoteAccess(hostSettings: host, devices: _sampleDevices),
+      links: _sampleHosts,
+      after: (tester) => tapVisible(tester, 'remote-manage-key'),
+    ),
+    'rail_host_switcher': (
+      controller: () => Played(hostLinks: _sampleHosts()).controller(),
+      after: (tester) async {
+        final show = find.byKey(const ValueKey('rail-show'));
+        if (show.evaluate().isNotEmpty) {
+          await tester.tap(show);
+          await settle(tester);
+        }
+        await tester.tap(find.text('project').first);
+        await settle(tester);
       },
     ),
     'settings_about': (

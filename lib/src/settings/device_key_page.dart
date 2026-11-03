@@ -23,10 +23,15 @@ class DeviceKeyPage extends StatelessWidget {
     required this.remote,
     required this.services,
     required this.onBack,
+    this.hostCount = 0,
   });
 
   final RemoteController remote;
   final PlatformServices services;
+
+  /// How many hosts this device can open; they stop recognising it when the
+  /// key changes.
+  final int hostCount;
 
   /// Back to Remote access.
   final VoidCallback onBack;
@@ -114,8 +119,11 @@ class DeviceKeyPage extends StatelessWidget {
               showModalPanel<void>(
                 context,
                 (_) => SizeClassBuilder(
-                  builder: (_, _) =>
-                      _ImportDialog(remote: remote, services: services),
+                  builder: (_, _) => _ImportDialog(
+                    remote: remote,
+                    services: services,
+                    hostCount: hostCount,
+                  ),
                 ),
                 width: 460,
                 height: 640,
@@ -128,7 +136,7 @@ class DeviceKeyPage extends StatelessWidget {
         NoticeBox(
           key: const ValueKey('key-regen-warning'),
           tone: NoticeTone.danger,
-          child: Text(_consequence(remote.devices.length)),
+          child: Text(_consequence(remote.devices.length, hostCount)),
         ),
         const SizedBox(height: 12),
         Align(
@@ -142,7 +150,8 @@ class DeviceKeyPage extends StatelessWidget {
               showModalPanel<void>(
                 context,
                 (_) => SizeClassBuilder(
-                  builder: (_, _) => _RegenerateDialog(remote: remote),
+                  builder: (_, _) =>
+                      _RegenerateDialog(remote: remote, hostCount: hostCount),
                 ),
                 width: 460,
                 height: 520,
@@ -162,12 +171,18 @@ String _spaced(String hex) => [
     hex.substring(i, i + 4 > hex.length ? hex.length : i + 4),
 ].join(' ');
 
-String _consequence(int devices) => devices == 0
-    ? 'Regenerating creates a new device ID. No device is paired with this '
-          'one yet. The hosts you can open stop recognising it.'
-    : 'Regenerating creates a new device ID. All $devices paired '
-          'device${devices == 1 ? '' : 's'} and the hosts you can open stop '
-          'recognising this device, and each pairing has to be done again.';
+String _consequence(int devices, int hosts) {
+  if (devices + hosts == 0) {
+    return 'Regenerating creates a new device ID. This device has no '
+        'pairings yet, so nothing else breaks.';
+  }
+  return 'Regenerating creates a new device ID. All '
+      '${_counted(devices, 'paired device', 'paired devices')} and '
+      '${_counted(hosts, 'host you can open', 'hosts you can open')} stop '
+      'recognising this device, and each pairing has to be done again.';
+}
+
+String _counted(int n, String one, String many) => '$n ${n == 1 ? one : many}';
 
 class _ExportDialog extends StatefulWidget {
   const _ExportDialog({required this.remote, required this.services});
@@ -320,9 +335,14 @@ class _ExportDialogState extends State<_ExportDialog> {
 }
 
 class _ImportDialog extends StatefulWidget {
-  const _ImportDialog({required this.remote, required this.services});
+  const _ImportDialog({
+    required this.remote,
+    required this.services,
+    required this.hostCount,
+  });
 
   final RemoteController remote;
+  final int hostCount;
   final PlatformServices services;
 
   @override
@@ -412,8 +432,9 @@ class _ImportDialogState extends State<_ImportDialog> {
         NoticeBox(
           tone: NoticeTone.danger,
           child: Text(
-            'Importing replaces this device\'s key. All $count paired '
-            'device${count == 1 ? '' : 's'} and the hosts you can open stop '
+            'Importing replaces this device\'s key. All '
+            '${_counted(count, 'paired device', 'paired devices')} and '
+            '${_counted(widget.hostCount, 'host', 'hosts')} stop '
             'recognising it and are cleared.',
           ),
         ),
@@ -472,9 +493,10 @@ class _ImportDialogState extends State<_ImportDialog> {
 }
 
 class _RegenerateDialog extends StatefulWidget {
-  const _RegenerateDialog({required this.remote});
+  const _RegenerateDialog({required this.remote, required this.hostCount});
 
   final RemoteController remote;
+  final int hostCount;
 
   @override
   State<_RegenerateDialog> createState() => _RegenerateDialogState();
@@ -533,7 +555,9 @@ class _RegenerateDialogState extends State<_RegenerateDialog> {
       body: [
         NoticeBox(
           tone: NoticeTone.danger,
-          child: Text(_consequence(widget.remote.devices.length)),
+          child: Text(
+            _consequence(widget.remote.devices.length, widget.hostCount),
+          ),
         ),
         const SizedBox(height: 12),
         Text(

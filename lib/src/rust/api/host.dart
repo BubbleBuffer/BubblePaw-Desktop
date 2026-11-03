@@ -4,6 +4,7 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'hosts.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
@@ -28,6 +29,18 @@ abstract class BubblePawHost implements RustOpaqueInterface {
   /// Calls still in flight finish first; if they take longer than a few
   /// seconds, the host stops in the background when the last one returns.
   Future<void> close();
+
+  /// Opens a host this device paired with (`list_saved_hosts`), through the
+  /// address it was paired at. The handle has the same calls and
+  /// notifications as a local one, limited by the profile the host granted;
+  /// it counts as attached, and closing it only ends this session.
+  static Future<BubblePawHost> connectSaved({
+    required String dataDir,
+    required String hostId,
+  }) => RustLib.instance.api.crateApiHostBubblePawHostConnectSaved(
+    dataDir: dataDir,
+    hostId: hostId,
+  );
 
   /// Notifications from now on, each a JSON-RPC notification as JSON text
   /// (`event`, `events.gap`). The stream ends when the session does.

@@ -116,13 +116,15 @@ Future<void> showPairDialog(
   BuildContext context, {
   required RemoteController remote,
   required String reachLabel,
+  Future<void> Function(String text)? onCopy,
 }) async {
   final flow = PairingFlow(access: remote.access, onAdded: remote.deviceAdded);
   try {
     await showModalPanel<void>(
       context,
       (_) => SizeClassBuilder(
-        builder: (_, _) => PairDialog(flow: flow, reachLabel: reachLabel),
+        builder: (_, _) =>
+            PairDialog(flow: flow, reachLabel: reachLabel, onCopy: onCopy),
       ),
       width: 480,
       height: 640,
@@ -161,7 +163,15 @@ String profileName(String profile) => switch (profile) {
 };
 
 class PairDialog extends StatelessWidget {
-  const PairDialog({super.key, required this.flow, required this.reachLabel});
+  const PairDialog({
+    super.key,
+    required this.flow,
+    required this.reachLabel,
+    this.onCopy,
+  });
+
+  /// Copies text to the clipboard; null hides "Copy pairing link".
+  final Future<void> Function(String text)? onCopy;
 
   final PairingFlow flow;
 
@@ -292,7 +302,7 @@ class PairDialog extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           'On the new device, choose Add a host, then scan the QR code or '
-          'enter the code. The code works once.',
+          'paste the pairing link. The code works once.',
           style: ts(theme.typeScale.uiSmall, theme.muted),
         ),
       ],
@@ -312,6 +322,13 @@ class PairDialog extends StatelessWidget {
                 ],
               ),
         [
+          if (onCopy != null)
+            ActionButton(
+              key: const ValueKey('pair-copy-link'),
+              label: 'Copy pairing link',
+              glyph: glyphCopy,
+              onTap: () => unawaited(onCopy!(offer.qrPayload)),
+            ),
           ActionButton(
             key: const ValueKey('pair-new-code'),
             label: 'New code',

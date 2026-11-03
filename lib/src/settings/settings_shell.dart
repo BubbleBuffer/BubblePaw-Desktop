@@ -141,6 +141,10 @@ class _SettingsShellState extends State<SettingsShell> {
       SettingsSection.remote => RemotePage(
         key: const ValueKey('page-remote'),
         remote: host.phase == HostPhase.running ? host.remote : null,
+        hosts: host.hosts,
+        deviceName: host.deviceName,
+        addHostPending: host.addHostPending,
+        onAddHostHandled: host.addHostHandled,
         services: widget.services,
         onBack: onBack,
       ),
