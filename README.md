@@ -70,7 +70,7 @@ flutter build linux --debug
 ```sh
 flutter create --platforms=android --org cc.breadcat --project-name bubblepaw_desktop .
 python3 tool/android_setup.py
-cargo ndk -t arm64-v8a -o android/app/src/main/jniLibs build --release --manifest-path native/Cargo.toml --no-default-features
+(cd native && cargo ndk -t arm64-v8a -o ../android/app/src/main/jniLibs build --release --no-default-features)
 flutter build apk --debug -t lib/main_phone.dart --target-platform android-arm64
 ```
 

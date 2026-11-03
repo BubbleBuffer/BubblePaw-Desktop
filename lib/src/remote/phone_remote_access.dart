@@ -22,7 +22,8 @@ class PhoneRemoteAccess implements RemoteAccess {
   }
 
   @override
-  Future<KeyInfo> keyInfo() => _key(() => native.deviceKeyInfo(dataDir: dataDirectory));
+  Future<KeyInfo> keyInfo() =>
+      _key(() => native.deviceKeyInfo(dataDir: dataDirectory));
 
   @override
   Future<void> exportKey(String dest, String passphrase) => _key(

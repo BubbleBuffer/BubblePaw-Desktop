@@ -1,6 +1,7 @@
 // The camera view that reads a pairing QR code (phone only). It resolves with
 // the text of the first code, or null when the person closes it.
 
+import 'package:agent_kit/agent_kit.dart';
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';

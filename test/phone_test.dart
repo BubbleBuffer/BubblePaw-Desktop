@@ -10,7 +10,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_remote.dart';
-import 'fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
 

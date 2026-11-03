@@ -71,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1415680485;
+  int get rustContentHash => -369592459;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -249,9 +249,23 @@ abstract class RustLibApi extends BaseApi {
 
   String crateApiHostCoreVersion();
 
+  Future<KeyInfo> crateApiHostsDeviceKeyInfo({required String dataDir});
+
+  Future<void> crateApiHostsExportDeviceKey({
+    required String dataDir,
+    required String dest,
+    required String passphrase,
+  });
+
   Future<bool> crateApiHostsForgetSavedHost({
     required String dataDir,
     required String id,
+  });
+
+  Future<KeyChange> crateApiHostsImportDeviceKey({
+    required String dataDir,
+    required String src,
+    required String passphrase,
   });
 
   Future<void> crateApiHostInitApp();
@@ -273,6 +287,8 @@ abstract class RustLibApi extends BaseApi {
     required String id,
     required int timeoutSecs,
   });
+
+  Future<KeyChange> crateApiHostsRegenerateDeviceKey({required String dataDir});
 
   Future<ShareSettings> crateApiRemoteShareSettings({
     required String dataDir,
@@ -1889,6 +1905,71 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "core_version", argNames: []);
 
   @override
+  Future<KeyInfo> crateApiHostsDeviceKeyInfo({required String dataDir}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 47,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_key_info,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsDeviceKeyInfoConstMeta,
+        argValues: [dataDir],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsDeviceKeyInfoConstMeta =>
+      const TaskConstMeta(debugName: "device_key_info", argNames: ["dataDir"]);
+
+  @override
+  Future<void> crateApiHostsExportDeviceKey({
+    required String dataDir,
+    required String dest,
+    required String passphrase,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          sse_encode_String(dest, serializer);
+          sse_encode_String(passphrase, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 48,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsExportDeviceKeyConstMeta,
+        argValues: [dataDir, dest, passphrase],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsExportDeviceKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "export_device_key",
+        argNames: ["dataDir", "dest", "passphrase"],
+      );
+
+  @override
   Future<bool> crateApiHostsForgetSavedHost({
     required String dataDir,
     required String id,
@@ -1902,7 +1983,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 47,
+            funcId: 49,
             port: port_,
           );
         },
@@ -1924,6 +2005,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<KeyChange> crateApiHostsImportDeviceKey({
+    required String dataDir,
+    required String src,
+    required String passphrase,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          sse_encode_String(src, serializer);
+          sse_encode_String(passphrase, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 50,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_key_change,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsImportDeviceKeyConstMeta,
+        argValues: [dataDir, src, passphrase],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsImportDeviceKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "import_device_key",
+        argNames: ["dataDir", "src", "passphrase"],
+      );
+
+  @override
   Future<void> crateApiHostInitApp() {
     return handler.executeNormal(
       NormalTask(
@@ -1932,7 +2050,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 48,
+            funcId: 51,
             port: port_,
           );
         },
@@ -1962,7 +2080,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 49,
+            funcId: 52,
             port: port_,
           );
         },
@@ -1996,7 +2114,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 50,
+            funcId: 53,
             port: port_,
           );
         },
@@ -2024,7 +2142,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(text, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 51)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 54)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_link_target,
@@ -2056,7 +2174,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 52,
+            funcId: 55,
             port: port_,
           );
         },
@@ -2078,6 +2196,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<KeyChange> crateApiHostsRegenerateDeviceKey({
+    required String dataDir,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 56,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_key_change,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsRegenerateDeviceKeyConstMeta,
+        argValues: [dataDir],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsRegenerateDeviceKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "regenerate_device_key",
+        argNames: ["dataDir"],
+      );
+
+  @override
   Future<ShareSettings> crateApiRemoteShareSettings({
     required String dataDir,
     required String workspaceDir,
@@ -2091,7 +2242,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 53,
+            funcId: 57,
             port: port_,
           );
         },

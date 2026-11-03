@@ -10,6 +10,8 @@ import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:bubblepaw_desktop/src/scripted.dart';
+
 import 'fake_remote.dart';
 import 'fakes.dart';
 import 'scenes.dart';

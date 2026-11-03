@@ -60,37 +60,37 @@ class GeneralPage extends StatelessWidget {
           ),
         ),
         if (!phone) ...[
-        const SettingsHeading('Startup', top: 24),
-        SwitchRow(
-          id: 'open-at-login',
-          label: 'Open at login',
-          description: 'BubblePaw starts with this computer.',
-          value: prefs.openAtLogin,
-          onChanged: (v) => set(prefs.copyWith(openAtLogin: v)),
-        ),
-        SwitchRow(
-          id: 'start-in-tray',
-          label: 'Start in the tray',
-          description: prefs.openAtLogin
-              ? 'The window stays hidden when BubblePaw starts at login.'
-              : 'Needs Open at login.',
-          value: prefs.effectiveStartInTray,
-          enabled: prefs.openAtLogin && tray,
-          onChanged: (v) => set(prefs.copyWith(startInTray: v)),
-        ),
-        SwitchRow(
-          id: 'keep-in-tray',
-          label: 'Keep running in the tray when the window is closed',
-          description: tray
-              ? 'Closing the window hides it to the tray. Quit from the tray '
-                    'menu.'
-              : 'This system shows no tray icon, so closing the window quits.',
-          value: prefs.keepInTray && tray,
-          enabled: tray,
-          onChanged: (v) => set(prefs.copyWith(keepInTray: v)),
-        ),
-        const SettingsHeading('Storage', top: 24),
-        _DataDirectoryRow(controller: controller),
+          const SettingsHeading('Startup', top: 24),
+          SwitchRow(
+            id: 'open-at-login',
+            label: 'Open at login',
+            description: 'BubblePaw starts with this computer.',
+            value: prefs.openAtLogin,
+            onChanged: (v) => set(prefs.copyWith(openAtLogin: v)),
+          ),
+          SwitchRow(
+            id: 'start-in-tray',
+            label: 'Start in the tray',
+            description: prefs.openAtLogin
+                ? 'The window stays hidden when BubblePaw starts at login.'
+                : 'Needs Open at login.',
+            value: prefs.effectiveStartInTray,
+            enabled: prefs.openAtLogin && tray,
+            onChanged: (v) => set(prefs.copyWith(startInTray: v)),
+          ),
+          SwitchRow(
+            id: 'keep-in-tray',
+            label: 'Keep running in the tray when the window is closed',
+            description: tray
+                ? 'Closing the window hides it to the tray. Quit from the tray '
+                      'menu.'
+                : 'This system shows no tray icon, so closing the window quits.',
+            value: prefs.keepInTray && tray,
+            enabled: tray,
+            onChanged: (v) => set(prefs.copyWith(keepInTray: v)),
+          ),
+          const SettingsHeading('Storage', top: 24),
+          _DataDirectoryRow(controller: controller),
         ],
         if (controller.startupFailed)
           Padding(

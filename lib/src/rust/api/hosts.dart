@@ -7,7 +7,9 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `bad_link`, `new`, `other`, `paths`, `saved_host`, `via`
+import 'remote.dart';
+
+// These functions are ignored because they are not marked as `pub`: `bad_link`, `key_change`, `new`, `other`, `paths`, `saved_host`, `via`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`
 
 /// The hosts this device can open, sorted by ID.
@@ -45,6 +47,39 @@ Future<HostPairing> pairWithHost({
   link: link,
   deviceName: deviceName,
 );
+
+/// This device's ID and fingerprint. The key is created when missing. Works
+/// without a host of its own, which is what the phone has.
+Future<KeyInfo> deviceKeyInfo({required String dataDir}) =>
+    RustLib.instance.api.crateApiHostsDeviceKeyInfo(dataDir: dataDir);
+
+/// Writes the key to `dest` (which must not exist), protected by `passphrase`.
+Future<void> exportDeviceKey({
+  required String dataDir,
+  required String dest,
+  required String passphrase,
+}) => RustLib.instance.api.crateApiHostsExportDeviceKey(
+  dataDir: dataDir,
+  dest: dest,
+  passphrase: passphrase,
+);
+
+/// Replaces the key with the one in `src`. A different key clears every
+/// pairing in both directions (see [`KeyChange`]).
+Future<KeyChange> importDeviceKey({
+  required String dataDir,
+  required String src,
+  required String passphrase,
+}) => RustLib.instance.api.crateApiHostsImportDeviceKey(
+  dataDir: dataDir,
+  src: src,
+  passphrase: passphrase,
+);
+
+/// Replaces the key with a fresh one. Every pairing in both directions is
+/// cleared.
+Future<KeyChange> regenerateDeviceKey({required String dataDir}) =>
+    RustLib.instance.api.crateApiHostsRegenerateDeviceKey(dataDir: dataDir);
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<HostPairing>>
 abstract class HostPairing implements RustOpaqueInterface {

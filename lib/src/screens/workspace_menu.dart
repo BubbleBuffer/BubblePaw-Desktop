@@ -256,55 +256,55 @@ class _RowState extends State<_Row> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: widget.tall ? 28 : 0),
                 child: Row(
-                children: [
-                  if (widget.glyph != null) ...[
-                    glyphIcon(widget.glyph!, size: 15, color: theme.muted),
-                    const SizedBox(width: 8),
-                  ],
-                  if (widget.dot != null) ...[
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: widget.dot!
-                            ? theme.constructiveInk
-                            : theme.faint,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const SizedBox(width: 8, height: 8),
-                    ),
-                    const SizedBox(width: 10),
-                  ],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          widget.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: ts(
-                            theme.typeScale.ui,
-                            theme.ink,
-                            weight: widget.selected ? 700 : 500,
-                          ),
+                  children: [
+                    if (widget.glyph != null) ...[
+                      glyphIcon(widget.glyph!, size: 15, color: theme.muted),
+                      const SizedBox(width: 8),
+                    ],
+                    if (widget.dot != null) ...[
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: widget.dot!
+                              ? theme.constructiveInk
+                              : theme.faint,
+                          shape: BoxShape.circle,
                         ),
-                        if (widget.detail != null)
+                        child: const SizedBox(width: 8, height: 8),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           Text(
-                            widget.detail!,
+                            widget.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: ts(theme.typeScale.uiSmall, theme.faint),
+                            style: ts(
+                              theme.typeScale.ui,
+                              theme.ink,
+                              weight: widget.selected ? 700 : 500,
+                            ),
                           ),
-                      ],
+                          if (widget.detail != null)
+                            Text(
+                              widget.detail!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: ts(theme.typeScale.uiSmall, theme.faint),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  if (widget.selected)
-                    Text(
-                      'Open',
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
-                    ),
-                ],
-              ),
+                    if (widget.selected)
+                      Text(
+                        'Open',
+                        style: ts(theme.typeScale.uiSmall, theme.muted),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -347,7 +347,9 @@ class HostSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    final radius = BorderRadius.vertical(top: Radius.circular(theme.radii.sheet));
+    final radius = BorderRadius.vertical(
+      top: Radius.circular(theme.radii.sheet),
+    );
     return Align(
       alignment: Alignment.bottomCenter,
       child: Semantics(
