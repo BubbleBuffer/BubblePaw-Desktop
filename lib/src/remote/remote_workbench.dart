@@ -164,6 +164,8 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
   }
 
   void _select(String id) {
+    // On the phone a tapped chat opens full screen, over the list.
+    if (widget.startOnList) _rail.open = false;
     if (id == _selected) return;
     setState(() => _selected = id);
   }
@@ -191,6 +193,7 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
     try {
       final chat = await widget.backend.createChat(workspace: path);
       if (!mounted) return;
+      if (widget.startOnList) _rail.open = false;
       setState(() => _selected = chat.id);
       unawaited(_refresh());
     } on KitError catch (error) {

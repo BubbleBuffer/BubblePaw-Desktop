@@ -95,7 +95,9 @@ Scene _remoteScene({
       settings: host,
       remote: (_) => fake,
       hostLinks: _links,
-    ).controller(prefs: const AppPrefs(shareAtStart: false, deviceName: 'Maya desktop'));
+    ).controller(
+      prefs: const AppPrefs(shareAtStart: false, deviceName: 'Maya desktop'),
+    );
   },
   after: (tester) async {
     await openSettings(tester, 'remote');

@@ -10,9 +10,8 @@ import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:bubblepaw_desktop/src/scripted.dart';
-
 import 'fake_remote.dart';
+import 'remote_chats_fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
 
@@ -36,20 +35,14 @@ HostController _controller(FakeHostLinks links, bool failOpen) =>
     Played(hostLinks: links).controller(
       localHost: false,
       phoneAccess: (_) => FakeRemoteAccess(),
-      remoteStarter: (_, _) async {
+      remoteStarter: (links, id) async {
         if (failOpen) {
           throw const HostLinkError(
             kind: HostLinkErrorKind.unreachable,
             message: 'unreachable',
           );
         }
-        final backend = await playedScript();
-        return StartedBackend(
-          backend,
-          () async {},
-          now: backend.clock.now(),
-          attached: true,
-        );
+        return RemoteFixture().start(links, id);
       },
     );
 
@@ -58,6 +51,11 @@ void main() {
   final scenes = <String, _Scene>{
     'phone-no-host': (hosts: const [], failOpen: false, after: null),
     'phone-chats': (hosts: [maya], failOpen: false, after: null),
+    'phone-chat-open': (
+      hosts: [maya],
+      failOpen: false,
+      after: (tester, _) => _tap(tester, 'rail-row-c2'),
+    ),
     'phone-open-failed': (hosts: [maya], failOpen: true, after: null),
     'phone-host-menu': (
       hosts: [maya],

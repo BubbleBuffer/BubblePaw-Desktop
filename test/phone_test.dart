@@ -5,11 +5,11 @@
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/link_scanner.dart';
-import 'package:bubblepaw_desktop/src/scripted.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_remote.dart';
+import 'remote_chats_fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
 
@@ -25,16 +25,11 @@ final _studio = fakeSavedHost(
 
 class _Started {
   final ids = <String>[];
+  final fixture = RemoteFixture();
 
   Future<StartedBackend> start(HostLinks links, String id) async {
     ids.add(id);
-    final backend = await playedScript();
-    return StartedBackend(
-      backend,
-      () async {},
-      now: backend.clock.now(),
-      attached: true,
-    );
+    return fixture.start(links, id);
   }
 }
 
@@ -108,6 +103,15 @@ void main() {
       expect(started.ids, [_studio.id]);
       expect(controller.openHostId, _studio.id);
       expect(find.byKey(const ValueKey('phone-home-message')), findsNothing);
+    });
+
+    testWidgets('the chat list is home and a tapped chat opens over it', (
+      tester,
+    ) async {
+      await _open(tester, hosts: [_maya]);
+      expect(find.byKey(const ValueKey('rail-row-c2')), findsOneWidget);
+      await _tap(tester, 'rail-row-c2');
+      expect(find.byKey(const ValueKey('rail-row-c2')), findsNothing);
     });
 
     testWidgets('says why a host could not be opened', (tester) async {
