@@ -155,11 +155,7 @@ FakeHostLinks _sampleHosts() => FakeHostLinks(
 /// Two saved hosts that may carry model traffic and one that may not.
 FakeHostLinks _egressHosts() => FakeHostLinks(
   hosts: [
-    fakeSavedHost(
-      id: 'OFFC-1111-2222-3333',
-      label: 'Office PC',
-      egress: true,
-    ),
+    fakeSavedHost(id: 'OFFC-1111-2222-3333', label: 'Office PC', egress: true),
     fakeSavedHost(
       id: 'STUD-4444-5555-6666',
       label: 'Studio mini',

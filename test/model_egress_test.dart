@@ -106,7 +106,10 @@ void main() {
       expect(find.byKey(ValueKey('via-gateway-${_studio.id}')), findsNothing);
       expect(find.text('Studio mini'), findsNothing);
       // Nothing is set: Direct is the choice and nothing is unavailable.
-      expect(find.byKey(const ValueKey('via-gateway-unavailable')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('via-gateway-unavailable')),
+        findsNothing,
+      );
     });
 
     testWidgets('is hidden on a provider kind that cannot use it', (
