@@ -12,6 +12,7 @@ import 'package:bubblepaw_desktop/src/feedback/redact.dart';
 import 'package:bubblepaw_desktop/src/feedback/report.dart';
 import 'package:bubblepaw_desktop/src/guarded_backend.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
+import 'package:bubblepaw_desktop/src/preferences.dart';
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/scripted.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -433,27 +434,32 @@ void main() {
     });
 
     testWidgets('chat.md has no file line for a remote host', (tester) async {
-      final links = FakeHostLinks(hosts: [fakeSavedHost()]);
+      final host = fakeSavedHost();
       Future<StartedBackend> start(HostLinks _, String _) async {
         final backend = await playedScript();
         return StartedBackend(backend, () async {}, attached: true);
       }
 
-      final controller = Played(
-        hostLinks: links,
-      ).controller(remoteStarter: start);
+      final controller =
+          Played(
+            settings: FakeHostSettings(),
+            remote: (_) => FakeRemoteAccess(),
+            hostLinks: FakeHostLinks(hosts: [host]),
+          ).controller(
+            prefs: const AppPrefs(shareAtStart: false),
+            remoteStarter: start,
+          );
       addTearDown(controller.close);
+      await pumpApp(tester, controller);
       final feedback = FeedbackController(
         storage: FileFeedbackStorage.inside(dir),
         host: controller,
         home: '/home/user',
       );
-      await tester.runAsync(() async {
-        await controller.init();
-        expect(feedback.chatMarkdown(chat()), contains('Full chat'));
-        await controller.openRemoteHost(fakeSavedHost().id);
-      });
-      expect(controller.openHostId, isNotNull);
+      expect(feedback.chatMarkdown(chat()), contains('Full chat'));
+      await tester.runAsync(() => controller.openRemoteHost(host.id));
+      await settle(tester);
+      expect(controller.openHostId, host.id);
       final md = feedback.chatMarkdown(chat());
       expect(md, isNot(contains('Full chat')));
       expect(md, contains('Chat  T (c_1)'));
