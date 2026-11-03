@@ -11,9 +11,11 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
+import 'package:agent_kit_core/agent_kit_core.dart' show KitUnavailable;
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
     show ExternalLibrary;
 
+import '../remote/remote_chats.dart' show RpcRefusal;
 import '../rust/api/host.dart' as native;
 import '../rust/frb_generated.dart';
 
@@ -141,6 +143,39 @@ class FfiBubblePawTransport implements BubblePawTransport {
     String method, [
     Map<String, Object?> params = const {},
   ]) => _inner.request(method, params);
+
+  /// One call straight to the host that keeps a JSON-RPC refusal's code and
+  /// data as an [RpcRefusal]; the kit's classification keeps neither. Any
+  /// other failure is [KitUnavailable]. Same host, same ordering as
+  /// [request].
+  Future<Object?> rawRequest(
+    String method,
+    Map<String, Object?> params, {
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
+    try {
+      final reply = await host
+          .call(method, jsonEncode(params))
+          .timeout(timeout);
+      return jsonDecode(reply);
+    } on native.HostCallError catch (error) {
+      if (error.kind != native.HostErrorKind.rpc) {
+        throw const KitUnavailable();
+      }
+      final data = error.dataJson;
+      Object? decoded;
+      if (data != null) {
+        try {
+          decoded = jsonDecode(data);
+        } on FormatException {
+          decoded = null;
+        }
+      }
+      throw RpcRefusal(error.code.toInt(), error.message, decoded);
+    } on TimeoutException {
+      throw const KitUnavailable();
+    }
+  }
 
   @override
   Stream<Map<String, Object?>> get notifications => _inner.notifications;

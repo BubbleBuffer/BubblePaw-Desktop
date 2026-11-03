@@ -2,7 +2,7 @@
 
 Settings > Remote access shares the host this app runs, pairs devices with it,
 lists the hosts this device can open, and holds the device key. The rail menu
-switches between this computer and those hosts. Core `v0.10.1` does the work; the app is a thin page
+switches between this computer and those hosts. Core `v0.10.2` does the work; the app is a thin page
 over it.
 
 ## Where the code is
@@ -55,19 +55,20 @@ key (`remote/host.bpkey`), which the sharing side uses too. Core's
 ## Chat list of a saved host
 
 Core's `session.list` rows carry each chat's `workspace` (the absolute path as
-the host sees it, or null), `needs_you` (a pending approval or question) and
-`running`. The kit's `BubblePawBackend` keeps only id, title, parent and time,
+the host sees it, or null), `needs_you` (a pending approval or question),
+`waiting_for` (`approval`, `question` or null; Core 0.10.2) and `running`. The kit's `BubblePawBackend` keeps only id, title, parent and time,
 and binds one workspace directory to the whole backend, so the app reads the
 rows itself (`startSavedHost` in `lib/src/host_controller.dart`):
 
 - `RowTapTransport` passes every request through and hands each `session.list`
   answer, array or paged, to `RemoteChatRows` (chat id to path, `needsYou`,
-  `running`).
+  `running`, `waitingFor`).
 - `RemoteBackend` wraps the kit's backend (the pattern of `GuardedBackend`).
   `listChats` returns the status `needsYou` or `running` from the row and the
   project's folder name as `workspace`. `loadChat` reports the row's own path
   as the snapshot's workspace (name is its last segment), so a remote project
   is the host's path and not the empty directory the kit was connected with.
+  `createChat` for a project is described under "New chat in a project".
 - The rail is the app's own (`RemoteRail`), because `SessionRail` has fixed
   Today and Earlier groups and `AgentWorkbench` takes no rail. `RemoteWorkbench`
   composes the kit's public pieces (`RailLayout`, `AgentChatPane`) with it.
@@ -79,19 +80,42 @@ rows itself (`startSavedHost` in `lib/src/host_controller.dart`):
   `ProjectRailState` (`HostController.remoteRail`). The plus beside a group is
   "New chat in <project>".
 
+- Rows say what a chat waits for: "Needs approval" or "Needs an answer" from
+  `waiting_for`, in "Needs you" and inside a project's group. A host before
+  Core 0.10.2 sends no `waiting_for`; its rows keep the kit's "Waiting for
+  you". "N running · N waiting" counts both kinds and does not change.
+
+### New chat in a project
+
+Core 0.10.2: `session.open {workspace}` opens a new root chat in that path.
+Over the tunnel the host accepts only a workspace it already knows (its
+default or one some chat uses); any other path is refused with code `-32003`
+(HTTP 403) and `data.workspace`. A `-32003` without `data.workspace` is the
+profile refusal (a read device may not open chats).
+
+- The plus beside a project, and the project picker beside New chat, start the
+  chat in that project's path. The picker ("Project for the new chat") lists
+  "Host default" and the projects of the loaded rows, distinct paths by name;
+  the plus and the picker both set the project the next New chat uses. New chat
+  with "Host default" sends no workspace, so the host picks its own.
+- The kit's `createChat` sends only the title and refuses a workspace other
+  than the one it was connected with, so `RemoteBackend.createChat` sends the
+  request itself through `FfiBubblePawTransport.rawRequest` (the kit's
+  transport turns every refusal into a fixed message and drops the code and
+  data). It returns a `ChatSummary` and records the path in `RemoteChatRows`,
+  so the snapshot carries it. The rail refreshes and the chat opens.
+- A refused project shows a notice (the style of the host-open notice, with
+  Dismiss): "This host will not start a chat in <project>. Start one there from
+  the host itself, or choose another project." The chat is not started in any
+  other project. A profile refusal says the device needs the edit profile.
+
 Limits:
 
-- Core's `session.open` takes no project, so a new chat starts in the host's own
-  workspace whatever project's plus was pressed (`RemoteBackend.createChat`
-  does not pass the path; the kit would refuse a workspace it was not bound to).
-  The chat then shows under the host's project in the list.
-- The row says a chat needs the person, not whether it is an approval or a
-  question, so the row reads "Waiting for you" (the kit's label).
 - No workspace column or context pane next to a saved host's chat; the crew
   shows as the strip under the header.
-- The mockup's project picker beside "New chat" is not built, for the first
-  limit: it would promise a project the host cannot honour. Search is not
-  built either (the kit's rail has none wired in the app).
+- Search is not built (the kit's rail has none wired in the app).
+- The picker lists only projects that have chats in the loaded list, so a
+  project whose chats are all older than the loaded pages is not offered.
 
 ## What is stored where
 
@@ -119,8 +143,13 @@ process with a local relay: a test client pairs with the read profile, calls
 `session.list`, and revoke closes it; the app pairs with a second in-process
 host, opens it and lists its chats, and reads it offline once it stops sharing.
 Chat list: `test/remote_chats_test.dart` runs scripted `session.list` rows through
-the kit's backend and the wrapper (statuses, folder names, snapshot path, grouping);
-`test/remote_rail_test.dart` covers group order, open and close and New chat in a
-project on `test/remote_chats_fakes.dart`; the `rail_remote_chats*` goldens show
-it in both themes and sizes.
+the kit's backend and the wrapper (statuses, folder names, snapshot path, grouping,
+`session.open` with a workspace, refusals, `waiting_for`);
+`test/remote_rail_test.dart` covers group order, open and close, New chat in a
+project, the picker, the refusal notice and the approval and question row text on
+`test/remote_chats_fakes.dart`; `test/ffi_transport_test.dart` covers `rawRequest`;
+the `rail_remote_chats*` goldens (including `rail_remote_chats_picker`) show it in
+both themes and sizes. The native test `a_saved_host_opens_chats_only_in_workspaces_it_knows`
+opens chats through a real second host: a known workspace works, an unknown one is
+refused with -32003 and its path.
 No external network.

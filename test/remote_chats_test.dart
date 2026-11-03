@@ -147,11 +147,157 @@ void main() {
     },
   );
 
-  test('a new chat does not bind a project the host cannot take', () async {
-    final inner = _Inner();
-    final backend = RemoteBackend(inner, RemoteChatRows());
-    await backend.createChat(workspace: '/home/maya/garden-api');
-    expect(inner.created, [null]);
+  group('a new chat in a project', () {
+    final requests = <(String, Map<String, Object?>)>[];
+    final refused = <String>{};
+
+    Future<Object?> raw(String method, Map<String, Object?> params) async {
+      requests.add((method, params));
+      final path = params['workspace']! as String;
+      if (refused.contains(path)) {
+        throw RpcRefusal(workspaceRefusedCode, 'refused', {'workspace': path});
+      }
+      return {
+        'id': 'new-1',
+        'title': 'New chat',
+        'updated_at': '2026-10-29T10:00:00Z',
+        'workspace': path,
+      };
+    }
+
+    setUp(() {
+      requests.clear();
+      refused.clear();
+    });
+
+    test(
+      'sends session.open with that workspace and carries the path',
+      () async {
+        final inner = _Inner();
+        final rows = RemoteChatRows();
+        final backend = RemoteBackend(inner, rows, rawRequest: raw);
+
+        final chat = await backend.createChat(
+          workspace: '/home/maya/garden-api',
+        );
+
+        expect(requests, hasLength(1));
+        expect(requests.single.$1, 'session.open');
+        expect(requests.single.$2, {'workspace': '/home/maya/garden-api'});
+        expect(inner.created, isEmpty);
+        expect(chat.id, 'new-1');
+        expect(chat.workspace, 'garden-api');
+        final snapshot = await backend.loadChat('new-1');
+        expect(snapshot.workspace!.path, '/home/maya/garden-api');
+        expect(snapshot.workspace!.name, 'garden-api');
+        expect(rows.workspaceOf('new-1'), '/home/maya/garden-api');
+      },
+    );
+
+    test('keeps a Windows path as the host wrote it', () async {
+      final backend = RemoteBackend(
+        _Inner(),
+        RemoteChatRows(),
+        rawRequest: raw,
+      );
+      final chat = await backend.createChat(workspace: r'C:\Users\maya\notes');
+      expect(requests.single.$2['workspace'], r'C:\Users\maya\notes');
+      expect(chat.workspace, 'notes');
+    });
+
+    test('without a project starts in the host workspace', () async {
+      final inner = _Inner();
+      final backend = RemoteBackend(inner, RemoteChatRows(), rawRequest: raw);
+      await backend.createChat();
+      expect(inner.created, [null]);
+      expect(requests, isEmpty);
+    });
+
+    test('a refusal names the project and starts no chat', () async {
+      refused.add('/home/maya/garden-api');
+      final inner = _Inner();
+      final rows = RemoteChatRows();
+      final backend = RemoteBackend(inner, rows, rawRequest: raw);
+
+      await expectLater(
+        backend.createChat(workspace: '/home/maya/garden-api'),
+        throwsA(
+          isA<KitInvalid>()
+              .having((e) => e.hostCode, 'hostCode', -32003)
+              .having(
+                (e) => e.message,
+                'message',
+                allOf(
+                  contains('garden-api'),
+                  contains('choose another project'),
+                ),
+              ),
+        ),
+      );
+      expect(inner.created, isEmpty);
+      expect(rows.of('new-1'), isNull);
+    });
+
+    test(
+      'a profile refusal without a path is not blamed on the project',
+      () async {
+        final backend = RemoteBackend(
+          _Inner(),
+          RemoteChatRows(),
+          rawRequest: (method, params) async =>
+              throw const RpcRefusal(workspaceRefusedCode, 'profile'),
+        );
+        await expectLater(
+          backend.createChat(workspace: '/home/maya/garden-api'),
+          throwsA(
+            isA<KitDenied>().having(
+              (e) => e.message,
+              'message',
+              allOf(contains('edit profile'), isNot(contains('garden-api'))),
+            ),
+          ),
+        );
+      },
+    );
+
+    test('another host error is a plain failure, not a refusal', () async {
+      final backend = RemoteBackend(
+        _Inner(),
+        RemoteChatRows(),
+        rawRequest: (method, params) async =>
+            throw const RpcRefusal(-32000, 'broke'),
+      );
+      await expectLater(
+        backend.createChat(workspace: '/home/maya/garden-api'),
+        throwsA(isA<KitFailed>()),
+      );
+    });
+  });
+
+  test('the row says what the chat waits for, when the host does', () {
+    final rows = RemoteChatRows()
+      ..absorb([
+        {
+          'id': 'a',
+          'workspace': '/w/one',
+          'needs_you': true,
+          'waiting_for': 'approval',
+        },
+        {
+          'id': 'b',
+          'workspace': '/w/one',
+          'needs_you': true,
+          'waiting_for': 'question',
+        },
+        // An older host: needs_you without waiting_for.
+        {'id': 'c', 'workspace': '/w/one', 'needs_you': true},
+        {'id': 'd', 'workspace': '/w/one', 'waiting_for': null},
+      ]);
+    expect(rows.waitingOf('a')!.label, 'Needs approval');
+    expect(rows.waitingOf('b')!.label, 'Needs an answer');
+    expect(rows.waitingOf('c'), isNull);
+    expect(rows.waitingOf('d'), isNull);
+    expect(rows.waitingOf('missing'), isNull);
   });
 
   test('chats group by project, the busy ones first', () {

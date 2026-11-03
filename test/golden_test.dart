@@ -111,8 +111,8 @@ RemoteFixture? _remote;
 HostController? _remoteController;
 
 /// A saved host with chats in four projects, open, with [open] projects
-/// expanded.
-Scene _remoteChats({List<String> open = const []}) => (
+/// expanded and, with [pick], the project picker open on that project.
+Scene _remoteChats({List<String> open = const [], String? pick}) => (
   controller: () {
     final fixture = RemoteFixture();
     _remote = fixture;
@@ -129,6 +129,11 @@ Scene _remoteChats({List<String> open = const []}) => (
     }
     for (final path in open) {
       await tapVisible(tester, 'project-toggle-$path');
+    }
+    if (pick != null) {
+      await tapVisible(tester, 'project-picker');
+      await tapVisible(tester, 'project-pick-$pick');
+      await tapVisible(tester, 'project-picker');
     }
   },
 );
@@ -833,6 +838,8 @@ void main() {
     'rail_remote_chats': _remoteChats(),
     // Two of its projects opened.
     'rail_remote_chats_open': _remoteChats(open: [gardenApi, agentKit]),
+    // The project picker beside New chat, with a project picked.
+    'rail_remote_chats_picker': _remoteChats(pick: agentKit),
     'settings_about': (
       controller: () => HostController(
         store: MemoryConfigStore(sampleConfig),

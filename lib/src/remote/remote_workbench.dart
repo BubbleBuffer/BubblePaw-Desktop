@@ -11,6 +11,7 @@ import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:bb_ui/bb_ui.dart' show SecondaryButton, ts;
 import 'package:flutter/widgets.dart';
 
+import '../screens/host_open_notice.dart';
 import 'project_groups.dart';
 import 'remote_chats.dart';
 import 'remote_rail.dart';
@@ -61,6 +62,12 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
   bool _loadMoreFailed = false;
   bool _listed = false;
   String? _listError;
+  String? _newChatError;
+  bool _pickerOpen = false;
+
+  /// The project the next New chat starts in (a path on the host); null is
+  /// the host's default. The plus of a project and the picker both set it.
+  String? _pickedPath;
   String? _selected;
   int _listing = 0;
   final Map<String, ChatStatus> _seen = {};
@@ -167,20 +174,46 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
     }
   }
 
-  /// Starts a chat. The host's `session.open` takes no project, so the chat
-  /// begins in the host's own workspace; [project] only names where the
-  /// person asked for it.
-  Future<void> _newChat([ProjectGroup? project]) async {
+  /// Starts a chat in [path] on the host, or in the host's own workspace
+  /// without one. A host that refuses the project says so; the chat is not
+  /// started anywhere else.
+  Future<void> _startChat(String? path) async {
+    setState(() {
+      _pickerOpen = false;
+      _newChatError = null;
+    });
     try {
-      final chat = await widget.backend.createChat(
-        workspace: project == null || project.key.isEmpty ? null : project.key,
-      );
+      final chat = await widget.backend.createChat(workspace: path);
       if (!mounted) return;
       setState(() => _selected = chat.id);
       unawaited(_refresh());
+    } on KitError catch (error) {
+      if (!mounted) return;
+      setState(() => _newChatError = error.message);
     } catch (_) {
-      // The rail stays as it was.
+      if (!mounted) return;
+      setState(() => _newChatError = 'The chat could not be started.');
     }
+  }
+
+  /// The plus of a project: the next New chat follows it too.
+  Future<void> _newChatIn(ProjectGroup project) {
+    final path = project.key.isEmpty ? null : project.key;
+    setState(() => _pickedPath = path);
+    return _startChat(path);
+  }
+
+  /// The host's known projects, from the loaded rows, by name.
+  List<PickableProject> _projects(List<ProjectGroup> groups) {
+    final list = [
+      for (final group in groups)
+        if (group.key.isNotEmpty) (path: group.key, name: group.name),
+    ];
+    list.sort((a, b) {
+      final byName = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      return byName != 0 ? byName : a.path.compareTo(b.path);
+    });
+    return list;
   }
 
   String _projectOf(ChatSummary chat) => chat.workspace ?? noProjectName;
@@ -189,38 +222,79 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
   Widget build(BuildContext context) {
     final t = context.bb;
     final clock = widget.now ?? DateTime.now();
+    final error = _newChatError;
     return ColoredBox(
       color: t.canvas,
-      child: RailLayout(
-        controller: _rail,
-        rail: ListenableBuilder(
-          listenable: widget.state,
-          builder: (context, _) => RemoteRail(
-            hostName: widget.hostName,
-            groups: groupByProject(_chats, widget.rows.workspaceOf),
-            needsYou: chatsNeedingYou(_chats),
-            projectOf: _projectOf,
-            state: widget.state,
-            selectedId: _selected,
-            now: clock,
-            onSelect: (chat) => _select(chat.id),
-            onNewChat: _newChat,
-            onNewChatIn: _newChat,
-            onSwitchHost: widget.onSwitchHost,
-            onSettings: widget.onSettings,
-            hasMore: _nextCursor != null,
-            loadingMore: _loadingMore,
-            loadMoreFailed: _loadMoreFailed,
-            onLoadMore: _loadMore,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: RailLayout(
+              controller: _rail,
+              rail: ListenableBuilder(
+                listenable: widget.state,
+                builder: (context, _) {
+                  final groups = groupByProject(
+                    _chats,
+                    widget.rows.workspaceOf,
+                  );
+                  final projects = _projects(groups);
+                  // A project that is no longer listed is not the pick.
+                  final picked = projects.any((p) => p.path == _pickedPath)
+                      ? _pickedPath
+                      : null;
+                  return RemoteRail(
+                    hostName: widget.hostName,
+                    groups: groups,
+                    needsYou: chatsNeedingYou(_chats),
+                    projectOf: _projectOf,
+                    waitingOf: widget.rows.waitingOf,
+                    state: widget.state,
+                    selectedId: _selected,
+                    now: clock,
+                    onSelect: (chat) => _select(chat.id),
+                    onNewChat: () => unawaited(_startChat(picked)),
+                    onNewChatIn: (group) => unawaited(_newChatIn(group)),
+                    projects: projects,
+                    pickedPath: picked,
+                    pickerOpen: _pickerOpen,
+                    onTogglePicker: () =>
+                        setState(() => _pickerOpen = !_pickerOpen),
+                    onPick: (path) => setState(() {
+                      _pickedPath = path;
+                      _pickerOpen = false;
+                    }),
+                    onSwitchHost: widget.onSwitchHost,
+                    onSettings: widget.onSettings,
+                    hasMore: _nextCursor != null,
+                    loadingMore: _loadingMore,
+                    loadMoreFailed: _loadMoreFailed,
+                    onLoadMore: _loadMore,
+                  );
+                },
+              ),
+              child: Builder(
+                builder: (context) {
+                  final whole =
+                      RailScope.maybeOf(context)?.sizeClass ??
+                      SizeClass.expanded;
+                  return _sheet(context, t, whole);
+                },
+              ),
+            ),
           ),
-        ),
-        child: Builder(
-          builder: (context) {
-            final whole =
-                RailScope.maybeOf(context)?.sizeClass ?? SizeClass.expanded;
-            return _sheet(context, t, whole);
-          },
-        ),
+          if (error != null)
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: KeyedSubtree(
+                key: const ValueKey('new-chat-error'),
+                child: HostOpenNotice(
+                  message: error,
+                  onDismiss: () => setState(() => _newChatError = null),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

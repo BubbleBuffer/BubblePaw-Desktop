@@ -6,9 +6,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
+import 'package:agent_kit_core/agent_kit_core.dart' show KitUnavailable;
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/core/ffi_transport.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
+import 'package:bubblepaw_desktop/src/remote/remote_chats.dart' show RpcRefusal;
 import 'package:bubblepaw_desktop/src/rust/api/host.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -102,6 +104,55 @@ void main() {
       'echo': {'title': 'T'},
     });
     expect(jsonDecode(host.calls.single.$2), {'title': 'T'});
+  });
+
+  group('rawRequest', () {
+    test('sends the params and returns the decoded result', () async {
+      final host = FakeNativeHost()
+        ..handlers['session.open'] = (params) => '{"id":"s1","echo":$params}';
+      final transport = await _open(host);
+      addTearDown(transport.dispose);
+
+      final result = await transport.rawRequest('session.open', {
+        'workspace': '/p',
+      });
+      expect(result, {
+        'id': 's1',
+        'echo': {'workspace': '/p'},
+      });
+    });
+
+    test('keeps the code and data of a refusal', () async {
+      final host = FakeNativeHost()
+        ..handlers['session.open'] = (_) =>
+            _fail(HostErrorKind.rpc, -32003, 'no', '{"workspace":"/p"}');
+      final transport = await _open(host);
+      addTearDown(transport.dispose);
+
+      await expectLater(
+        transport.rawRequest('session.open', {'workspace': '/p'}),
+        throwsA(
+          isA<RpcRefusal>().having((e) => e.code, 'code', -32003).having(
+            (e) => e.data,
+            'data',
+            {'workspace': '/p'},
+          ),
+        ),
+      );
+    });
+
+    test('a lost host is unavailable, not a refusal', () async {
+      final host = FakeNativeHost()
+        ..handlers['session.open'] = (_) =>
+            _fail(HostErrorKind.disconnected, 0, 'gone');
+      final transport = await _open(host);
+      addTearDown(transport.dispose);
+
+      await expectLater(
+        transport.rawRequest('session.open', {'workspace': '/p'}),
+        throwsA(isA<KitUnavailable>()),
+      );
+    });
   });
 
   test('the transport reports whether the host was already running', () async {
