@@ -54,7 +54,7 @@ void main() {
     'phone-chat-open': (
       hosts: [maya],
       failOpen: false,
-      after: (tester, _) => _tap(tester, 'rail-row-c2'),
+      after: (tester, _) => _tap(tester, 'needs-row-c1'),
     ),
     'phone-open-failed': (hosts: [maya], failOpen: true, after: null),
     'phone-host-menu': (

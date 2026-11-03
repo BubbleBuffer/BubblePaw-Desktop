@@ -109,9 +109,9 @@ void main() {
       tester,
     ) async {
       await _open(tester, hosts: [_maya]);
-      expect(find.byKey(const ValueKey('rail-row-c2')), findsOneWidget);
-      await _tap(tester, 'rail-row-c2');
-      expect(find.byKey(const ValueKey('rail-row-c2')), findsNothing);
+      expect(find.byKey(const ValueKey('needs-row-c1')), findsOneWidget);
+      await _tap(tester, 'needs-row-c1');
+      expect(find.byKey(const ValueKey('needs-row-c1')), findsNothing);
     });
 
     testWidgets('says why a host could not be opened', (tester) async {
