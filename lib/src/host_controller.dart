@@ -16,6 +16,8 @@ import 'guarded_backend.dart';
 import 'host_failure.dart';
 import 'preferences.dart';
 import 'scripted.dart';
+import 'remote/remote_access.dart';
+import 'remote/remote_controller.dart';
 import 'settings/settings_section.dart';
 import 'updates/update_controller.dart';
 
@@ -30,6 +32,7 @@ class StartedBackend {
     this.attached = false,
     this.version,
     this.settings,
+    this.remote,
   });
 
   final AgentBackend backend;
@@ -37,6 +40,10 @@ class StartedBackend {
   /// The host's settings (config.get and config.set); null when the backend
   /// has none, as the scripted one.
   final HostSettings? settings;
+
+  /// Builds the sharing side of the embedded host for a device name; null
+  /// when the host is attached, scripted or not embedded.
+  final RemoteAccessFactory? remote;
 
   /// The host was already running; [dispose] only disconnects from it.
   final bool attached;
@@ -91,6 +98,22 @@ Future<StartedBackend> startBubblePaw(
     attached: transport.attached,
     version: embeddedCoreVersion(),
     settings: TransportHostSettings(transport),
+    remote: _remoteFactory(transport, config),
+  );
+}
+
+/// The sharing side, only for a host this process runs.
+RemoteAccessFactory? _remoteFactory(
+  FfiBubblePawTransport transport,
+  AppConfig config,
+) {
+  final host = transport.host;
+  if (transport.attached || host is! NativeHostHandle) return null;
+  return (name) => NativeRemoteAccess.forHost(
+    host,
+    dataDirectory: config.dataDirectory,
+    workspaceDirectory: config.workspaceDirectory,
+    deviceName: name,
   );
 }
 
@@ -129,6 +152,7 @@ class HostController extends ChangeNotifier {
   HostFailure? _failure;
   GuardedBackend? _backend;
   HostSettings? _settings;
+  RemoteController? _remote;
   Stream<ChatSummary>? _createdChats;
   DateTime? _now;
   Future<void> Function()? _dispose;
@@ -265,6 +289,9 @@ class HostController extends ChangeNotifier {
 
   /// The running host's settings, or null when the backend has none.
   HostSettings? get settings => _settings;
+
+  /// The sharing side of this host; null when it cannot be shared from here.
+  RemoteController? get remote => _remote;
 
   /// The chat the person has open, when one is known.
   String? get currentChatId => _backend?.currentChat.value;
@@ -408,6 +435,7 @@ class HostController extends ChangeNotifier {
     _now = started.now;
     _attached = started.attached;
     _settings = started.settings;
+    _remote = _buildRemote(started.remote, started.settings);
     _backend = GuardedBackend(
       started.backend,
       onFailure: _hostFailed,
@@ -419,6 +447,33 @@ class HostController extends ChangeNotifier {
     log.host(started.attached ? 'attached to a running host' : 'host attached');
     _hostVersion = started.version;
     _notify();
+  }
+
+  RemoteController? _buildRemote(
+    RemoteAccessFactory? factory,
+    HostSettings? settings,
+  ) {
+    if (factory == null) return null;
+    final name = _prefs.deviceName.isNotEmpty
+        ? _prefs.deviceName
+        : Platform.localHostname;
+    final controller = RemoteController(
+      access: factory(name),
+      settings: settings,
+      deviceName: name,
+      saveDeviceName: (value) =>
+          updatePrefs(_prefs.copyWith(deviceName: value)),
+      shareAtStart: () => _prefs.shareAtStart,
+      saveShareAtStart: (value) =>
+          updatePrefs(_prefs.copyWith(shareAtStart: value)),
+    );
+    unawaited(controller.load(autostart: true));
+    return controller;
+  }
+
+  void _dropRemote() {
+    _remote?.dispose();
+    _remote = null;
   }
 
   /// Shows the failure notice when the host goes away while no command or
@@ -438,6 +493,7 @@ class HostController extends ChangeNotifier {
     final dispose = _dispose;
     _backend = null;
     _settings = null;
+    _dropRemote();
     _dispose = null;
     _notify();
     if (dispose != null) unawaited(_quietly(dispose));
@@ -464,6 +520,7 @@ class HostController extends ChangeNotifier {
     _backend?.closing();
     _backend = null;
     _settings = null;
+    _dropRemote();
     _createdChats = null;
     _dispose = null;
     _attached = false;
@@ -495,6 +552,7 @@ class HostController extends ChangeNotifier {
     _generation++;
     final dispose = _dispose;
     _backend?.closing();
+    _dropRemote();
     _dispose = null;
     if (dispose != null) unawaited(_quietly(dispose));
     super.dispose();

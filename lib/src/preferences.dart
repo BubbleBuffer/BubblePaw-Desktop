@@ -25,6 +25,8 @@ class AppPrefs {
     this.checkUpdates = true,
     this.lastUpdateCheck,
     this.skippedUpdate = '',
+    this.shareAtStart = true,
+    this.deviceName = '',
   });
 
   final ThemeSetting theme;
@@ -57,6 +59,13 @@ class AppPrefs {
   /// A version the person chose to skip, such as `0.2.0`.
   final String skippedUpdate;
 
+  /// Remote access: share this host as soon as the host runs (never in the
+  /// temporary-address mode).
+  final bool shareAtStart;
+
+  /// What devices see this computer called; empty means the computer's name.
+  final String deviceName;
+
   /// Whether a login start hides the window.
   bool get effectiveStartInTray => openAtLogin && startInTray;
 
@@ -71,11 +80,15 @@ class AppPrefs {
     bool? checkUpdates,
     DateTime? lastUpdateCheck,
     String? skippedUpdate,
+    bool? shareAtStart,
+    String? deviceName,
   }) => AppPrefs(
     updateChannel: updateChannel ?? this.updateChannel,
     checkUpdates: checkUpdates ?? this.checkUpdates,
     lastUpdateCheck: lastUpdateCheck ?? this.lastUpdateCheck,
     skippedUpdate: skippedUpdate ?? this.skippedUpdate,
+    shareAtStart: shareAtStart ?? this.shareAtStart,
+    deviceName: deviceName ?? this.deviceName,
     theme: theme ?? this.theme,
     openAtLogin: openAtLogin ?? this.openAtLogin,
     startInTray: startInTray ?? this.startInTray,
@@ -96,6 +109,8 @@ class AppPrefs {
     if (lastUpdateCheck != null)
       'lastUpdateCheck': lastUpdateCheck!.toUtc().toIso8601String(),
     if (skippedUpdate.isNotEmpty) 'skippedUpdate': skippedUpdate,
+    'shareAtStart': shareAtStart,
+    if (deviceName.isNotEmpty) 'deviceName': deviceName,
   };
 
   /// Reads what it can; anything missing or of the wrong type is a default.
@@ -130,6 +145,11 @@ class AppPrefs {
         final String text => text,
         _ => '',
       },
+      shareAtStart: flag('shareAtStart', defaults.shareAtStart),
+      deviceName: switch (json['deviceName']) {
+        final String text => text,
+        _ => '',
+      },
     );
   }
 
@@ -145,7 +165,9 @@ class AppPrefs {
       other.updateChannel == updateChannel &&
       other.checkUpdates == checkUpdates &&
       other.lastUpdateCheck == lastUpdateCheck &&
-      other.skippedUpdate == skippedUpdate;
+      other.skippedUpdate == skippedUpdate &&
+      other.shareAtStart == shareAtStart &&
+      other.deviceName == deviceName;
 
   @override
   int get hashCode => Object.hash(
@@ -159,5 +181,7 @@ class AppPrefs {
     checkUpdates,
     lastUpdateCheck,
     skippedUpdate,
+    shareAtStart,
+    deviceName,
   );
 }

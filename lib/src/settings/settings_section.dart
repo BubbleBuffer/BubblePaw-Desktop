@@ -1,4 +1,4 @@
-// The sections of Settings. Remote access joins with its work.
+// The sections of Settings.
 
 enum SettingsSection {
   general('General'),
@@ -6,6 +6,7 @@ enum SettingsSection {
   tools('Tools'),
   mcp('MCP servers'),
   skills('Skills'),
+  remote('Remote access'),
   feedback('Feedback'),
   about('About');
 

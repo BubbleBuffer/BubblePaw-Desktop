@@ -16,6 +16,7 @@ import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/platform/download.dart';
 import 'package:bubblepaw_desktop/src/platform/releases.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
+import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
 import 'package:bubblepaw_desktop/src/semver.dart';
 import 'package:bubblepaw_desktop/src/updates/update_controller.dart';
 import 'package:flutter/foundation.dart'
@@ -23,6 +24,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'fake_remote.dart';
 import 'fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
@@ -73,6 +75,46 @@ Scene _mcpScene({
     if (after != null) await after(tester);
   },
 );
+
+/// Remote access with a fake sharing side: [access] configures it, then
+/// [after] drives the page (the host starts with sharing off).
+Scene _remoteScene({
+  required FakeRemoteAccess Function(FakeHostSettings host) access,
+  Map<String, Object?>? values,
+  Future<void> Function(WidgetTester tester)? after,
+}) => (
+  // Each variant of the scene gets its own host and sharing state.
+  controller: () {
+    final host = FakeHostSettings(values: values);
+    final fake = access(host);
+    return Played(
+      settings: host,
+      remote: (_) => fake,
+    ).controller(prefs: const AppPrefs(shareAtStart: false));
+  },
+  after: (tester) async {
+    await openSettings(tester, 'remote');
+    if (after != null) await after(tester);
+  },
+);
+
+/// Devices whose last-seen dates do not depend on the clock.
+final _sampleDevices = [
+  DeviceEntry(
+    id: 'PHON-E123-4567-89AB',
+    label: "Maya's phone",
+    profile: 'edit',
+    kind: 'phone',
+    pairedAt: BigInt.from(1700000000),
+    lastSeen: BigInt.from(1700000100),
+  ),
+  const DeviceEntry(
+    id: 'LAPT-OP12-3456-78CD',
+    label: 'Work laptop',
+    profile: 'read',
+    kind: 'laptop',
+  ),
+];
 
 /// Fixed licences, so the page does not depend on the packages in the build.
 Stream<LicenseEntry> sampleLicences() => Stream.fromIterable([
@@ -545,6 +587,104 @@ void main() {
         await tapVisible(tester, 'srv-remove');
       },
     ),
+    // Core v0.10.0: Remote access shares the host, and pairs devices.
+    'settings_remote_stopped': _remoteScene(
+      access: (host) =>
+          FakeRemoteAccess(hostSettings: host, devices: _sampleDevices),
+    ),
+    'settings_remote_relay': _remoteScene(
+      access: (host) =>
+          FakeRemoteAccess(hostSettings: host, devices: _sampleDevices),
+      after: (tester) => tapVisible(tester, 'toggle-share'),
+    ),
+    'settings_remote_temporary': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'reach-quick');
+      },
+    ),
+    'settings_remote_domain_signed_out': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) => tapVisible(tester, 'reach-domain'),
+    ),
+    'settings_remote_domain_token': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'reach-domain');
+        await tapVisible(tester, 'cf-use-token');
+      },
+    ),
+    'settings_remote_domain_signed_in': _remoteScene(
+      values: {
+        'remote.mode': 'domain',
+        'remote.hostname': 'bubblepaw-desk.example.com',
+      },
+      access: (host) => FakeRemoteAccess(
+        hostSettings: host,
+        cloudflare: const CloudflareStatus(
+          signedIn: true,
+          via: CloudflareVia.tokenFile,
+          account: 'maya@example.com',
+          zones: ['example.com', 'maya.dev'],
+        ),
+        cloudflaredStatus: const CloudflaredStatus(
+          installed: true,
+          version: '2025.9.0',
+          pinnedVersion: '2025.9.0',
+          updateAvailable: false,
+          managed: true,
+        ),
+        devices: _sampleDevices,
+      ),
+      after: (tester) => tapVisible(tester, 'toggle-share'),
+    ),
+    'settings_remote_other_host': _remoteScene(
+      access: (host) => FakeRemoteAccess(
+        hostSettings: host,
+        other: const OtherShare(
+          shared: true,
+          ours: false,
+          cli: true,
+          hostId: 'T4WK-9HDB-2QXN-6MRE',
+          dataDir: '/var/lib/bubblepaw/data',
+        ),
+      ),
+    ),
+    'settings_remote_pair_profile': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'toggle-share');
+        await tapVisible(tester, 'remote-pair');
+      },
+    ),
+    'settings_remote_pair_code': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'toggle-share');
+        await tapVisible(tester, 'remote-pair');
+        await tapVisible(tester, 'pair-continue');
+      },
+    ),
+    'settings_remote_key': _remoteScene(
+      access: (host) =>
+          FakeRemoteAccess(hostSettings: host, devices: _sampleDevices),
+      after: (tester) => tapVisible(tester, 'remote-manage-key'),
+    ),
+    'settings_remote_key_export': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'remote-manage-key');
+        await tapVisible(tester, 'key-export');
+      },
+    ),
+    'settings_remote_key_regenerate': _remoteScene(
+      access: (host) =>
+          FakeRemoteAccess(hostSettings: host, devices: _sampleDevices),
+      after: (tester) async {
+        await tapVisible(tester, 'remote-manage-key');
+        await tapVisible(tester, 'key-regenerate');
+      },
+    ),
     'settings_about': (
       controller: () => HostController(
         store: MemoryConfigStore(sampleConfig),
@@ -600,6 +740,12 @@ void main() {
             find.byType(BubblePawApp),
             matchesGoldenFile('goldens/$name.png'),
           );
+          // The pairing countdown ticks until its dialog closes.
+          final close = find.byKey(const ValueKey('dialog-close'));
+          if (close.evaluate().isNotEmpty) {
+            await tester.tap(close);
+            await settle(tester);
+          }
         });
       }
     }

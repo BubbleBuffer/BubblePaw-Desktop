@@ -166,11 +166,10 @@ void main() {
       expect(find.byKey(const ValueKey('startup-error')), findsOneWidget);
     });
 
-    testWidgets('has no turn layout and no remote access', (tester) async {
+    testWidgets('has no turn layout', (tester) async {
       await pumpApp(tester, _controller());
       await _open(tester, 'general');
       expect(find.textContaining('Turn layout'), findsNothing);
-      expect(find.textContaining('Remote'), findsNothing);
     });
   });
 
