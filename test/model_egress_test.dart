@@ -230,6 +230,7 @@ void main() {
       await _tap(tester, 'pair-continue');
       expect(access.calls, contains('pair:edit'));
       expect(access.pairGrants, [false]);
+      await _tap(tester, 'pair-cancel');
     });
 
     testWidgets('ticking it passes the grant to the offer', (tester) async {
@@ -240,6 +241,7 @@ void main() {
       expect(access.calls, contains('pair:read'));
       expect(access.pairGrants, [true]);
       expect(access.offers.last.egress, isTrue);
+      await _tap(tester, 'pair-cancel');
     });
 
     testWidgets('the box can be unticked again', (tester) async {
@@ -248,6 +250,7 @@ void main() {
       await _tap(tester, 'pair-egress');
       await _tap(tester, 'pair-continue');
       expect(access.pairGrants, [false]);
+      await _tap(tester, 'pair-cancel');
     });
   });
 
