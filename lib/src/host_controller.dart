@@ -98,7 +98,7 @@ Future<StartedBackend> startSavedHost(HostLinks links, String hostId) async {
     workspaceDirectory: '',
   );
   return StartedBackend(
-    RemoteBackend(backend, rows),
+    RemoteBackend(backend, rows, rawRequest: transport.rawRequest),
     backend.dispose,
     remoteRows: rows,
     createdChats: backend.createdChats,

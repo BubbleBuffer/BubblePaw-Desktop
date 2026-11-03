@@ -12,7 +12,7 @@ use bubblepaw_sdk::{
 };
 use serde_json::json;
 
-use crate::api::host::BubblePawHost;
+use crate::api::host::{BubblePawHost, HostErrorKind};
 use crate::api::hosts::{self, SavedHostEntry};
 use crate::api::remote::*;
 use crate::host_setup;
@@ -742,6 +742,76 @@ async fn the_app_pairs_with_a_second_host_opens_it_and_lists_its_chats() {
         .unwrap());
     assert!(hosts::list_saved_hosts(app).await.unwrap().is_empty());
 
+    f.host.close().await.unwrap();
+    f.relay.shutdown().await;
+}
+
+#[tokio::test]
+async fn a_saved_host_opens_chats_only_in_workspaces_it_knows() {
+    let f = fixture().await;
+    f.started().await;
+    let app = app_data(&f);
+    let saved = pair_app(&f, &app, "edit").await;
+    let remote = BubblePawHost::connect_saved(app.clone(), saved.id.clone())
+        .await
+        .unwrap();
+
+    // A chat in the host's default workspace; the list names that path as the
+    // host writes it (so it is a workspace the host knows).
+    remote
+        .call("session.open".into(), "{}".into())
+        .await
+        .unwrap();
+    let listed = remote
+        .call("session.list".into(), String::new())
+        .await
+        .unwrap();
+    let listed: serde_json::Value = serde_json::from_str(&listed).unwrap();
+    let known = listed[0]["workspace"]
+        .as_str()
+        .expect("the row names its workspace")
+        .to_owned();
+    let opened = remote
+        .call(
+            "session.open".into(),
+            json!({"workspace": known}).to_string(),
+        )
+        .await
+        .unwrap();
+    let opened: serde_json::Value = serde_json::from_str(&opened).unwrap();
+    let id = opened["id"].as_str().expect("a session id").to_owned();
+
+    // A path the host has never used is refused with -32003 and its path.
+    let elsewhere = f.root.path().join("elsewhere");
+    std::fs::create_dir_all(&elsewhere).unwrap();
+    let refused = remote
+        .call(
+            "session.open".into(),
+            json!({"workspace": elsewhere.display().to_string()}).to_string(),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(refused.kind, HostErrorKind::Rpc);
+    assert_eq!(refused.code, -32003);
+    let data = refused.data_json.expect("the refusal names the workspace");
+    assert!(data.contains("elsewhere"), "{data}");
+
+    // The list says what each chat waits for (null for a chat that does not).
+    let listed = remote
+        .call("session.list".into(), String::new())
+        .await
+        .unwrap();
+    let listed: serde_json::Value = serde_json::from_str(&listed).unwrap();
+    let row = listed
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["id"] == id.as_str())
+        .expect("the new chat is listed");
+    assert!(row["waiting_for"].is_null(), "{row}");
+    assert!(row.get("waiting_for").is_some(), "{row}");
+
+    remote.close().await.unwrap();
     f.host.close().await.unwrap();
     f.relay.shutdown().await;
 }

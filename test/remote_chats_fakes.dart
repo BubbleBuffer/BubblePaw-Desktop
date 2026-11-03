@@ -83,13 +83,26 @@ final sampleRemoteChats = [
   _chat('c7', 'Draft the release notes', const Duration(days: 3)),
 ];
 
-/// `session.list` rows for [sampleRemoteChats]: two chats wait for the
-/// person, two run.
-List<Map<String, Object?>> sampleRemoteRows() => [
-  {'id': 'c1', 'workspace': gardenApi, 'needs_you': true, 'running': false},
+/// `session.list` rows for [sampleRemoteChats]: one chat waits for an
+/// approval, one for an answer, two run. [waitingFor] false leaves out
+/// `waiting_for`, as a host before Core 0.10.2 does.
+List<Map<String, Object?>> sampleRemoteRows({bool waitingFor = true}) => [
+  {
+    'id': 'c1',
+    'workspace': gardenApi,
+    'needs_you': true,
+    'running': false,
+    if (waitingFor) 'waiting_for': 'approval',
+  },
   {'id': 'c2', 'workspace': gardenApi, 'needs_you': false, 'running': true},
   {'id': 'c3', 'workspace': gardenApi, 'needs_you': false, 'running': false},
-  {'id': 'c4', 'workspace': agentKit, 'needs_you': true, 'running': false},
+  {
+    'id': 'c4',
+    'workspace': agentKit,
+    'needs_you': true,
+    'running': false,
+    if (waitingFor) 'waiting_for': 'question',
+  },
   {'id': 'c5', 'workspace': agentKit, 'needs_you': false, 'running': true},
   {'id': 'c6', 'workspace': scratch, 'needs_you': false, 'running': false},
   {'id': 'c7', 'workspace': notes, 'needs_you': false, 'running': false},
@@ -97,18 +110,40 @@ List<Map<String, Object?>> sampleRemoteRows() => [
 
 /// One saved host that answers with [sampleRemoteChats].
 class RemoteFixture {
-  RemoteFixture() {
-    rows.absorb(sampleRemoteRows());
+  RemoteFixture({bool waitingFor = true}) {
+    rows.absorb(sampleRemoteRows(waitingFor: waitingFor));
   }
 
   final rows = RemoteChatRows();
   final backend = ListedBackend(sampleRemoteChats);
+
+  /// The params of each `session.open` the app sent with a workspace.
+  final opened = <Map<String, Object?>>[];
+
+  /// Workspaces the host refuses over the tunnel (-32003).
+  final refused = <String>{};
+
+  /// The host's answer to a raw request: opens a chat in the workspace, or
+  /// refuses it.
+  Future<Object?> raw(String method, Map<String, Object?> params) async {
+    opened.add(params);
+    final path = params['workspace']! as String;
+    if (refused.contains(path)) {
+      throw RpcRefusal(workspaceRefusedCode, 'refused', {'workspace': path});
+    }
+    return {
+      'id': 'new-${opened.length}',
+      'title': 'New chat',
+      'workspace': path,
+    };
+  }
+
   final host = fakeSavedHost(lastConnected: 1700000100);
   late final links = FakeHostLinks(hosts: [host]);
 
   Future<StartedBackend> start(HostLinks links, String id) async =>
       StartedBackend(
-        RemoteBackend(backend, rows),
+        RemoteBackend(backend, rows, rawRequest: raw),
         () async {},
         now: remoteClock,
         attached: true,
