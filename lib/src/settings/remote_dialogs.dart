@@ -305,6 +305,18 @@ class PairDialog extends StatelessWidget {
           'paste the pairing link. The code works once.',
           style: ts(theme.typeScale.uiSmall, theme.muted),
         ),
+        if (onCopy != null) ...[
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ActionButton(
+              key: const ValueKey('pair-copy-link'),
+              label: 'Copy pairing link',
+              glyph: glyphCopy,
+              onTap: () => unawaited(onCopy!(offer.qrPayload)),
+            ),
+          ),
+        ],
       ],
       footer: dialogFooter(
         leading: flow.expired
@@ -322,13 +334,6 @@ class PairDialog extends StatelessWidget {
                 ],
               ),
         [
-          if (onCopy != null)
-            ActionButton(
-              key: const ValueKey('pair-copy-link'),
-              label: 'Copy pairing link',
-              glyph: glyphCopy,
-              onTap: () => unawaited(onCopy!(offer.qrPayload)),
-            ),
           ActionButton(
             key: const ValueKey('pair-new-code'),
             label: 'New code',
