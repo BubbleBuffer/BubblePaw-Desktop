@@ -572,34 +572,51 @@ class _RemotePageState extends State<RemotePage> {
     return GroupCard(
       key: const ValueKey('remote-status'),
       children: [
-        KeyValueRow(
-          relay ? 'Relay' : 'Tunnel',
-          '',
-          mono: false,
-          trailing: canRetry
-              ? ActionButton(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 112,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: Text(
+                    relay ? 'Relay' : 'Tunnel',
+                    style: ts(theme.typeScale.ui, theme.muted),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    StatePill(
+                      label,
+                      key: const ValueKey('remote-pill'),
+                      tone: tone,
+                    ),
+                    if (why.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          why,
+                          key: const ValueKey('remote-why'),
+                          style: ts(theme.typeScale.uiSmall, theme.muted),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (canRetry) ...[
+                const SizedBox(width: 8),
+                ActionButton(
                   key: const ValueKey('remote-start-again'),
                   label: 'Start again',
                   glyph: glyphRefresh,
                   onTap: () => unawaited(r.startAgain()),
-                )
-              : null,
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(124, 0, 12, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              StatePill(label, key: const ValueKey('remote-pill'), tone: tone),
-              if (why.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    why,
-                    key: const ValueKey('remote-why'),
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
-                  ),
                 ),
+              ],
             ],
           ),
         ),
