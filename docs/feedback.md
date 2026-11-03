@@ -48,7 +48,11 @@ app-support folder). Two saves in the same second get a `-2` suffix.
 
 `report.md` has the person's text, a list of attached files, and the diagnostics block.
 `chat.md` has the last 20 messages oldest first: role, time and text; a tool call or a
-file edit is one line. Both are redacted.
+file edit is one line. Under the `Chat` line a `Full chat` line gives the file that holds
+the whole chat on the reporter's computer, `<Core data folder>/chats/<chat id>.db` (Core's
+layout; an archived chat is `.db.zst`). It is left out when the chat is on a remote host,
+because the host API returns no path. Both files are redacted, so the home folder shows
+as `~`.
 
 After a save, `SavedNotice` shows "Saved to feedback/<id>" with Open folder and Dismiss.
 
