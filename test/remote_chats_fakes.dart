@@ -37,8 +37,7 @@ class ListedBackend implements AgentBackend {
   @override
   Future<ChatSnapshot> loadChat(String chatId) async => ChatSnapshot(
     chatId: chatId,
-    title:
-        chats.where((c) => c.id == chatId).firstOrNull?.title ?? 'New chat',
+    title: chats.where((c) => c.id == chatId).firstOrNull?.title ?? 'New chat',
     workspace: const WorkspaceInfo(name: '', path: ''),
   );
 
