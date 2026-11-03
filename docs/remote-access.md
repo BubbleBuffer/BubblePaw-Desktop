@@ -2,7 +2,7 @@
 
 Settings > Remote access shares the host this app runs, pairs devices with it,
 lists the hosts this device can open, and holds the device key. The rail menu
-switches between this computer and those hosts. Core `v0.11.1` does the work; the app is a thin page
+switches between this computer and those hosts. Core `v0.12.0` does the work; the app is a thin page
 over it.
 
 ## Where the code is

@@ -18,6 +18,8 @@ use bubblepaw_sdk::remote::{
 };
 use flutter_rust_bridge::frb;
 
+use super::remote::{KeyChange, KeyInfo};
+
 /// What kind of failure a [`HostLinkError`] is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HostLinkErrorKind {
@@ -252,7 +254,11 @@ pub async fn pair_with_host(
         paths.hosts.clone(),
         device_name,
     );
-    options.device_kind = DeviceKind::Desktop;
+    options.device_kind = if cfg!(feature = "local-host") {
+        DeviceKind::Desktop
+    } else {
+        DeviceKind::Phone
+    };
     let pending = remote::pair(options).await?;
     Ok(HostPairing {
         comparison: pending.comparison().to_owned(),
@@ -314,4 +320,72 @@ impl HostPairing {
             *guard = None;
         }
     }
+}
+
+fn key_change(change: remote::DeviceKeyChange) -> KeyChange {
+    KeyChange {
+        old_id: change.old_id,
+        id: change.id,
+        fingerprint: change.fingerprint,
+        cleared_devices: change.cleared_devices as u32,
+        cleared_hosts: change.cleared_hosts as u32,
+    }
+}
+
+/// This device's ID and fingerprint. The key is created when missing. Works
+/// without a host of its own, which is what the phone has.
+pub async fn device_key_info(data_dir: String) -> Result<KeyInfo, HostLinkError> {
+    let key_file = paths(&data_dir).key_file;
+    tokio::task::spawn_blocking(move || remote::device_key_info(&key_file))
+        .await
+        .map_err(HostLinkError::other)?
+        .map(|info| KeyInfo {
+            id: info.id,
+            fingerprint: info.fingerprint,
+        })
+        .map_err(HostLinkError::other)
+}
+
+/// Writes the key to `dest` (which must not exist), protected by `passphrase`.
+pub async fn export_device_key(
+    data_dir: String,
+    dest: String,
+    passphrase: String,
+) -> Result<(), HostLinkError> {
+    let key_file = paths(&data_dir).key_file;
+    tokio::task::spawn_blocking(move || {
+        remote::export_device_key(&key_file, Path::new(&dest), &passphrase)
+    })
+    .await
+    .map_err(HostLinkError::other)?
+    .map_err(HostLinkError::other)
+}
+
+/// Replaces the key with the one in `src`. A different key clears every
+/// pairing in both directions (see [`KeyChange`]).
+pub async fn import_device_key(
+    data_dir: String,
+    src: String,
+    passphrase: String,
+) -> Result<KeyChange, HostLinkError> {
+    let key_paths = remote::DeviceKeyPaths::in_data_dir(Path::new(&data_dir));
+    tokio::task::spawn_blocking(move || {
+        let passphrase = (!passphrase.is_empty()).then_some(passphrase);
+        remote::import_device_key(&key_paths, Path::new(&src), passphrase.as_deref())
+    })
+    .await
+    .map_err(HostLinkError::other)?
+    .map(key_change)
+    .map_err(HostLinkError::other)
+}
+
+/// Replaces the key with a fresh one. Every pairing in both directions is
+/// cleared.
+pub async fn regenerate_device_key(data_dir: String) -> Result<KeyChange, HostLinkError> {
+    let key_paths = remote::DeviceKeyPaths::in_data_dir(Path::new(&data_dir));
+    tokio::task::spawn_blocking(move || remote::regenerate_device_key(&key_paths))
+        .await
+        .map_err(HostLinkError::other)?
+        .map(key_change)
+        .map_err(HostLinkError::other)
 }

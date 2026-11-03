@@ -50,8 +50,8 @@ jobs:
         run: flutter test --exclude-tags "golden || native"
       # Goldens are rendered on Linux with the bundled fonts. To accept new
       # renders, run this workflow by hand (workflow_dispatch): the last step
-      # formats the code, re-renders the goldens and uploads the result as
-      # fix.patch (`git apply fix.patch`).
+      # regenerates the flutter_rust_bridge code, formats the code, re-renders
+      # the goldens and uploads the result as fix.patch (`git apply fix.patch`).
       - name: goldens
         if: always()
         run: flutter test --tags golden
@@ -68,6 +68,13 @@ jobs:
           cargo fmt --manifest-path native/Cargo.toml --check
           cargo clippy --manifest-path native/Cargo.toml --all-targets -- -D warnings
           cargo test --manifest-path native/Cargo.toml
+      # The phone build: the same crate without the embedded host. The test
+      # pairs with and opens an in-process host through a local relay.
+      - name: native crate, remote only (clippy, tests)
+        if: always()
+        run: |
+          cargo clippy --manifest-path native/Cargo.toml --all-targets --no-default-features -- -D warnings
+          cargo test --manifest-path native/Cargo.toml --no-default-features
       # Scripted provider only: no model is called. The Dart FFI transport
       # runs against the crate built here.
       - name: native host (FFI transport, real crate)
@@ -92,6 +99,9 @@ jobs:
       - name: Patch with formatting and new goldens (manual runs)
         if: always() && github.event_name == 'workflow_dispatch'
         run: |
+          # The bridge code follows native/src/api (committed, regenerated here).
+          cargo install flutter_rust_bridge_codegen --version 2.13.0 --locked
+          flutter_rust_bridge_codegen generate
           dart format lib test
           flutter test --tags golden --update-goldens || true
           rm -rf test/failures
