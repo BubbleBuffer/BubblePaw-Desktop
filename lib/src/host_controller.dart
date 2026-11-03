@@ -19,6 +19,8 @@ import 'scripted.dart';
 import 'remote/host_links.dart';
 import 'remote/hosts_controller.dart';
 import 'remote/remote_access.dart';
+import 'remote/project_groups.dart';
+import 'remote/remote_chats.dart';
 import 'remote/remote_controller.dart';
 import 'settings/settings_section.dart';
 import 'updates/update_controller.dart';
@@ -35,9 +37,14 @@ class StartedBackend {
     this.version,
     this.settings,
     this.remote,
+    this.remoteRows,
   });
 
   final AgentBackend backend;
+
+  /// For a saved host: what its chat list rows say about each chat. Its
+  /// presence makes the workbench draw the host's project groups.
+  final RemoteChatRows? remoteRows;
 
   /// The host's settings (config.get and config.set); null when the backend
   /// has none, as the scripted one.
@@ -84,13 +91,16 @@ Future<StartedBackend> startSavedHost(HostLinks links, String hostId) async {
     workspaceDirectory: '',
     opener: ({required dataDir, required workspaceDir}) => links.open(hostId),
   );
+  // The host has many projects: the rows say which chat is in which one.
+  final rows = RemoteChatRows();
   final backend = await BubblePawBackend.connect(
-    transport,
+    RowTapTransport(transport, rows),
     workspaceDirectory: '',
   );
   return StartedBackend(
-    backend,
+    RemoteBackend(backend, rows),
     backend.dispose,
+    remoteRows: rows,
     createdChats: backend.createdChats,
     connectionLost: backend.connectionLost,
     attached: true,
@@ -195,6 +205,9 @@ class HostController extends ChangeNotifier {
   bool _opening = false;
   String? _openError;
   GuardedBackend? _remoteBackend;
+  RemoteChatRows? _remoteRows;
+  DateTime? _remoteNow;
+  ProjectRailState? _remoteRail;
   HostSettings? _remoteSettings;
   Stream<ChatSummary>? _remoteCreatedChats;
   Future<void> Function()? _remoteDispose;
@@ -368,6 +381,11 @@ class HostController extends ChangeNotifier {
     return _hosts;
   }
 
+  /// The open saved host's chat rows and which of its project groups are
+  /// open; null for this computer, and for a saved host that gave no rows.
+  RemoteChatRows? get remoteRows => _remoteRows;
+  ProjectRailState? get remoteRail => _remoteRail;
+
   /// The saved host that is open, or null for this computer.
   SavedHostEntry? get openHost {
     final id = _openHostId;
@@ -404,6 +422,9 @@ class HostController extends ChangeNotifier {
       _remoteDispose = started.dispose;
       _remoteSettings = started.settings;
       _remoteCreatedChats = started.createdChats;
+      _remoteRows = started.remoteRows;
+      _remoteNow = started.now;
+      _remoteRail = started.remoteRows == null ? null : ProjectRailState();
       _remoteBackend = GuardedBackend(
         started.backend,
         onFailure: (_) => _remoteLost(ticket),
@@ -473,6 +494,9 @@ class HostController extends ChangeNotifier {
     final dispose = _remoteDispose;
     _remoteBackend?.closing();
     _remoteBackend = null;
+    _remoteRows = null;
+    _remoteNow = null;
+    _remoteRail = null;
     _remoteSettings = null;
     _remoteCreatedChats = null;
     _remoteDispose = null;
@@ -502,7 +526,7 @@ class HostController extends ChangeNotifier {
       _remoteBackend != null ? _remoteCreatedChats : _createdChats;
 
   /// Replaces the wall clock for ages; null for a real host.
-  DateTime? get now => _now;
+  DateTime? get now => _remoteBackend != null ? _remoteNow : _now;
 
   /// Whether the settings screen is drawn over the current state.
   bool get settingsOpen => _settingsOpen;

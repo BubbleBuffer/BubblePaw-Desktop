@@ -78,3 +78,18 @@ const LucideGlyph glyphChevronLeft = (
   LucideIcons.chevronLeft,
   LucideIcons.chevronLeft500,
 );
+const LucideGlyph glyphChevronRight = (
+  LucideIcons.chevronRight300,
+  LucideIcons.chevronRight,
+  LucideIcons.chevronRight500,
+);
+const LucideGlyph glyphPanelLeftClose = (
+  LucideIcons.panelLeftClose300,
+  LucideIcons.panelLeftClose,
+  LucideIcons.panelLeftClose500,
+);
+const LucideGlyph glyphSettings = (
+  LucideIcons.settings300,
+  LucideIcons.settings,
+  LucideIcons.settings500,
+);
