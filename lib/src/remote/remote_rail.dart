@@ -363,43 +363,33 @@ class _ChatRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  Row(
+                  // The project tag goes under the status when both do not fit.
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 2,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Flexible(
-                        child: StatusMark(
-                          chat.status,
-                          label: label,
-                          detail: detail,
-                        ),
-                      ),
-                      if (tag != null) ...[
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              border: Border.all(color: theme.railLine),
-                              borderRadius: BorderRadius.circular(
-                                theme.radii.sm,
+                      StatusMark(chat.status, label: label, detail: detail),
+                      if (tag != null)
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: theme.railLine),
+                            borderRadius: BorderRadius.circular(theme.radii.sm),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Text(
+                              tag,
+                              style: ts(
+                                const TypeSpec(11, 16, 400),
+                                theme.railMuted,
+                                mono: true,
                               ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                              ),
-                              child: Text(
-                                tag,
-                                style: ts(
-                                  const TypeSpec(11, 16, 400),
-                                  theme.railMuted,
-                                  mono: true,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ),
-                      ],
                     ],
                   ),
                 ],
