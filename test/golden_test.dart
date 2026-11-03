@@ -82,20 +82,21 @@ Scene _remoteScene({
   required FakeRemoteAccess Function(FakeHostSettings host) access,
   Map<String, Object?>? values,
   Future<void> Function(WidgetTester tester)? after,
-}) {
-  final host = FakeHostSettings(values: values);
-  final fake = access(host);
-  return (
-    controller: () => Played(
+}) => (
+  // Each variant of the scene gets its own host and sharing state.
+  controller: () {
+    final host = FakeHostSettings(values: values);
+    final fake = access(host);
+    return Played(
       settings: host,
       remote: (_) => fake,
-    ).controller(prefs: const AppPrefs(shareAtStart: false)),
-    after: (tester) async {
-      await openSettings(tester, 'remote');
-      if (after != null) await after(tester);
-    },
-  );
-}
+    ).controller(prefs: const AppPrefs(shareAtStart: false));
+  },
+  after: (tester) async {
+    await openSettings(tester, 'remote');
+    if (after != null) await after(tester);
+  },
+);
 
 /// Devices whose last-seen dates do not depend on the clock.
 final _sampleDevices = [
