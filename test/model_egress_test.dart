@@ -5,6 +5,7 @@
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/platform/releases.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
+import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
