@@ -162,9 +162,10 @@ sets and shows the grant and the choice.
   `via`. A `via` that names a host no longer saved here, or one that no longer
   grants it, stays selected under its ID as "Unavailable", and the host's own
   setting is not changed. Only codex, responses, chat-completions and
-  anthropic-messages providers with an https base URL on port 443 accept a
-  `via`; for any other provider the host refuses the write and the page shows
-  its reason as it is, under that provider's picker.
+  anthropic-messages providers accept a `via`, so the picker is shown on those
+  kinds only. The host also needs an https base URL on port 443; when it
+  refuses a write (a non-https base URL, say) the page shows its reason as it is,
+  under that provider's picker.
 - **Only this computer's host.** The saved hosts are this device's. With a saved
   host open, the settings pages work against that host, whose own saved hosts
   are not known here, so the picker is not shown.

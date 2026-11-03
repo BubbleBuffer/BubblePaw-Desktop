@@ -540,12 +540,12 @@ void main() {
     'settings_models_via': (
       controller: () => Played(
         capabilities: hostControlCapabilities,
-        providers: sampleProviders,
+        providers: sampleViaProviders,
         models: sampleModels,
         settings: FakeHostSettings(
           values: {
             'model.main': 'demo/scripted',
-            'providers.openrouter.via': 'OFFC-1111-2222-3333',
+            'providers.sidecar.via': 'OFFC-1111-2222-3333',
           },
         ),
         hostLinks: _egressHosts(),
@@ -555,12 +555,12 @@ void main() {
     'settings_models_via_unavailable': (
       controller: () => Played(
         capabilities: hostControlCapabilities,
-        providers: sampleProviders,
+        providers: sampleViaProviders,
         models: sampleModels,
         settings: FakeHostSettings(
           values: {
             'model.main': 'demo/scripted',
-            'providers.openrouter.via': 'GONE-0000-1111-2222',
+            'providers.sidecar.via': 'GONE-0000-1111-2222',
           },
         ),
         hostLinks: _egressHosts(),

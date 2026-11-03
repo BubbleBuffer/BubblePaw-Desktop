@@ -61,7 +61,7 @@ Future<FakeHostSettings> _models(
     tester,
     Played(
       capabilities: hostControlCapabilities,
-      providers: sampleProviders,
+      providers: sampleViaProviders,
       models: sampleModels,
       settings: settings,
       hostLinks: FakeHostLinks(hosts: hosts),
@@ -98,49 +98,59 @@ void main() {
     ) async {
       await _models(tester, hosts: [_office, _studio, _shed]);
       expect(find.text('Send model traffic through…'), findsWidgets);
-      expect(find.byKey(const ValueKey('via-demo-direct')), findsOneWidget);
-      expect(find.byKey(ValueKey('via-demo-${_office.id}')), findsOneWidget);
-      expect(find.byKey(ValueKey('via-demo-${_shed.id}')), findsOneWidget);
+      expect(find.byKey(const ValueKey('via-gateway-direct')), findsOneWidget);
+      expect(find.byKey(ValueKey('via-gateway-${_office.id}')), findsOneWidget);
+      expect(find.byKey(ValueKey('via-gateway-${_shed.id}')), findsOneWidget);
       // Studio mini did not grant it.
-      expect(find.byKey(ValueKey('via-demo-${_studio.id}')), findsNothing);
+      expect(find.byKey(ValueKey('via-gateway-${_studio.id}')), findsNothing);
       expect(find.text('Studio mini'), findsNothing);
       // Nothing is set: Direct is the choice and nothing is unavailable.
-      expect(find.byKey(const ValueKey('via-demo-unavailable')), findsNothing);
+      expect(find.byKey(const ValueKey('via-gateway-unavailable')), findsNothing);
+    });
+
+    testWidgets('is hidden on a provider kind that cannot use it', (
+      tester,
+    ) async {
+      await _models(tester, hosts: [_office]);
+      expect(find.byKey(const ValueKey('provider-demo')), findsOneWidget);
+      expect(find.byKey(const ValueKey('via-demo-direct')), findsNothing);
+      expect(find.byKey(const ValueKey('via-gateway-direct')), findsOneWidget);
+      expect(find.byKey(const ValueKey('via-sidecar-direct')), findsOneWidget);
     });
 
     testWidgets('choosing a host writes providers.<name>.via', (tester) async {
       final settings = await _models(tester, hosts: [_office, _shed]);
-      await _tap(tester, 'via-demo-${_office.id}');
-      expect(settings.writes, [('providers.demo.via', _office.id)]);
-      expect(settings.values['providers.demo.via'], _office.id);
+      await _tap(tester, 'via-gateway-${_office.id}');
+      expect(settings.writes, [('providers.gateway.via', _office.id)]);
+      expect(settings.values['providers.gateway.via'], _office.id);
       // The page read it back and shows no refusal.
-      expect(find.byKey(const ValueKey('via-demo-error')), findsNothing);
+      expect(find.byKey(const ValueKey('via-gateway-error')), findsNothing);
     });
 
     testWidgets('choosing Direct clears the key', (tester) async {
       final settings = await _models(
         tester,
         hosts: [_office],
-        values: {'providers.demo.via': _office.id},
+        values: {'providers.gateway.via': _office.id},
       );
-      await _tap(tester, 'via-demo-direct');
-      expect(settings.writes, [('providers.demo.via', null)]);
-      expect(settings.values.containsKey('providers.demo.via'), isFalse);
+      await _tap(tester, 'via-gateway-direct');
+      expect(settings.writes, [('providers.gateway.via', null)]);
+      expect(settings.values.containsKey('providers.gateway.via'), isFalse);
     });
 
     testWidgets('the saved via is the one selected', (tester) async {
       final settings = await _models(
         tester,
         hosts: [_office, _shed],
-        values: {'providers.demo.via': _shed.id},
+        values: {'providers.gateway.via': _shed.id},
       );
       // Choosing the host already chosen writes nothing.
-      await _tap(tester, 'via-demo-${_shed.id}');
+      await _tap(tester, 'via-gateway-${_shed.id}');
       expect(settings.writes, isEmpty);
       // Another provider keeps its own choice.
-      await _tap(tester, 'via-openrouter-${_office.id}');
-      expect(settings.writes, [('providers.openrouter.via', _office.id)]);
-      expect(settings.values['providers.demo.via'], _shed.id);
+      await _tap(tester, 'via-sidecar-${_office.id}');
+      expect(settings.writes, [('providers.sidecar.via', _office.id)]);
+      expect(settings.values['providers.gateway.via'], _shed.id);
     });
 
     testWidgets('a via that is no longer saved is shown by its ID', (
@@ -149,10 +159,10 @@ void main() {
       await _models(
         tester,
         hosts: [_office],
-        values: {'providers.demo.via': 'GONE-0000-1111-2222'},
+        values: {'providers.gateway.via': 'GONE-0000-1111-2222'},
       );
       expect(
-        find.byKey(const ValueKey('via-demo-unavailable')),
+        find.byKey(const ValueKey('via-gateway-unavailable')),
         findsOneWidget,
       );
       expect(find.text('GONE-0000-1111-2222'), findsOneWidget);
@@ -165,35 +175,35 @@ void main() {
       await _models(
         tester,
         hosts: [_office, _studio],
-        values: {'providers.demo.via': _studio.id},
+        values: {'providers.gateway.via': _studio.id},
       );
       expect(
-        find.byKey(const ValueKey('via-demo-unavailable')),
+        find.byKey(const ValueKey('via-gateway-unavailable')),
         findsOneWidget,
       );
       expect(find.text(_studio.id), findsOneWidget);
-      expect(find.byKey(ValueKey('via-demo-${_studio.id}')), findsNothing);
+      expect(find.byKey(ValueKey('via-gateway-${_studio.id}')), findsNothing);
     });
 
     testWidgets('a refusal shows the host reason as it is', (tester) async {
       final settings = await _models(tester, hosts: [_office]);
       settings.failWith = const HostSettingsException(
-        'providers.demo.via: this provider kind does not carry model traffic '
+        'providers.gateway.via: this provider kind does not carry model traffic '
         'through a device',
         code: -32012,
-        key: 'providers.demo.via',
+        key: 'providers.gateway.via',
       );
-      await _tap(tester, 'via-demo-${_office.id}');
+      await _tap(tester, 'via-gateway-${_office.id}');
       final text = tester.widget<Text>(
-        find.byKey(const ValueKey('via-demo-error')),
+        find.byKey(const ValueKey('via-gateway-error')),
       );
       expect(
         text.data,
-        'providers.demo.via: this provider kind does not carry model traffic '
+        'providers.gateway.via: this provider kind does not carry model traffic '
         'through a device',
       );
       // The refusal is for that provider only.
-      expect(find.byKey(const ValueKey('via-openrouter-error')), findsNothing);
+      expect(find.byKey(const ValueKey('via-sidecar-error')), findsNothing);
     });
   });
 

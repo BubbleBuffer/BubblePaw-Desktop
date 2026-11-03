@@ -303,6 +303,14 @@ class _Note extends StatelessWidget {
   }
 }
 
+/// The provider kinds whose `via` the host accepts (Core v0.11.0).
+const _viaKinds = {
+  'codex',
+  'responses',
+  'chat-completions',
+  'anthropic-messages',
+};
+
 class _Providers extends StatelessWidget {
   const _Providers({
     required this.current,
@@ -398,7 +406,10 @@ class _Providers extends StatelessWidget {
             current: current,
             making: making,
             onMakeDefault: onMakeDefault,
-            via: via == null || hosts == null
+            via:
+                via == null ||
+                    hosts == null ||
+                    !_viaKinds.contains(provider.kind)
                 ? null
                 : _ViaPicker(
                     provider: provider.name,
