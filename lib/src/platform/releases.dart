@@ -5,6 +5,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'key_files.dart';
+
 /// Opens [url] in the person's browser.
 Future<void> openLink(Uri url) async {
   final target = url.toString();
@@ -26,7 +28,21 @@ Future<void> openFolder(String path) async {
 
 /// The platform's side of Settings, replaceable in tests.
 class PlatformServices {
-  const PlatformServices({this.open = openLink});
+  const PlatformServices({
+    this.open = openLink,
+    this.saveKeyFile = saveKeyFilePath,
+    this.pickKeyFile = pickKeyFilePath,
+    this.copy = copyToClipboard,
+  });
 
   final Future<void> Function(Uri url) open;
+
+  /// Where to save an exported key file; null when cancelled.
+  final Future<String?> Function(String suggestedName) saveKeyFile;
+
+  /// A key file to import; null when cancelled.
+  final Future<String?> Function() pickKeyFile;
+
+  /// Puts text on the clipboard.
+  final Future<void> Function(String text) copy;
 }

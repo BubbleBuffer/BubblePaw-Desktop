@@ -44,6 +44,8 @@ dependencies:
   launch_at_startup: 0.5.1
   # The same pin as bb_ui's, for the Lucide glyphs its Ico enum lacks.
   lucide_icons_flutter: 3.1.25
+  # The QR code of the pairing link, drawn from its modules.
+  qr: ^3.0.2
 
 dev_dependencies:
   flutter_test:

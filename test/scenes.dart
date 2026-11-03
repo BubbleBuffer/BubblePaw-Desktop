@@ -7,7 +7,9 @@ import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:agent_kit_core/fake.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
+import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
+import 'package:bubblepaw_desktop/src/preferences.dart';
 import 'package:bubblepaw_desktop/src/scripted.dart';
 
 import 'support.dart';
@@ -96,6 +98,7 @@ class Played {
     this.version,
     this.attached = false,
     this.settings,
+    this.remote,
   });
 
   final List<ChatScript>? scripts;
@@ -110,6 +113,9 @@ class Played {
 
   /// The host's settings; null for none.
   final HostSettings? settings;
+
+  /// The sharing side of the host; null for none.
+  final RemoteAccessFactory? remote;
   Future<Object>? connectionLost;
 
   /// Chats the host creates by itself, as BubblePawBackend does for a rewind.
@@ -135,11 +141,14 @@ class Played {
       version: version,
       attached: attached,
       settings: settings,
+      remote: remote,
     );
   }
 
-  HostController controller({AppConfig config = sampleConfig}) =>
-      HostController(store: MemoryConfigStore(config), starter: start);
+  HostController controller({
+    AppConfig config = sampleConfig,
+    AppPrefs prefs = const AppPrefs(),
+  }) => HostController(store: MemoryConfigStore(config, prefs), starter: start);
 }
 
 /// What the stdio host offers for child agents: their questions can be

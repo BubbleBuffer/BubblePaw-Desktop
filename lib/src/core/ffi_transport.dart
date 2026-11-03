@@ -68,6 +68,9 @@ class NativeHostHandle implements NativeHost {
 
   final native.BubblePawHost _host;
 
+  /// The native handle, for the sharing side that lives beside it.
+  native.BubblePawHost get handle => _host;
+
   @override
   bool get attached => _host.attached;
 
@@ -129,6 +132,9 @@ class FfiBubblePawTransport implements BubblePawTransport {
 
   /// The host was already running in another process.
   bool get attached => _pipe.host.attached;
+
+  /// The native host this transport talks to.
+  NativeHost get host => _pipe.host;
 
   @override
   Future<Object?> request(

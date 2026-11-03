@@ -1,8 +1,7 @@
-// Settings: General, Models, Tools, Skills, Feedback and About. At expanded and
+// Settings: General, Models, Tools, MCP, Skills, Remote access, Feedback and About. At expanded and
 // medium width a
 // section list sits on the left and the page beside it; at compact width the
 // list is the first screen and a section is pushed over it.
-// Remote access joins the list with the remote work.
 
 import 'package:agent_kit/agent_kit.dart';
 import 'package:bb_ui/bb_ui.dart';
@@ -20,6 +19,8 @@ import 'general_page.dart';
 import 'licences_page.dart';
 import 'mcp_page.dart';
 import 'models_page.dart';
+import 'remote_glyphs.dart';
+import 'remote_page.dart';
 import 'settings_section.dart';
 import 'settings_widgets.dart';
 import 'skills_page.dart';
@@ -87,6 +88,7 @@ class _SettingsShellState extends State<SettingsShell> {
     SettingsSection.tools => 'Toolsets and approvals',
     SettingsSection.mcp => 'Servers and sign-in',
     SettingsSection.skills => 'Discovered skills',
+    SettingsSection.remote => 'Share this host and pair devices',
     SettingsSection.feedback => switch (widget.feedback.reports.length) {
       0 => 'No reports saved',
       1 => '1 report saved',
@@ -101,6 +103,7 @@ class _SettingsShellState extends State<SettingsShell> {
     SettingsSection.tools => glyphWrench,
     SettingsSection.mcp => glyphPlug,
     SettingsSection.skills => glyphBookOpen,
+    SettingsSection.remote => glyphGlobe,
     SettingsSection.feedback => glyphMessageSquareText,
     SettingsSection.about => glyphInfo,
   };
@@ -133,6 +136,12 @@ class _SettingsShellState extends State<SettingsShell> {
       SettingsSection.skills => SkillsPage(
         key: const ValueKey('page-skills'),
         settings: host.phase == HostPhase.running ? host.settings : null,
+        onBack: onBack,
+      ),
+      SettingsSection.remote => RemotePage(
+        key: const ValueKey('page-remote'),
+        remote: host.phase == HostPhase.running ? host.remote : null,
+        services: widget.services,
         onBack: onBack,
       ),
       SettingsSection.feedback => FeedbackPage(

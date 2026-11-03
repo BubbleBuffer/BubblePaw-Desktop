@@ -39,7 +39,7 @@ flowchart LR
 | --- | --- | --- |
 | `bubblepaw_desktop` | [`lib/`](lib) | The desktop app shell for BubblePaw on the agent kit: the host's lifetime, settings, tray, feedback, updates |
 | `agent_kit` | [`packages/agent_kit`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit) | Flutter widgets for the agent kit: theme, status, transcript, composer, chrome, workspace |
-| `bubblepaw_desktop_native` | [`native/`](native) | Rust crate on `bubblepaw-sdk` (Core `v0.7.3`): open, call, notifications and close, as JSON-RPC text. [`rust_builder/`](rust_builder) is the Cargokit glue that builds it with the app |
+| `bubblepaw_desktop_native` | [`native/`](native) | Rust crate on `bubblepaw-sdk` (Core `v0.10.0`): open, call, notifications and close, as JSON-RPC text. [`rust_builder/`](rust_builder) is the Cargokit glue that builds it with the app |
 | `agent_kit_core` | [`packages/agent_kit_core`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit_core) | Pure Dart agent UI core: view models, the `AgentBackend` port, the event reducer and a scripted fake backend |
 | `agent_kit_bubblepaw` | [`packages/agent_kit_bubblepaw`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit_bubblepaw) | Pure Dart BubblePaw stdio JSON-RPC backend for the agent kit |
 | `bb_ui` | [`packages/bb_ui`](https://github.com/BubbleBuffer/bb-ui/tree/v0.6.0/packages/bb_ui) | BubbleBuffer UI primitives for Flutter without Material |

@@ -175,6 +175,10 @@ Layout follows the kit's size classes (`SizeClassBuilder`, measured on the widge
 own width); the app adds no breakpoints. The theme follows the platform's light or
 dark setting, and the form factor is always desktop.
 
+## Remote access
+
+Settings > Remote access is described in [remote-access.md](remote-access.md). `HostController.remote` holds its controller for an embedded host.
+
 ## Tests
 
 | Test | What it covers |
