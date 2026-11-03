@@ -20,6 +20,9 @@ import 'guarded_backend.dart';
 import 'host_controller.dart';
 import 'remote/host_links.dart';
 import 'remote/hosts_controller.dart';
+import 'remote/project_groups.dart';
+import 'remote/remote_chats.dart';
+import 'remote/remote_workbench.dart';
 import 'pick_folder.dart' as picker;
 import 'platform/releases.dart';
 import 'preferences.dart';
@@ -338,6 +341,9 @@ class _AppShellState extends State<AppShell> {
             unawaited(controller.switchWorkspace(path)),
         pickFolder: pickFolder,
         hostMenu: _hostMenu(),
+        remoteRows: controller.remoteRows,
+        remoteRail: controller.remoteRail,
+        remoteName: controller.openHost?.label ?? 'Host',
       ),
     };
   }
@@ -358,6 +364,9 @@ class Workbench extends StatefulWidget {
     this.pickFolder,
     this.createdChats,
     this.now,
+    this.remoteRows,
+    this.remoteRail,
+    this.remoteName = 'Host',
   });
 
   final GuardedBackend backend;
@@ -379,6 +388,12 @@ class Workbench extends StatefulWidget {
 
   /// The hosts group of the rail menu; null for none.
   final HostMenu? hostMenu;
+
+  /// Set for an open saved host: its chat rows, which project groups are
+  /// open and its name. The rail then groups the chats by project.
+  final RemoteChatRows? remoteRows;
+  final ProjectRailState? remoteRail;
+  final String remoteName;
 
   @override
   State<Workbench> createState() => _WorkbenchState();
@@ -436,28 +451,47 @@ class _WorkbenchState extends State<Workbench> {
   Widget build(BuildContext context) => Stack(
     children: [
       Positioned.fill(
-        child: AgentWorkbench(
-          key: ValueKey(_openChatId),
-          backend: widget.backend,
-          initialChatId: _openChatId,
-          workspaceName: widget.workspaceName,
-          initials: widget.initials,
-          workspaceController: _workspace,
-          workspacePaneBuilder: _workspace == null
-              ? null
-              : (context, tab) => const SizedBox.shrink(),
-          now: widget.now,
-          onSettings: widget.onSettings,
-          onSwitchWorkspace: _openWorkspaceMenu,
-          onReviewApproval: (approval) {
-            final diff = approval.diff;
-            if (diff != null) _showDiff(diff);
-          },
-          transcriptActions: TranscriptActions(
-            now: widget.now,
-            onReviewDiff: (edit) => _showDiff(edit.diff),
-          ),
-        ),
+        child: widget.remoteRows != null && widget.remoteRail != null
+            ? RemoteWorkbench(
+                backend: widget.backend,
+                rows: widget.remoteRows!,
+                state: widget.remoteRail!,
+                hostName: widget.remoteName,
+                initialChatId: _openChatId,
+                now: widget.now,
+                onSettings: widget.onSettings,
+                onSwitchHost: _openWorkspaceMenu,
+                transcriptActions: TranscriptActions(
+                  now: widget.now,
+                  onReviewDiff: (edit) => _showDiff(edit.diff),
+                ),
+                onReviewApproval: (approval) {
+                  final diff = approval.diff;
+                  if (diff != null) _showDiff(diff);
+                },
+              )
+            : AgentWorkbench(
+                key: ValueKey(_openChatId),
+                backend: widget.backend,
+                initialChatId: _openChatId,
+                workspaceName: widget.workspaceName,
+                initials: widget.initials,
+                workspaceController: _workspace,
+                workspacePaneBuilder: _workspace == null
+                    ? null
+                    : (context, tab) => const SizedBox.shrink(),
+                now: widget.now,
+                onSettings: widget.onSettings,
+                onSwitchWorkspace: _openWorkspaceMenu,
+                onReviewApproval: (approval) {
+                  final diff = approval.diff;
+                  if (diff != null) _showDiff(diff);
+                },
+                transcriptActions: TranscriptActions(
+                  now: widget.now,
+                  onReviewDiff: (edit) => _showDiff(edit.diff),
+                ),
+              ),
       ),
       if (_review != null)
         Positioned.fill(

@@ -27,6 +27,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_remote.dart';
 import 'fakes.dart';
+import 'remote_chats_fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
 import 'tools_samples.dart';
@@ -104,6 +105,33 @@ Scene _remoteScene({
 
 /// The hosts of the scene being built, for the steps that answer as a host.
 FakeHostLinks? _links;
+
+/// The saved host of the scene being built, opened by the scene's steps.
+RemoteFixture? _remote;
+HostController? _remoteController;
+
+/// A saved host with chats in four projects, open, with [open] projects
+/// expanded.
+Scene _remoteChats({List<String> open = const []}) => (
+  controller: () {
+    final fixture = RemoteFixture();
+    _remote = fixture;
+    return _remoteController = fixture.controller();
+  },
+  after: (tester) async {
+    final controller = _remoteController!;
+    await tester.runAsync(() => controller.openRemoteHost(_remote!.host.id));
+    await settle(tester);
+    final show = find.byKey(const ValueKey('rail-show'));
+    if (show.evaluate().isNotEmpty) {
+      await tester.tap(show);
+      await settle(tester);
+    }
+    for (final path in open) {
+      await tapVisible(tester, 'project-toggle-$path');
+    }
+  },
+);
 
 /// Two saved hosts: one answers, one does not.
 FakeHostLinks _sampleHosts() => FakeHostLinks(
@@ -801,6 +829,10 @@ void main() {
         await settle(tester);
       },
     ),
+    // The chat list of an open saved host: Needs you first, then the projects.
+    'rail_remote_chats': _remoteChats(),
+    // Two of its projects opened.
+    'rail_remote_chats_open': _remoteChats(open: [gardenApi, agentKit]),
     'settings_about': (
       controller: () => HostController(
         store: MemoryConfigStore(sampleConfig),
