@@ -27,6 +27,7 @@ class PairingFlow extends ChangeNotifier {
 
   PairingStep _step = PairingStep.profile;
   String _profile = 'edit';
+  bool _egress = false;
   PairingOffer? _offer;
   PairingRequest? _request;
   DeviceEntry? _added;
@@ -40,6 +41,9 @@ class PairingFlow extends ChangeNotifier {
 
   PairingStep get step => _step;
   String get profile => _profile;
+
+  /// Whether the device may send its model traffic through this computer.
+  bool get egress => _egress;
   PairingOffer? get offer => _offer;
   PairingRequest? get request => _request;
   DeviceEntry? get added => _added;
@@ -56,6 +60,12 @@ class PairingFlow extends ChangeNotifier {
     _notify();
   }
 
+  void chooseEgress(bool value) {
+    if (_egress == value) return;
+    _egress = value;
+    _notify();
+  }
+
   /// Opens the offer with the chosen profile and waits for a device.
   Future<void> createCode() async {
     if (_busy) return;
@@ -66,7 +76,7 @@ class PairingFlow extends ChangeNotifier {
     _notify();
     try {
       await _offer?.cancel();
-      final offer = await access.pair(_profile);
+      final offer = await access.pair(_profile, egress: _egress);
       if (ticket != _ticket || _disposed) {
         await offer.cancel();
         return;

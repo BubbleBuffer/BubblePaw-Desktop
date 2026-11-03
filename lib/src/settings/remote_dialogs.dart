@@ -8,6 +8,7 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:qr/qr.dart';
 
+import '../feedback/glyphs.dart' show glyphCheck;
 import '../remote/pairing_flow.dart';
 import '../remote/remote_access.dart';
 import '../remote/remote_controller.dart';
@@ -162,6 +163,79 @@ String profileName(String profile) => switch (profile) {
   final other => other,
 };
 
+/// A checkbox with a label and one line under it.
+class _CheckRow extends StatelessWidget {
+  const _CheckRow({
+    super.key,
+    required this.value,
+    required this.label,
+    required this.detail,
+    required this.onTap,
+  });
+
+  final bool value;
+  final String label;
+  final String detail;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.bb;
+    return Semantics(
+      container: true,
+      checked: value,
+      label: label,
+      hint: detail,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: Hover(
+        onTap: onTap,
+        lift: 0,
+        borderRadius: BorderRadius.circular(6),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: value ? theme.accent : theme.surface,
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(
+                    color: value ? theme.accent : theme.threadStrong,
+                  ),
+                ),
+                child: value
+                    ? Center(
+                        child: glyphIcon(
+                          glyphCheck,
+                          size: 12,
+                          color: theme.onAccent,
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: ts(theme.typeScale.ui, theme.ink)),
+                  Text(detail, style: ts(theme.typeScale.uiSmall, theme.muted)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class PairDialog extends StatelessWidget {
   const PairDialog({
     super.key,
@@ -208,6 +282,18 @@ class PairDialog extends StatelessWidget {
             selected: flow.profile == id,
             onTap: () => flow.chooseProfile(id),
           ),
+        const SizedBox(height: 4),
+        _CheckRow(
+          key: const ValueKey('pair-egress'),
+          value: flow.egress,
+          label:
+              'Allow this device to send model traffic through this computer',
+          detail:
+              "The device's model requests pass through this computer. "
+              'Prompts and keys stay on the device.',
+          onTap: () => flow.chooseEgress(!flow.egress),
+        ),
+        const SizedBox(height: 12),
         Text(
           'You can revoke the device later in Share this host.',
           style: ts(theme.typeScale.uiSmall, theme.muted),

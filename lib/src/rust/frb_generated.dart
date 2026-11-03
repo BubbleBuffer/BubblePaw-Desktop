@@ -208,6 +208,7 @@ abstract class RustLibApi extends BaseApi {
   Future<PairOffer> crateApiRemoteRemoteSharePair({
     required RemoteShare that,
     required String profile,
+    required bool egress,
   });
 
   Future<KeyChange> crateApiRemoteRemoteShareRegenerateKey({
@@ -1506,6 +1507,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Future<PairOffer> crateApiRemoteRemoteSharePair({
     required RemoteShare that,
     required String profile,
+    required bool egress,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -1516,6 +1518,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_String(profile, serializer);
+          sse_encode_bool(egress, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -1529,7 +1532,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_share_error,
         ),
         constMeta: kCrateApiRemoteRemoteSharePairConstMeta,
-        argValues: [that, profile],
+        argValues: [that, profile, egress],
         apiImpl: this,
       ),
     );
@@ -1538,7 +1541,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiRemoteRemoteSharePairConstMeta =>
       const TaskConstMeta(
         debugName: "RemoteShare_pair",
-        argNames: ["that", "profile"],
+        argNames: ["that", "profile", "egress"],
       );
 
   @override
@@ -2380,8 +2383,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   DeviceEntry dco_decode_device_entry(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return DeviceEntry(
       id: dco_decode_String(arr[0]),
       label: dco_decode_String(arr[1]),
@@ -2389,6 +2392,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       kind: dco_decode_String(arr[3]),
       pairedAt: dco_decode_opt_box_autoadd_u_64(arr[4]),
       lastSeen: dco_decode_opt_box_autoadd_u_64(arr[5]),
+      egress: dco_decode_bool(arr[6]),
     );
   }
 
@@ -2578,8 +2582,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SavedHostEntry dco_decode_saved_host_entry(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return SavedHostEntry(
       id: dco_decode_String(arr[0]),
       label: dco_decode_String(arr[1]),
@@ -2588,6 +2592,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       profile: dco_decode_String(arr[4]),
       pairedAt: dco_decode_opt_box_autoadd_u_64(arr[5]),
       lastConnected: dco_decode_opt_box_autoadd_u_64(arr[6]),
+      egress: dco_decode_bool(arr[7]),
     );
   }
 
@@ -2976,6 +2981,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_kind = sse_decode_String(deserializer);
     var var_pairedAt = sse_decode_opt_box_autoadd_u_64(deserializer);
     var var_lastSeen = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_egress = sse_decode_bool(deserializer);
     return DeviceEntry(
       id: var_id,
       label: var_label,
@@ -2983,6 +2989,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       kind: var_kind,
       pairedAt: var_pairedAt,
       lastSeen: var_lastSeen,
+      egress: var_egress,
     );
   }
 
@@ -3215,6 +3222,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_profile = sse_decode_String(deserializer);
     var var_pairedAt = sse_decode_opt_box_autoadd_u_64(deserializer);
     var var_lastConnected = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_egress = sse_decode_bool(deserializer);
     return SavedHostEntry(
       id: var_id,
       label: var_label,
@@ -3223,6 +3231,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       profile: var_profile,
       pairedAt: var_pairedAt,
       lastConnected: var_lastConnected,
+      egress: var_egress,
     );
   }
 
@@ -3639,6 +3648,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.kind, serializer);
     sse_encode_opt_box_autoadd_u_64(self.pairedAt, serializer);
     sse_encode_opt_box_autoadd_u_64(self.lastSeen, serializer);
+    sse_encode_bool(self.egress, serializer);
   }
 
   @protected
@@ -3853,6 +3863,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.profile, serializer);
     sse_encode_opt_box_autoadd_u_64(self.pairedAt, serializer);
     sse_encode_opt_box_autoadd_u_64(self.lastConnected, serializer);
+    sse_encode_bool(self.egress, serializer);
   }
 
   @protected
@@ -4184,9 +4195,14 @@ class RemoteShareImpl extends RustOpaque implements RemoteShare {
 
   /// Opens a pairing offer for a device that will get `profile` (`read`,
   /// `edit` or `full`). One offer is open at a time: a new one replaces the
-  /// last. Sharing must be online.
-  Future<PairOffer> pair({required String profile}) => RustLib.instance.api
-      .crateApiRemoteRemoteSharePair(that: this, profile: profile);
+  /// last. Sharing must be online. With `egress` the device may also send
+  /// its model traffic through this computer.
+  Future<PairOffer> pair({required String profile, required bool egress}) =>
+      RustLib.instance.api.crateApiRemoteRemoteSharePair(
+        that: this,
+        profile: profile,
+        egress: egress,
+      );
 
   /// Replaces the key with a fresh one. Stops sharing first and leaves it
   /// stopped. Every pairing in both directions is cleared.

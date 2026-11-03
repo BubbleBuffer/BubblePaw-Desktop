@@ -10,7 +10,7 @@ mod host_setup;
 mod remote_tests;
 
 /// The Core release this build embeds (the `tag` of `bubblepaw-sdk` in Cargo.toml).
-pub const CORE_VERSION: &str = "0.10.2";
+pub const CORE_VERSION: &str = "0.11.1";
 
 #[cfg(test)]
 mod tests {

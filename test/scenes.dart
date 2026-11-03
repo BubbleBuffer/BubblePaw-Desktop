@@ -206,6 +206,32 @@ final sampleProviders = ProviderSetup(
   ],
 );
 
+/// Providers of kinds that accept `via` (a chat-completions gateway and an
+/// anthropic-messages one) and one that does not (scripted).
+final sampleViaProviders = ProviderSetup(
+  main: 'demo/scripted',
+  activeMain: 'demo/scripted',
+  providers: [
+    ProviderInfo(
+      name: 'demo',
+      kind: 'scripted',
+      models: const [ProviderModel(id: 'scripted')],
+    ),
+    ProviderInfo(
+      name: 'gateway',
+      kind: 'chat-completions',
+      baseUrl: 'https://gateway.example.com/v1',
+      models: const [ProviderModel(id: 'deepseek-v4.1-flash')],
+    ),
+    ProviderInfo(
+      name: 'sidecar',
+      kind: 'anthropic-messages',
+      baseUrl: 'https://sidecar.example.com',
+      models: const [ProviderModel(id: 'sonnet')],
+    ),
+  ],
+);
+
 /// The composer's choices for [sampleProviders].
 const sampleModels = [
   KitChoice(id: 'demo/scripted', label: 'demo/scripted', detail: 'scripted'),

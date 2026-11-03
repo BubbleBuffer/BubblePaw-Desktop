@@ -120,6 +120,9 @@ class _SettingsShellState extends State<SettingsShell> {
         key: const ValueKey('page-models'),
         backend: host.phase == HostPhase.running ? host.backend : null,
         settings: host.phase == HostPhase.running ? host.settings : null,
+        // The saved hosts here are this computer's, so they are offered only
+        // while this computer's host is the one being configured.
+        hosts: host.openHostId == null ? host.hosts : null,
         onBack: onBack,
       ),
       SettingsSection.tools => ToolsPage(

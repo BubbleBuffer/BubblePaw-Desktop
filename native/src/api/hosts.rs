@@ -110,6 +110,8 @@ pub struct SavedHostEntry {
     pub paired_at: Option<u64>,
     /// Unix seconds of the last successful connection.
     pub last_connected: Option<u64>,
+    /// Whether this host let this device send model traffic through it.
+    pub egress: bool,
 }
 
 impl From<SavedHost> for SavedHostEntry {
@@ -125,6 +127,7 @@ impl From<SavedHost> for SavedHostEntry {
                 .unwrap_or_default(),
             paired_at: host.paired_at,
             last_connected: host.last_connected,
+            egress: host.egress,
         }
     }
 }

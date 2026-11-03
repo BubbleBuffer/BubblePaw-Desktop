@@ -1923,6 +1923,7 @@ fn wire__crate__api__remote__RemoteShare_pair_impl(
                 flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RemoteShare>,
             >>::sse_decode(&mut deserializer);
             let api_profile = <String>::sse_decode(&mut deserializer);
+            let api_egress = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, crate::api::remote::ShareError>(
@@ -1944,9 +1945,12 @@ fn wire__crate__api__remote__RemoteShare_pair_impl(
                             }
                         }
                         let api_that_guard = api_that_guard.unwrap();
-                        let output_ok =
-                            crate::api::remote::RemoteShare::pair(&*api_that_guard, api_profile)
-                                .await?;
+                        let output_ok = crate::api::remote::RemoteShare::pair(
+                            &*api_that_guard,
+                            api_profile,
+                            api_egress,
+                        )
+                        .await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -2978,6 +2982,7 @@ impl SseDecode for crate::api::remote::DeviceEntry {
         let mut var_kind = <String>::sse_decode(deserializer);
         let mut var_pairedAt = <Option<u64>>::sse_decode(deserializer);
         let mut var_lastSeen = <Option<u64>>::sse_decode(deserializer);
+        let mut var_egress = <bool>::sse_decode(deserializer);
         return crate::api::remote::DeviceEntry {
             id: var_id,
             label: var_label,
@@ -2985,6 +2990,7 @@ impl SseDecode for crate::api::remote::DeviceEntry {
             kind: var_kind,
             paired_at: var_pairedAt,
             last_seen: var_lastSeen,
+            egress: var_egress,
         };
     }
 }
@@ -3267,6 +3273,7 @@ impl SseDecode for crate::api::hosts::SavedHostEntry {
         let mut var_profile = <String>::sse_decode(deserializer);
         let mut var_pairedAt = <Option<u64>>::sse_decode(deserializer);
         let mut var_lastConnected = <Option<u64>>::sse_decode(deserializer);
+        let mut var_egress = <bool>::sse_decode(deserializer);
         return crate::api::hosts::SavedHostEntry {
             id: var_id,
             label: var_label,
@@ -3275,6 +3282,7 @@ impl SseDecode for crate::api::hosts::SavedHostEntry {
             profile: var_profile,
             paired_at: var_pairedAt,
             last_connected: var_lastConnected,
+            egress: var_egress,
         };
     }
 }
@@ -3721,6 +3729,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::remote::DeviceEntry {
             self.kind.into_into_dart().into_dart(),
             self.paired_at.into_into_dart().into_dart(),
             self.last_seen.into_into_dart().into_dart(),
+            self.egress.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3982,6 +3991,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::hosts::SavedHostEntry {
             self.profile.into_into_dart().into_dart(),
             self.paired_at.into_into_dart().into_dart(),
             self.last_connected.into_into_dart().into_dart(),
+            self.egress.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -4315,6 +4325,7 @@ impl SseEncode for crate::api::remote::DeviceEntry {
         <String>::sse_encode(self.kind, serializer);
         <Option<u64>>::sse_encode(self.paired_at, serializer);
         <Option<u64>>::sse_encode(self.last_seen, serializer);
+        <bool>::sse_encode(self.egress, serializer);
     }
 }
 
@@ -4563,6 +4574,7 @@ impl SseEncode for crate::api::hosts::SavedHostEntry {
         <String>::sse_encode(self.profile, serializer);
         <Option<u64>>::sse_encode(self.paired_at, serializer);
         <Option<u64>>::sse_encode(self.last_connected, serializer);
+        <bool>::sse_encode(self.egress, serializer);
     }
 }
 

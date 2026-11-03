@@ -838,6 +838,15 @@ class _RemotePageState extends State<RemotePage> {
                                 lastSeenText(now, d.lastSeen),
                                 style: ts(theme.typeScale.uiSmall, theme.muted),
                               ),
+                              if (d.egress)
+                                Text(
+                                  'Model traffic allowed',
+                                  key: ValueKey('device-egress-${d.id}'),
+                                  style: ts(
+                                    theme.typeScale.uiSmall,
+                                    theme.muted,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
