@@ -1,6 +1,7 @@
-// The app's own preferences: theme, what happens at login and when the window
-// closes, and whether the host starts with the app. Stored beside config.json
-// as preferences.json. They apply at once; nothing here restarts the host.
+// The app's own preferences: theme, how finished turns start, what happens at
+// login and when the window closes, and whether the host starts with the app.
+// Stored beside config.json as preferences.json. They apply at once; nothing
+// here restarts the host.
 
 /// How the app picks light or dark.
 enum ThemeSetting {
@@ -10,12 +11,17 @@ enum ThemeSetting {
   dark,
 }
 
+/// How the steps of a finished turn start in a chat: shut behind the summary
+/// line, or open.
+enum TurnLayout { collapsed, open }
+
 /// Which releases of the app the update check looks at.
 enum UpdateChannel { stable, nightly }
 
 class AppPrefs {
   const AppPrefs({
     this.theme = ThemeSetting.system,
+    this.turnLayout = TurnLayout.collapsed,
     this.openAtLogin = false,
     this.startInTray = false,
     this.keepInTray = false,
@@ -30,6 +36,10 @@ class AppPrefs {
   });
 
   final ThemeSetting theme;
+
+  /// How a finished turn's steps start in a chat on this device. A running
+  /// turn is always open, and a turn the person opened or closed keeps that.
+  final TurnLayout turnLayout;
 
   /// BubblePaw starts when the person signs in to the computer.
   final bool openAtLogin;
@@ -71,6 +81,7 @@ class AppPrefs {
 
   AppPrefs copyWith({
     ThemeSetting? theme,
+    TurnLayout? turnLayout,
     bool? openAtLogin,
     bool? startInTray,
     bool? keepInTray,
@@ -90,6 +101,7 @@ class AppPrefs {
     shareAtStart: shareAtStart ?? this.shareAtStart,
     deviceName: deviceName ?? this.deviceName,
     theme: theme ?? this.theme,
+    turnLayout: turnLayout ?? this.turnLayout,
     openAtLogin: openAtLogin ?? this.openAtLogin,
     startInTray: startInTray ?? this.startInTray,
     keepInTray: keepInTray ?? this.keepInTray,
@@ -99,6 +111,7 @@ class AppPrefs {
 
   Map<String, Object?> toJson() => {
     'theme': theme.name,
+    'turnLayout': turnLayout.name,
     'openAtLogin': openAtLogin,
     'startInTray': startInTray,
     'keepInTray': keepInTray,
@@ -126,6 +139,10 @@ class AppPrefs {
       theme: ThemeSetting.values.firstWhere(
         (t) => t.name == json['theme'],
         orElse: () => defaults.theme,
+      ),
+      turnLayout: TurnLayout.values.firstWhere(
+        (t) => t.name == json['turnLayout'],
+        orElse: () => defaults.turnLayout,
       ),
       openAtLogin: flag('openAtLogin', defaults.openAtLogin),
       startInTray: flag('startInTray', defaults.startInTray),
@@ -157,6 +174,7 @@ class AppPrefs {
   bool operator ==(Object other) =>
       other is AppPrefs &&
       other.theme == theme &&
+      other.turnLayout == turnLayout &&
       other.openAtLogin == openAtLogin &&
       other.startInTray == startInTray &&
       other.keepInTray == keepInTray &&
@@ -172,6 +190,7 @@ class AppPrefs {
   @override
   int get hashCode => Object.hash(
     theme,
+    turnLayout,
     openAtLogin,
     startInTray,
     keepInTray,

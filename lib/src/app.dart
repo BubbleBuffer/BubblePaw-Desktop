@@ -298,6 +298,7 @@ class _AppShellState extends State<AppShell> {
       remoteRows: controller.remoteRows,
       remoteRail: controller.remoteRail,
       remoteName: controller.openHost?.label ?? 'Host',
+      finishedTurnsOpen: controller.prefs.turnLayout == TurnLayout.open,
       phone: true,
     );
   }
@@ -385,6 +386,7 @@ class _AppShellState extends State<AppShell> {
         remoteRows: controller.remoteRows,
         remoteRail: controller.remoteRail,
         remoteName: controller.openHost?.label ?? 'Host',
+        finishedTurnsOpen: controller.prefs.turnLayout == TurnLayout.open,
       ),
     };
   }
@@ -409,7 +411,12 @@ class Workbench extends StatefulWidget {
     this.remoteRail,
     this.remoteName = 'Host',
     this.phone = false,
+    this.finishedTurnsOpen = false,
   });
+
+  /// Whether the steps of a finished turn start open (Settings, General, Turn
+  /// layout).
+  final bool finishedTurnsOpen;
 
   /// A phone: the chat list is home, a chat opens over it, and the host menu
   /// is a sheet from the bottom.
@@ -516,6 +523,7 @@ class _WorkbenchState extends State<Workbench> {
                 transcriptActions: TranscriptActions(
                   now: widget.now,
                   onReviewDiff: (edit) => _showDiff(edit.diff),
+                  finishedActivityOpen: widget.finishedTurnsOpen,
                 ),
                 onReviewApproval: (approval) {
                   final diff = approval.diff;
@@ -542,6 +550,7 @@ class _WorkbenchState extends State<Workbench> {
                 transcriptActions: TranscriptActions(
                   now: widget.now,
                   onReviewDiff: (edit) => _showDiff(edit.diff),
+                  finishedActivityOpen: widget.finishedTurnsOpen,
                 ),
               ),
       ),

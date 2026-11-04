@@ -1,4 +1,5 @@
-// General: theme, and what happens at login and when the window closes.
+// General: theme, how finished turns are shown, and what happens at login and
+// when the window closes.
 
 import 'package:agent_kit/agent_kit.dart';
 import 'package:bb_ui/bb_ui.dart';
@@ -29,7 +30,7 @@ class GeneralPage extends StatelessWidget {
   final HostController controller;
   final VoidCallback? onBack;
 
-  /// The phone shows the theme only: no startup, tray or data directory.
+  /// The phone has no startup, tray or data directory.
   final bool phone;
 
   @override
@@ -57,6 +58,20 @@ class GeneralPage extends StatelessWidget {
               ThemeSetting.dark => 'Dark',
             },
             onChanged: (t) => set(prefs.copyWith(theme: t)),
+          ),
+        ),
+        SettingsRow(
+          label: 'Turn layout',
+          description: 'How the steps of a finished turn are shown.',
+          trailing: SegmentedChoice<TurnLayout>(
+            idPrefix: 'turn-layout',
+            options: TurnLayout.values,
+            value: prefs.turnLayout,
+            labelOf: (t) => switch (t) {
+              TurnLayout.collapsed => 'Collapsed',
+              TurnLayout.open => 'Open',
+            },
+            onChanged: (t) => set(prefs.copyWith(turnLayout: t)),
           ),
         ),
         if (!phone) ...[

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BubblePaw mockups: turn layout</title>
+<link rel="stylesheet" href="../remote-and-settings/style.css">
+<style>
+  body { padding: 16px; }
+  .review { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; max-width: 812px; margin: 0 auto 16px; }
+  .review .grow { flex: 1; }
+  .pair { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; align-items: flex-start; }
+  .label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+  .screen { width: 390px; max-width: 100%; background: var(--surface); border: 1px solid var(--thread); border-radius: var(--r-sheet); padding: 16px; }
+  .setting { margin-bottom: 16px; padding-bottom: 4px; border-bottom: 1px solid var(--seam); }
+
+  /* Transcript, after agent_kit's transcript_turn golden. */
+  .user { margin-left: 54px; padding: 10px 14px; background: var(--surface2); border-radius: var(--r-panel); }
+  .reply { margin: 16px 0; }
+  .summary { display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 0; border: 0; background: transparent; text-align: left; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .summary:hover { color: var(--ink); }
+  .summary .ic { transition: transform var(--fast) var(--ease); }
+  .summary[aria-expanded="true"] .ic { transform: rotate(90deg); }
+  .rows { margin: 4px 0 0 6px; padding-left: 12px; border-left: 1px solid var(--seam); }
+  .act { display: grid; grid-template-columns: 14px 40px 1fr auto; gap: 4px; align-items: start; width: 100%; padding: 8px 4px; border-radius: var(--r-md); border: 0; background: transparent; text-align: left; font-size: 13px; font-weight: 500; }
+  .act:hover { background: var(--hover); }
+  .act .ic { margin-top: 3px; color: var(--muted); transition: transform var(--fast) var(--ease); }
+  .act[aria-expanded="true"] .ic { transform: rotate(90deg); }
+  .act:hover .what, .act[aria-expanded="true"] .what { color: var(--ink); }
+  .act .kind { font-family: var(--mono); font-weight: 400; font-size: 12.5px; color: var(--muted); }
+  .act .what { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .act .meta { color: var(--muted); }
+  .act .meta.bad { color: var(--danger-ink); }
+  .act[aria-expanded="true"] .what { white-space: normal; overflow-wrap: anywhere; overflow: visible; }
+  .detail { margin: 0 0 8px 22px; }
+  .detail .args { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0 0 6px; font: 400 12px/17px var(--mono); color: var(--muted); }
+  .detail .args b { font-weight: 400; color: var(--faint); }
+  .detail .args span { overflow-wrap: anywhere; color: var(--ink); }
+  .detail pre { margin: 0; padding: 8px 10px; max-height: 180px; overflow: auto; background: var(--code); border-radius: var(--r-md); font: 400 12px/17px var(--mono); white-space: pre; scrollbar-width: thin; }
+  .detail pre .bad { color: var(--danger-ink); }
+  .detail .foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .detail .foot .sz { font-weight: 500; }
+  .detail .foot .bad { color: var(--danger-ink); }
+  .edit { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--seam); border-radius: var(--r-panel); font-size: 13px; font-weight: 600; }
+  .edit .add { font-family: var(--mono); font-weight: 400; color: var(--ok-ink); }
+  .edit .del { font-family: var(--mono); font-weight: 400; color: var(--danger-ink); }
+  .edit .sp { flex: 1; }
+</style>
+</head>
+<body>
+<!-- Review bar: not part of the app. -->
+<div class="review">
+  <b>Turn layout</b><span class="muted">The same finished turn under each choice. Each step opens and closes on its own.</span>
+  <span class="grow"></span>
+  <div class="seg" role="group" id="theme">
+    <button aria-pressed="true" data-theme-value="light">Light</button>
+    <button aria-pressed="false" data-theme-value="dark">Dark</button>
+  </div>
+</div>
+<main class="pair" id="pair"></main>
+<script src="../remote-and-settings/icons.js"></script>
+<script>
+  const ic = (name, size) =>
+    `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${window.LUCIDE[name]}</svg>`;
+
+  const rows = [
+    { kind: 'think', what: 'Compared how the bar handles a reconnect', meta: '6s',
+      text: 'The bar resets because last is cleared on close. Holding it and marking it stale avoids the false zero.' },
+    { kind: 'read', what: 'usage/mod.rs', meta: '212 lines',
+      args: [['path', 'crates/bubblepaw-host/src/usage/mod.rs']],
+      out: `pub struct UsageState {
+    pub window: QuotaWindow,
+    pub last: UsageSnapshot,`, size: '6.1 KB', more: 'Show all 212 lines' },
+    { kind: 'grep', what: 'reset|on_close · crates/', meta: '9 hits',
+      args: [['pattern', 'reset|on_close'], ['path', 'crates/']],
+      out: `crates/bubblepaw-host/src/usage/mod.rs:183
+crates/bubblepaw-host/src/usage/mod.rs:190`, size: '412 B', more: 'Show all 9 hits' },
+    { kind: 'exec', what: 'cd crates/bubblepaw-host && cargo test usage --no-fail-fast', meta: 'exit 101', bad: true,
+      out: `running 14 tests
+test usage::tests::merge_adds_turn_tokens ... ok
+<span class="bad">test usage::tests::snapshot_survives_reconnect ... FAILED</span>
+<span class="bad">test result: FAILED. 13 passed; 1 failed</span>`, size: '2.1 KB', exit: 'exited 101', more: 'Show all 20 lines' },
+    { kind: 'read', what: 'web/src/quota-bar.tsx', meta: '88 lines',
+      args: [['path', 'web/src/quota-bar.tsx']],
+      out: `export function QuotaBar({ usage }: Props) {`, size: '2.4 KB', more: 'Show all 88 lines' },
+  ];
+
+  const detail = (r) => {
+    const args = r.args ? `<div class="args">${r.args.map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('')}</div>` : '';
+    const body = r.text ?? r.out;
+    const foot = r.out ? `<div class="foot"><span class="sz">${r.size}${r.exit ? ` · <span class="bad">${r.exit}</span>` : ''}</span><span>${r.more}</span><span>Open full output</span></div>` : '';
+    return `${args}<pre${r.text ? ' style="white-space:pre-wrap"' : ''}>${body}</pre>${foot}`;
+  };
+
+  const setting = (value) => `
+    <div class="setting"><div class="rowline">
+      <div class="grow"><div class="t">Turn layout</div><div class="s">How the steps of a finished turn are shown.</div></div>
+      <div class="seg" role="group">
+        <button aria-pressed="${value === 'closed'}" tabindex="-1">Collapsed</button>
+        <button aria-pressed="${value === 'open'}" tabindex="-1">Open</button>
+      </div>
+    </div></div>`;
+
+  const turn = (open) => `
+    <div class="user">Keep the last known quota figure when the socket reconnects.</div>
+    <div class="reply">The bar now keeps the last figure and dims it until the first update after the reconnect.</div>
+    <button class="summary" aria-expanded="${open}">${ic('chevron-right', 14)}<span>Worked 48s · thought 6s · 5 tool calls</span></button>
+    <div class="rows" ${open ? '' : 'hidden'}>
+      ${rows.map((r) => {
+        const on = open && r.kind === 'exec';
+        return `<button class="act" aria-expanded="${on}">${ic('chevron-right', 14)}<span class="kind">${r.kind}</span><span class="what">${r.what}</span><span class="meta${r.bad ? ' bad' : ''}">${r.meta}</span></button>
+        <div class="detail" ${on ? '' : 'hidden'}>${detail(r)}</div>`;
+      }).join('')}
+    </div>
+    <div class="edit">${ic('chevron-right', 14)}${ic('file-pen', 15)}<span>usage/mod.rs</span><span class="add">+8</span><span class="del">−3</span><span class="sp"></span></div>`;
+
+  const column = (value, title) => `
+    <section><p class="label">${title}</p><div class="screen">${setting(value)}${turn(value === 'open')}</div></section>`;
+
+  document.getElementById('pair').innerHTML = column('closed', 'Collapsed') + column('open', 'Open');
+
+  document.addEventListener('click', (e) => {
+    const summary = e.target.closest('.summary');
+    if (summary) {
+      const open = summary.getAttribute('aria-expanded') !== 'true';
+      summary.setAttribute('aria-expanded', open);
+      summary.nextElementSibling.hidden = !open;
+    }
+    const act = e.target.closest('.act');
+    if (act) {
+      const open = act.getAttribute('aria-expanded') !== 'true';
+      for (const other of act.parentElement.querySelectorAll('.act')) {
+        other.setAttribute('aria-expanded', other === act && open);
+        other.nextElementSibling.hidden = !(other === act && open);
+      }
+    }
+    const theme = e.target.closest('[data-theme-value]');
+    if (theme) {
+      document.documentElement.dataset.theme = theme.dataset.themeValue;
+      for (const b of document.querySelectorAll('#theme button')) b.setAttribute('aria-pressed', b === theme);
+    }
+  });
+</script>
+</body>
+</html>

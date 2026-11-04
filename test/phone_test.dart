@@ -4,6 +4,7 @@
 
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
+import 'package:bubblepaw_desktop/src/preferences.dart';
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/link_scanner.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_chats.dart';
@@ -179,11 +180,20 @@ void main() {
       expect(find.byKey(const ValueKey('settings-nav-feedback')), findsNothing);
     });
 
-    testWidgets('General is the theme alone', (tester) async {
-      await _open(tester);
+    testWidgets('General is the theme and the turn layout', (tester) async {
+      final (controller, _, _) = await _open(tester);
       await _tap(tester, 'phone-settings');
       await _tap(tester, 'settings-nav-general');
       expect(find.text('Theme'), findsOneWidget);
+      expect(find.text('Turn layout'), findsOneWidget);
+      expect(
+        find.text('How the steps of a finished turn are shown.'),
+        findsOneWidget,
+      );
+      expect(find.text('Collapsed'), findsOneWidget);
+      expect(controller.prefs.turnLayout, TurnLayout.collapsed);
+      await _tap(tester, 'turn-layout-open');
+      expect(controller.prefs.turnLayout, TurnLayout.open);
       expect(find.text('Open at login'), findsNothing);
       expect(find.text('Storage'), findsNothing);
     });

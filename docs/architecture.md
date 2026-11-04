@@ -21,14 +21,14 @@ DesktopIntegration   tray menu, close-to-tray, login entry (lib/src/platform/)
 ## Dependencies
 
 `agent_kit`, `agent_kit_core` and `agent_kit_bubblepaw` come from
-`BubbleBuffer/agent-kit` at a commit hash (currently v0.16.4, `a1421bd`). The ref is the commit hash
+`BubbleBuffer/agent-kit` at a commit hash (currently v0.18.0, `ff7fa54`). The ref is the commit hash
 because the kit's packages depend on each other by path inside that repository,
 and pub resolves those to the hash; a tag in the app would conflict with it.
 v0.15.2 added `BubblePawBackend.connectionLost` (idle exit detection); v0.15.3
 added "Rewind from here" and hides the empty ledger.
 `flutter_rust_bridge` is pinned to `2.13.0`, the version of the generated bindings, and
 `bubblepaw_desktop_native` is a path dependency on `native/`, built by `rust_builder/`
-(Cargokit). `bb_ui` is pinned to `v0.6.0`, the kit's own pin. The kit's fonts are bundled in
+(Cargokit). `bb_ui` is pinned to `v0.7.2`, the kit's own pin. The kit's fonts are bundled in
 `assets/fonts` (the kit says hosts do that), with their OFL licences.
 
 ## State
@@ -113,11 +113,11 @@ cause (a locked store, a bad config).
 - **Settings** (`lib/src/settings/`): `SettingsShell` shows a 240 px section list beside
   the page at medium and expanded widths, and the list as the first screen with pushed
   pages at compact width. There are no MCP servers or Remote access items yet.
-  - **General**: theme (System, Light, Dark), Open at login, Start in the tray (on only
+  - **General**: theme (System, Light, Dark), Turn layout (Collapsed or Open; how the steps of a finished turn start in a chat, default Collapsed), Open at login, Start in the tray (on only
     with Open at login), Keep running in the tray when the window is closed. These are
     app preferences in `preferences.json` (`AppPrefs`), beside `config.json`, and apply
-    at once. No tray on the system: the Keep switch is off and closing quits. The app
-    has no turn-layout setting, so none is shown.
+    at once. No tray on the system: the Keep switch is off and closing quits. Turn
+    layout reaches the transcript as `TranscriptActions.finishedActivityOpen`: a running turn is always open, and a turn the person opened or closed keeps that. The phone shows the theme and the turn layout.
   - **Storage** (on the General page): the data directory, where the chats are stored. "Save and restart" writes `config.json` and opens the host again on the new directory (`HostController.setDataDirectory`); chats already stored in the old directory stay there.
   - **Models**: the host's providers (kind, base URL, whether the host found the key, never
     the key) and their models with the Default mark or Make default (on hover or focus at
@@ -205,6 +205,7 @@ Settings > Remote access is described in [remote-access.md](remote-access.md). `
 | `test/mcp_servers_test.dart` | The MCP rules: config parsing, arguments, validation messages, form from config, the add, edit and tool-toggle plans, the server phase |
 | `test/mcp_page_test.dart` | The MCP page: the list and statuses, the switches, sign-in and cancel, a pushed status, Add and Edit writes, a refusal with rollback, Remove |
 | `test/model_egress_test.dart` | Model traffic through a paired device: the provider picker (Direct and granting hosts only, the writes, an unavailable `via`, a refusal), the pair dialog's grant (off by default, passed to the offer) and the paired devices' "Model traffic allowed" |
+| `test/turn_layout_test.dart` | The Turn layout preference (default, save and load) and its row in General; collapsed and open turns in the transcript, a toggled turn keeping its state |
 | `test/settings_test.dart` | General switches and theme, Models, About (versions, Core row, Updates, Licences search and expand), the tray notice, version constants |
 | `test/semver_test.dart`, `test/download_test.dart`, `test/updates_test.dart`, `test/update_dialog_test.dart` | Versions, the verified download, app updates and the dialog; see [core-and-updates.md](core-and-updates.md) |
 | `test/tray_test.dart` | The tray menu model, icon file choice, and the integration against fake tray, window and login adapters (close-to-tray, quit, waiting count, login entry) |
