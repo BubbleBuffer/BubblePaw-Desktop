@@ -227,7 +227,7 @@ void main() {
       expect(find.textContaining('Default '), findsNothing);
       expect(find.textContaining('Main chat uses'), findsNothing);
       expect(find.textContaining(' running'), findsNothing);
-      expect(find.textContaining(RegExp(r'^d+ of d+ on$')), findsNothing);
+      expect(find.textContaining(RegExp(r'^\d+ of \d+ on$')), findsNothing);
       expect(find.textContaining('rror'), findsNothing);
     });
 
