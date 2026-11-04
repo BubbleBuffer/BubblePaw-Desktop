@@ -20,8 +20,9 @@ if [ -z "$(adb shell pidof "$pkg")" ]; then
   exit 1
 fi
 # A native library that cannot load shows up as an UnsatisfiedLinkError.
-if adb logcat -d | grep -q "UnsatisfiedLinkError"; then
-  adb logcat -d | grep -B2 -A10 "UnsatisfiedLinkError" | head -40
+pid=$(adb shell pidof "$pkg" | tr -d '')
+if adb logcat -d --pid="$pid" | grep -q "UnsatisfiedLinkError"; then
+  adb logcat -d --pid="$pid" | grep -B2 -A10 "UnsatisfiedLinkError" | head -40
   exit 1
 fi
 adb exec-out screencap -p > smoke.png
