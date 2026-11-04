@@ -199,6 +199,21 @@ sets and shows the grant and the choice.
   names the device and the reason in the provider's error text, so the app adds
   nothing for it.
 
+## From the tray
+
+The tray menu has a "Share this host" check item, shown while the host runs and
+`HostController.remote` is not null. It is ticked while sharing is on or coming
+up (`RemoteController.share.status` is not `off`: connecting, online or offline
+and retrying). Choosing it calls the same `RemoteController.setEnabled` as the
+Share switch on this page. If sharing then cannot start (a `ShareBlock`, an
+`error` or `failure`, or another program sharing the data directory), the app
+opens Settings on Remote access and shows the window, where the reason is
+written. The status line says how the host is reached: "shared via relay" in
+relay mode, "shared via Cloudflare Tunnel" in the two tunnel modes. The icon
+carries a green dot while shared and a red one while the host is stopped or
+failed (`TrayDot`, `lib/src/platform/tray_icon.dart`; the files are made by
+`assets/icon/tray/make_tray_dots.py`). Tests: `test/tray_test.dart`.
+
 ## Tests
 
 Pages run against `test/fake_remote.dart` (`FakeHostLinks` for the hosts
