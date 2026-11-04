@@ -118,6 +118,24 @@ void main() {
       expect(find.textContaining('Cloudflare Tunnel'), findsOneWidget);
     });
 
+    testWidgets('each row shows the host ID before how it is reached', (
+      tester,
+    ) async {
+      await _open(tester, hosts: [_maya, _studio]);
+      await _hostsTab(tester);
+      final maya = tester.widget<Text>(
+        find.byKey(ValueKey('host-id-line-${_maya.id}')),
+      );
+      expect(maya.textSpan!.toPlainText(), startsWith('${_maya.id} · Relay'));
+      final studio = tester.widget<Text>(
+        find.byKey(ValueKey('host-id-line-${_studio.id}')),
+      );
+      expect(
+        studio.textSpan!.toPlainText(),
+        startsWith('${_studio.id} · Cloudflare Tunnel'),
+      );
+    });
+
     testWidgets('says so when there are none', (tester) async {
       await _open(tester, hosts: []);
       await _hostsTab(tester);

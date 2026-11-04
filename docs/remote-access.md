@@ -39,6 +39,9 @@ key (`remote/host.bpkey`), which the sharing side uses too. Core's
   the 6-digit number, and the host's owner confirms and picks the profile. A
   failed link says why (wrong, expired or used code, declined, unreachable).
   The link and code are never logged.
+- **List rows.** Each row shows the host's name, then its ID in monospace
+  (`SavedHostEntry.id`), how it is reached and when it was last opened, with
+  the presence pill and Remove beside them.
 - **Presence.** Asked on demand (when the list or the rail menu shows), not on
   a timer: Online, Offline, or Not checked when the relay did not answer.
 - **Opening.** `HostController.openRemoteHost` connects with
@@ -74,6 +77,9 @@ rows itself (`startSavedHost` in `lib/src/host_controller.dart`):
   Today and Earlier groups and `AgentWorkbench` takes no rail. `RemoteWorkbench`
   composes the kit's public pieces (`RailLayout`, `AgentChatPane`) with it.
   This computer keeps the kit's rail and workbench.
+- The rail's hide button reads "Hide the rail". Its host button always reads
+  Online: a saved host that stops answering closes it and returns to this
+  computer, so the rail never shows an offline host.
 - The rail shows "Needs you" with a count first, then "Projects": one group per
   path, groups with a running or waiting chat first, then the latest change.
   A group's toggle row shows "N running · N waiting", or the time of its last

@@ -169,16 +169,32 @@ class _HostsSectionState extends State<HostsSection> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(h.label, style: ts(theme.typeScale.ui, theme.ink)),
-                        Text(
-                          [
-                            viaName(h.via),
-                            if (h.lastConnected != null)
-                              lastSeenText(
-                                now,
-                                h.lastConnected,
-                              ).replaceFirst('Last seen', 'Opened'),
-                          ].join(' · '),
-                          style: ts(theme.typeScale.uiSmall, theme.muted),
+                        Text.rich(
+                          TextSpan(
+                            style: ts(theme.typeScale.uiSmall, theme.muted),
+                            children: [
+                              TextSpan(
+                                text: h.id,
+                                style: ts(
+                                  theme.typeScale.uiSmall,
+                                  theme.muted,
+                                  mono: true,
+                                ),
+                              ),
+                              TextSpan(
+                                text: [
+                                  '',
+                                  viaName(h.via),
+                                  if (h.lastConnected != null)
+                                    lastSeenText(
+                                      now,
+                                      h.lastConnected,
+                                    ).replaceFirst('Last seen', 'Opened'),
+                                ].join(' · '),
+                              ),
+                            ],
+                          ),
+                          key: ValueKey('host-id-line-${h.id}'),
                         ),
                       ],
                     ),

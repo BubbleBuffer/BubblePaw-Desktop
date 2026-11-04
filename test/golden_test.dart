@@ -493,6 +493,17 @@ void main() {
         lastUpdateCheck: DateTime.utc(2026, 10, 27, 9, 14),
       ),
     ),
+    // About while it checks, and while a download runs.
+    'settings_about_checking': updateScene(
+      phase: const UpdateChecking(),
+      dialog: false,
+      section: 'about',
+    ),
+    'settings_about_downloading': updateScene(
+      phase: UpdateDownloading(sampleManifest(), 18400000, 42100000),
+      dialog: false,
+      section: 'about',
+    ),
     // The update dialog, one scene per state.
     'update_available': updateScene(phase: UpdateAvailable(sampleManifest())),
     'update_downloading': updateScene(

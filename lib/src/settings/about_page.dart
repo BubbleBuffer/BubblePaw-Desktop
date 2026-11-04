@@ -85,6 +85,28 @@ class _AboutPageState extends State<AboutPage> {
     if (mounted) setState(() {});
   }
 
+  /// The BubblePaw row's status line.
+  String _statusLine(UpdatePhase phase, UpdateManifest? offered) {
+    final version = offered?.version;
+    return switch (phase) {
+      UpdateChecking() => 'Checking GitHub releases…',
+      UpdateDownloading(:final fraction) =>
+        'Downloading $version, ${(fraction * 100).round()}%.',
+      UpdateReady() =>
+        _updates.canInstall
+            ? '$version is ready to install.'
+            : '$version is downloaded.',
+      UpdateFailed() => 'Latest version $version. The download failed.',
+      UpdateAvailable() => 'Latest version $version.',
+      UpdateIdle() =>
+        _updates.checkError != null
+            ? 'Could not check. ${_updates.checkError}'
+            : _updates.upToDate
+            ? 'Up to date.'
+            : 'Latest version not checked.',
+    };
+  }
+
   Widget _phonePage(BuildContext context) {
     final theme = context.bb;
     return SettingsPage(
@@ -128,45 +150,52 @@ class _AboutPageState extends State<AboutPage> {
         phase is UpdateDownloading ||
         phase is UpdateReady ||
         phase is UpdateFailed;
-    final channelName = prefs.updateChannel == UpdateChannel.stable
-        ? 'Stable'
-        : 'Nightly';
     final last = prefs.lastUpdateCheck;
     final lastText = checking
         ? 'Checking now'
-        : _updates.checkError != null
-        ? 'Could not check. ${_updates.checkError}'
         : last == null
         ? 'Not checked yet'
         : formatChecked(last, widget.now?.call() ?? DateTime.now());
+    final status = _statusLine(phase, offered);
+    final coreVersion = _host.hostVersion;
     return SettingsPage(
       title: 'About',
       onBack: widget.onBack,
       backKey: const ValueKey('settings-page-back'),
       children: [
         const SettingsHeading('Updates'),
+        SwitchRow(
+          id: 'auto-update',
+          label: 'Check for updates automatically',
+          description:
+              'Looks at GitHub releases when BubblePaw starts, at most once '
+              'a day.',
+          value: prefs.checkUpdates,
+          onChanged: (v) => unawaited(_updates.setAutomatic(v)),
+        ),
         SettingsRow(
-          label: 'BubblePaw',
-          description: '$buildVersion · $channelName',
-          trailing: checking
-              ? const StatePill(
-                  'Checking',
-                  key: ValueKey('update-state'),
-                  tone: PillTone.attention,
-                )
-              : available && offered != null
-              ? StatePill(
-                  '${offered.version} available',
-                  key: const ValueKey('update-state'),
-                  tone: PillTone.attention,
-                )
-              : _updates.upToDate
-              ? const StatePill(
-                  'Up to date',
-                  key: ValueKey('update-state'),
-                  tone: PillTone.good,
-                )
-              : null,
+          label: 'BubblePaw $buildVersion',
+          description: status,
+          trailing: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.end,
+            children: [
+              if (available)
+                ActionButton(
+                  key: const ValueKey('update-review'),
+                  label: 'Review update',
+                  kind: ActionKind.primary,
+                  onTap: _updates.review,
+                ),
+              ActionButton(
+                key: const ValueKey('update-check'),
+                label: 'Check for updates',
+                glyph: glyphRefresh,
+                onTap: checking ? () {} : () => unawaited(_updates.check()),
+              ),
+            ],
+          ),
         ),
         SettingsRow(
           label: 'Channel',
@@ -195,36 +224,18 @@ class _AboutPageState extends State<AboutPage> {
           ),
           const SizedBox(height: 8),
         ],
-        SwitchRow(
-          id: 'auto-update',
-          label: 'Check automatically',
-          description: 'Checks when BubblePaw starts, at most once a day.',
-          value: prefs.checkUpdates,
-          onChanged: (v) => unawaited(_updates.setAutomatic(v)),
+        KeyedSubtree(
+          key: const ValueKey('update-core'),
+          child: SettingsRow(
+            label: coreVersion == null ? 'Core' : 'Core $coreVersion',
+            description: 'Bundled with BubblePaw. It updates with the app.',
+            trailing: null,
+          ),
         ),
         SettingsRow(
           label: 'Last checked',
           description: lastText,
-          trailing: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.end,
-            children: [
-              if (available)
-                ActionButton(
-                  key: const ValueKey('update-review'),
-                  label: 'Review update',
-                  kind: ActionKind.primary,
-                  onTap: _updates.review,
-                ),
-              ActionButton(
-                key: const ValueKey('update-check'),
-                label: checking ? 'Checking' : 'Check now',
-                glyph: glyphRefresh,
-                onTap: checking ? () {} : () => unawaited(_updates.check()),
-              ),
-            ],
-          ),
+          trailing: null,
         ),
         const SizedBox(height: 4),
         const SettingsHeading('Versions', top: 24),
