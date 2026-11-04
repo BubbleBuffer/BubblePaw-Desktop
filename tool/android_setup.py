@@ -4,12 +4,15 @@
 The Android project is not committed: CI (and anyone building the phone app)
 runs `flutter create --platforms=android` and then this script. It sets the
 app name, the permissions (internet, camera for the pairing QR code), the
-minimum SDK and the one ABI the app ships (arm64).
+minimum SDK and the one ABI the app ships: arm64-v8a, or $ANDROID_ABI (the
+x86_64 emulator smoke test in CI).
 """
+import os
 import pathlib
 import re
 import sys
 
+abi = os.environ.get("ANDROID_ABI", "arm64-v8a")
 root = pathlib.Path(__file__).resolve().parent.parent
 android = root / "android"
 manifest = android / "app" / "src" / "main" / "AndroidManifest.xml"
@@ -33,20 +36,16 @@ for name in ("build.gradle.kts", "build.gradle"):
         continue
     g = gradle.read_text(encoding="utf-8")
     g = g.replace("flutter.minSdkVersion", "26")
-    if "arm64-v8a" not in g:
+    if "abiFilters" not in g:
         if name.endswith(".kts"):
-            g = re.sub(
-                r"(defaultConfig \{\n)",
-                lambda m: m.group(1) + '        ndk { abiFilters += listOf("arm64-v8a") }\n',
-                g,
-                count=1,
-            )
+            line = '        ndk { abiFilters += listOf("%s") }\n' % abi
         else:
-            g = re.sub(
-                r"(defaultConfig \{\n)",
-                lambda m: m.group(1) + "        ndk { abiFilters 'arm64-v8a' }\n",
-                g,
-                count=1,
-            )
+            line = "        ndk { abiFilters '%s' }\n" % abi
+        g = re.sub(
+            r"(defaultConfig \{\n)",
+            lambda m: m.group(1) + line,
+            g,
+            count=1,
+        )
     gradle.write_text(g, encoding="utf-8")
 print("android/ patched")

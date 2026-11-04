@@ -184,3 +184,56 @@ jobs:
           name: bubblepaw-phone-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
+
+  android-smoke:
+    name: phone app starts on an emulator (x86_64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+      - name: rust toolchain
+        run: rustup toolchain install stable --profile minimal && rustup default stable && rustup target add x86_64-linux-android
+      - name: cargo-ndk
+        run: cargo install cargo-ndk --locked
+      - run: flutter pub get
+      - name: android project
+        env:
+          ANDROID_ABI: x86_64
+        run: |
+          flutter create --platforms=android --org cc.breadcat --project-name bubblepaw_desktop .
+          python3 tool/android_setup.py
+      - name: native crate for x86_64 (remote client only)
+        run: |
+          export ANDROID_NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          cd native
+          cargo ndk -t x86_64 -o ../android/app/src/main/jniLibs build --release --no-default-features
+      - name: apk (debug, x86_64, for the emulator only)
+        run: flutter build apk --debug -t lib/main_phone.dart --target-platform android-x64
+      - name: enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: launch on the emulator
+        uses: reactivecircus/android-emulator-runner@62dbb605bba737720e10b196cb4220d374026a6d # v2.33.0
+        with:
+          api-level: 33
+          arch: x86_64
+          target: google_apis
+          script: ./tool/android_smoke.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: phone-emulator-screenshot
+          path: smoke.png
+          if-no-files-found: ignore
