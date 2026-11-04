@@ -7,17 +7,27 @@ publish = false
 [lib]
 crate-type = ["cdylib", "staticlib", "rlib"]
 
+[features]
+default = ["local-host"]
+# The embedded host and sharing it (Desktop). Without it the crate is the
+# remote client only (the phone app): pairing, hosts you can open, the device
+# key and opening a saved host. The Android build uses --no-default-features.
+local-host = ["bubblepaw-sdk/host"]
+
 [dependencies]
 anyhow = "1"
 flutter_rust_bridge = "=2.13.0"
 # The Core release Desktop embeds. Keep CORE_VERSION in src/lib.rs in step.
-bubblepaw-sdk = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.11.1" }
+bubblepaw-sdk = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.12.0", default-features = false }
 serde_json = "1"
 tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
 
 [dev-dependencies]
 tempfile = "3"
-bubblepaw-remote = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.11.1" }
+bubblepaw-remote = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.12.0" }
+# The host side of the remote-only tests; it turns the SDK's `host` feature on
+# for test builds only.
+bubblepaw-sdk = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.12.0", features = ["host"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

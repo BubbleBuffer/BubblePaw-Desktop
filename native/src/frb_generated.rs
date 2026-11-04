@@ -42,7 +42,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1415680485;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -369592459;
 
 // Section: executor
 
@@ -2500,6 +2500,85 @@ fn wire__crate__api__host__core_version_impl(
         },
     )
 }
+fn wire__crate__api__hosts__device_key_info_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "device_key_info",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_data_dir = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::api::hosts::HostLinkError>(
+                    (move || async move {
+                        let output_ok = crate::api::hosts::device_key_info(api_data_dir).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__hosts__export_device_key_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "export_device_key",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_data_dir = <String>::sse_decode(&mut deserializer);
+            let api_dest = <String>::sse_decode(&mut deserializer);
+            let api_passphrase = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::api::hosts::HostLinkError>(
+                    (move || async move {
+                        let output_ok = crate::api::hosts::export_device_key(
+                            api_data_dir,
+                            api_dest,
+                            api_passphrase,
+                        )
+                        .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__hosts__forget_saved_host_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -2530,6 +2609,49 @@ fn wire__crate__api__hosts__forget_saved_host_impl(
                     (move || async move {
                         let output_ok =
                             crate::api::hosts::forget_saved_host(api_data_dir, api_id).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__hosts__import_device_key_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "import_device_key",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_data_dir = <String>::sse_decode(&mut deserializer);
+            let api_src = <String>::sse_decode(&mut deserializer);
+            let api_passphrase = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::api::hosts::HostLinkError>(
+                    (move || async move {
+                        let output_ok = crate::api::hosts::import_device_key(
+                            api_data_dir,
+                            api_src,
+                            api_passphrase,
+                        )
+                        .await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -2716,6 +2838,43 @@ fn wire__crate__api__hosts__probe_saved_host_impl(
                             api_timeout_secs,
                         )
                         .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__hosts__regenerate_device_key_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "regenerate_device_key",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_data_dir = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::api::hosts::HostLinkError>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::hosts::regenerate_device_key(api_data_dir).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -3534,12 +3693,18 @@ fn pde_ffi_dispatcher_primary_impl(
             data_len,
         ),
         45 => wire__crate__api__remote__RemoteShare_watch_impl(port, ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__hosts__forget_saved_host_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__host__init_app_impl(port, ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__hosts__list_saved_hosts_impl(port, ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__hosts__pair_with_host_impl(port, ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__hosts__probe_saved_host_impl(port, ptr, rust_vec_len, data_len),
-        53 => wire__crate__api__remote__share_settings_impl(port, ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__hosts__device_key_info_impl(port, ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__hosts__export_device_key_impl(port, ptr, rust_vec_len, data_len),
+        49 => wire__crate__api__hosts__forget_saved_host_impl(port, ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__hosts__import_device_key_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__host__init_app_impl(port, ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__hosts__list_saved_hosts_impl(port, ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__hosts__pair_with_host_impl(port, ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__hosts__probe_saved_host_impl(port, ptr, rust_vec_len, data_len),
+        56 => {
+            wire__crate__api__hosts__regenerate_device_key_impl(port, ptr, rust_vec_len, data_len)
+        }
+        57 => wire__crate__api__remote__share_settings_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3565,7 +3730,7 @@ fn pde_ffi_dispatcher_sync_impl(
         22 => wire__crate__api__remote__PairRequest_device_name_impl(ptr, rust_vec_len, data_len),
         35 => wire__crate__api__remote__RemoteShare_new_impl(ptr, rust_vec_len, data_len),
         46 => wire__crate__api__host__core_version_impl(ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__hosts__parse_pairing_link_impl(ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__hosts__parse_pairing_link_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

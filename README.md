@@ -39,7 +39,7 @@ flowchart LR
 | --- | --- | --- |
 | `bubblepaw_desktop` | [`lib/`](lib) | The desktop app shell for BubblePaw on the agent kit: the host's lifetime, settings, tray, feedback, updates |
 | `agent_kit` | [`packages/agent_kit`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit) | Flutter widgets for the agent kit: theme, status, transcript, composer, chrome, workspace |
-| `bubblepaw_desktop_native` | [`native/`](native) | Rust crate on `bubblepaw-sdk` (Core `v0.11.1`): open, call, notifications and close, as JSON-RPC text. [`rust_builder/`](rust_builder) is the Cargokit glue that builds it with the app |
+| `bubblepaw_desktop_native` | [`native/`](native) | Rust crate on `bubblepaw-sdk` (Core `v0.12.0`): open, call, notifications and close, as JSON-RPC text. [`rust_builder/`](rust_builder) is the Cargokit glue that builds it with the app |
 | `agent_kit_core` | [`packages/agent_kit_core`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit_core) | Pure Dart agent UI core: view models, the `AgentBackend` port, the event reducer and a scripted fake backend |
 | `agent_kit_bubblepaw` | [`packages/agent_kit_bubblepaw`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit_bubblepaw) | Pure Dart BubblePaw stdio JSON-RPC backend for the agent kit |
 | `bb_ui` | [`packages/bb_ui`](https://github.com/BubbleBuffer/bb-ui/tree/v0.6.0/packages/bb_ui) | BubbleBuffer UI primitives for Flutter without Material |
@@ -50,7 +50,7 @@ You need Flutter **3.47.7** (stable) and a Rust toolchain (stable, installed wit
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on GitHub-hosted `ubuntu-latest` and `windows-latest`. Linux: format, analyze, tests, goldens, the crate's fmt, Clippy and tests, the FFI transport test against the built crate, and a debug build. Windows: the crate's tests, the same FFI test and a debug build.
 
-The embedded Core is `bubblepaw-sdk` at tag `v0.11.1` (`native/Cargo.toml`; `CORE_VERSION` in `native/src/lib.rs` must match, and a test checks it). The Dart bindings in `lib/src/rust/` and `native/src/frb_generated.rs` are generated and committed: after changing `native/src/api/`, run `flutter_rust_bridge_codegen generate` (version 2.13.0, the same as the `flutter_rust_bridge` package).
+The embedded Core is `bubblepaw-sdk` at tag `v0.12.0` (`native/Cargo.toml`; `CORE_VERSION` in `native/src/lib.rs` must match, and a test checks it). The Dart bindings in `lib/src/rust/` and `native/src/frb_generated.rs` are generated and committed: after changing `native/src/api/`, run `flutter_rust_bridge_codegen generate` (version 2.13.0, the same as the `flutter_rust_bridge` package), or run the CI workflow by hand and apply its `fix.patch`, which regenerates them.
 
 ```sh
 flutter pub get
@@ -64,6 +64,17 @@ flutter build linux --debug
 ```
 
 **Run it.** Scripted mode runs the kit's fake backend and does not start Core: `flutter run -d linux --dart-entrypoint-args=--scripted`, or `bubblepaw_desktop --scripted` for a built app. Real mode is `flutter run -d linux`; on first run the app saves default directories, starts the embedded host and opens Settings, and Settings > About shows the Core version it embeds.
+
+**Phone (Android).** `lib/main_phone.dart` is a remote-only client: it pairs with a host and opens it, with no host of its own, sharing or tray. The native crate builds for it with `--no-default-features` (no embedded Core). The Android project is not committed; CI generates it and builds a debug-signed arm64 APK, uploaded as the `bubblepaw-phone-debug-apk` artifact. To build one yourself (Android SDK and NDK, `cargo-ndk`, the `aarch64-linux-android` Rust target):
+
+```sh
+flutter create --platforms=android --org cc.breadcat --project-name bubblepaw_desktop .
+python3 tool/android_setup.py
+(cd native && cargo ndk -t arm64-v8a -o ../android/app/src/main/jniLibs build --release --no-default-features)
+flutter build apk --debug -t lib/main_phone.dart --target-platform android-arm64
+```
+
+See [docs/phone-app.md](docs/phone-app.md).
 
 Config is `config.json` in the app-support directory: `%APPDATA%\BubblePaw Desktop` on Windows, or `$XDG_DATA_HOME/bubblepaw-desktop` (else `~/.local/share/bubblepaw-desktop`) on Linux. `--config-dir <dir>` replaces that directory for one launch. The app's own preferences are in `preferences.json` beside it. Release builds and the Windows installer are described in [docs/releases.md](docs/releases.md).
 

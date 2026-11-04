@@ -1,23 +1,29 @@
 //! The API Dart sees. Everything here is JSON-RPC in, JSON-RPC out.
 
+#[cfg(feature = "local-host")]
+use std::sync::Weak;
 use std::{
     path::PathBuf,
-    sync::{Arc, Mutex, Weak},
+    sync::{Arc, Mutex},
     time::Duration,
 };
 
 use bubblepaw_sdk::{
     remote::{Limits, RemoteConnect, RemotePaths},
-    Client, ClientError, ConfigError, ConfigOptions, Notifications,
+    Client, ClientError, Notifications,
 };
+#[cfg(feature = "local-host")]
+use bubblepaw_sdk::{ConfigError, ConfigOptions};
 use flutter_rust_bridge::frb;
 use serde_json::Value;
 
 use crate::frb_generated::StreamSink;
+#[cfg(feature = "local-host")]
 use crate::host_setup;
 
 use super::hosts::{saved_host, HostLinkError, HostLinkErrorKind};
-use super::remote::Shared as RemoteShared;
+#[cfg(feature = "local-host")]
+use crate::share::Shared as RemoteShared;
 
 /// The host-API error code of `no_provider_configured`.
 const NO_PROVIDER_CONFIGURED: i64 = -32004;
@@ -60,6 +66,7 @@ impl HostCallError {
     }
 }
 
+#[cfg(feature = "local-host")]
 impl From<ConfigError> for HostCallError {
     /// A configuration the host cannot start from. The text names the file,
     /// key or provider at fault, so the app shows it as is.
@@ -106,6 +113,7 @@ pub struct BubblePawHost {
     client: Mutex<Option<Arc<Client>>>,
     attached: bool,
     /// Remote shares made for this host; `close` stops them first.
+    #[cfg(feature = "local-host")]
     shares: Mutex<Vec<Weak<RemoteShared>>>,
 }
 
@@ -126,11 +134,22 @@ impl BubblePawHost {
         data_dir: String,
         workspace_dir: String,
     ) -> Result<BubblePawHost, HostCallError> {
-        Self::open_with(host_setup::options(
-            &PathBuf::from(data_dir),
-            &PathBuf::from(workspace_dir),
-        ))
-        .await
+        #[cfg(feature = "local-host")]
+        {
+            Self::open_with(host_setup::options(
+                &PathBuf::from(data_dir),
+                &PathBuf::from(workspace_dir),
+            ))
+            .await
+        }
+        #[cfg(not(feature = "local-host"))]
+        {
+            let _ = (data_dir, workspace_dir);
+            Err(HostCallError::plain(
+                HostErrorKind::Host,
+                "this device has no host of its own; open a saved host",
+            ))
+        }
     }
 
     /// Opens a host this device paired with (`list_saved_hosts`), through the
@@ -199,9 +218,12 @@ impl BubblePawHost {
     pub async fn close(&self) -> Result<(), HostCallError> {
         // Stop sharing first: a share holds the client, and closing waits for
         // every other holder to let go.
-        let shares = std::mem::take(&mut *self.shares.lock().unwrap());
-        for share in shares.into_iter().filter_map(|share| share.upgrade()) {
-            share.release().await;
+        #[cfg(feature = "local-host")]
+        {
+            let shares = std::mem::take(&mut *self.shares.lock().unwrap());
+            for share in shares.into_iter().filter_map(|share| share.upgrade()) {
+                share.release().await;
+            }
         }
         let Some(mut shared) = self.client.lock().unwrap().take() else {
             return Ok(());
@@ -235,6 +257,7 @@ impl BubblePawHost {
 
 impl BubblePawHost {
     /// Opens the host for already-built options.
+    #[cfg(feature = "local-host")]
     #[frb(ignore)]
     pub async fn open_with(options: ConfigOptions) -> Result<BubblePawHost, HostCallError> {
         let config = host_setup::load(options)?;
@@ -247,10 +270,12 @@ impl BubblePawHost {
         Self {
             client: Mutex::new(Some(Arc::new(client))),
             attached,
+            #[cfg(feature = "local-host")]
             shares: Mutex::new(Vec::new()),
         }
     }
 
+    #[cfg(feature = "local-host")]
     #[frb(ignore)]
     pub(crate) fn register_share(&self, share: Weak<RemoteShared>) {
         let mut shares = self.shares.lock().unwrap();
@@ -273,7 +298,7 @@ impl BubblePawHost {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "local-host"))]
 mod tests {
     use super::*;
     use serde_json::json;

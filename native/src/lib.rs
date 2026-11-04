@@ -5,12 +5,16 @@
 
 pub mod api;
 mod frb_generated;
+#[cfg(feature = "local-host")]
 mod host_setup;
-#[cfg(test)]
+#[cfg(all(test, not(feature = "local-host")))]
+mod remote_only_tests;
+#[cfg(all(test, feature = "local-host"))]
 mod remote_tests;
+mod share;
 
 /// The Core release this build embeds (the `tag` of `bubblepaw-sdk` in Cargo.toml).
-pub const CORE_VERSION: &str = "0.11.1";
+pub const CORE_VERSION: &str = "0.12.0";
 
 #[cfg(test)]
 mod tests {

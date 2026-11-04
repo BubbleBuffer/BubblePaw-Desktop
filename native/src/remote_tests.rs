@@ -16,6 +16,7 @@ use crate::api::host::{BubblePawHost, HostErrorKind};
 use crate::api::hosts::{self, SavedHostEntry};
 use crate::api::remote::*;
 use crate::host_setup;
+use crate::share::{load_remote, WatchCursor};
 
 struct Fixture {
     root: tempfile::TempDir,

@@ -18,6 +18,7 @@ import 'preferences.dart';
 import 'scripted.dart';
 import 'remote/host_links.dart';
 import 'remote/hosts_controller.dart';
+import 'remote/phone_remote_access.dart';
 import 'remote/remote_access.dart';
 import 'remote/project_groups.dart';
 import 'remote/remote_chats.dart';
@@ -168,6 +169,8 @@ class HostController extends ChangeNotifier {
     this.starter,
     this.linksFactory,
     this.remoteStarter,
+    this.localHost = true,
+    this.phoneAccess,
     this.scripted = false,
     LogBuffer? log,
     UpdateController? updates,
@@ -178,6 +181,14 @@ class HostController extends ChangeNotifier {
   }
 
   final ConfigStore store;
+
+  /// False on a phone: there is no host of this device's own, only the saved
+  /// hosts it can open. Nothing is started, shared or kept in a tray.
+  final bool localHost;
+
+  /// The device-key side on a phone; null uses the native one (tests give a
+  /// fake).
+  final RemoteAccess Function(String dataDirectory)? phoneAccess;
   final bool scripted;
 
   /// What Desktop remembers for a feedback report: its own events and what it
@@ -486,7 +497,9 @@ class HostController extends ChangeNotifier {
     }
     final name = openHost?.label ?? 'The host';
     unawaited(openLocalHost());
-    _openError = '$name stopped answering. This computer is open again.';
+    _openError = localHost
+        ? '$name stopped answering. This computer is open again.'
+        : '$name stopped answering. Open it again from the host menu.';
     unawaited(_hosts?.refreshPresence());
   }
 
@@ -509,8 +522,11 @@ class HostController extends ChangeNotifier {
   }
 
   /// What this device calls itself to the devices and hosts it pairs with.
-  String get deviceName =>
-      _prefs.deviceName.isNotEmpty ? _prefs.deviceName : Platform.localHostname;
+  String get deviceName => _prefs.deviceName.isNotEmpty
+      ? _prefs.deviceName
+      : localHost
+      ? Platform.localHostname
+      : 'My phone';
 
   /// The sharing side of this host; null when it cannot be shared from here.
   RemoteController? get remote => _remote;
@@ -531,10 +547,35 @@ class HostController extends ChangeNotifier {
   /// Whether the settings screen is drawn over the current state.
   bool get settingsOpen => _settingsOpen;
 
+  /// The phone opens the host it connected to last, so the chats are there
+  /// when the app starts. With none saved it stays on the empty home.
+  Future<void> _openLastHost() async {
+    final hosts = this.hosts;
+    if (hosts == null) return;
+    await hosts.load();
+    if (_disposed || hosts.hosts.isEmpty) return;
+    final last = hosts.hosts.reduce((a, b) {
+      final x = a.lastConnected ?? BigInt.zero;
+      final y = b.lastConnected ?? BigInt.zero;
+      return y > x ? b : a;
+    });
+    await openRemoteHost(last.id);
+  }
+
   /// Loads the config and starts the host. With no saved config the first
   /// run saves the defaults, starts the host and opens Settings.
   Future<void> init() async {
     _prefs = await store.loadPrefs();
+    if (!localHost) {
+      // A phone has no host to start: the saved hosts are all there is, and
+      // the device key is the one sharing-side thing it keeps.
+      _config = store.defaults;
+      _phase = HostPhase.running;
+      _remote = _buildPhoneRemote();
+      _notify();
+      unawaited(_openLastHost());
+      return;
+    }
     _config = await store.load();
     if (scripted) {
       await _start();
@@ -622,6 +663,7 @@ class HostController extends ChangeNotifier {
   }
 
   Future<void> _start() async {
+    if (!localHost) return;
     final ticket = ++_generation;
     await _stopBackend();
     _failure = null;
@@ -689,6 +731,20 @@ class HostController extends ChangeNotifier {
           updatePrefs(_prefs.copyWith(shareAtStart: value)),
     );
     unawaited(controller.load(autostart: true));
+    return controller;
+  }
+
+  RemoteController _buildPhoneRemote() {
+    final controller = RemoteController(
+      access: (phoneAccess ?? PhoneRemoteAccess.new)(formConfig.dataDirectory),
+      settings: null,
+      deviceName: deviceName,
+      saveDeviceName: (value) =>
+          updatePrefs(_prefs.copyWith(deviceName: value)),
+      shareAtStart: () => false,
+      saveShareAtStart: (_) async {},
+    );
+    unawaited(controller.load());
     return controller;
   }
 

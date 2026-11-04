@@ -154,11 +154,15 @@ class Played {
     AppConfig config = sampleConfig,
     AppPrefs prefs = const AppPrefs(),
     RemoteStarter? remoteStarter,
+    bool localHost = true,
+    RemoteAccess Function(String)? phoneAccess,
   }) => HostController(
     store: MemoryConfigStore(config, prefs),
     starter: start,
     linksFactory: hostLinks == null ? null : (_) => hostLinks!,
     remoteStarter: remoteStarter,
+    localHost: localHost,
+    phoneAccess: phoneAccess,
   );
 }
 

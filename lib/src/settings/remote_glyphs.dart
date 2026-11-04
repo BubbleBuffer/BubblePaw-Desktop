@@ -28,6 +28,11 @@ const LucideGlyph glyphClock = (
   LucideIcons.clock,
   LucideIcons.clock500,
 );
+const LucideGlyph glyphScanLine = (
+  LucideIcons.scanLine300,
+  LucideIcons.scanLine,
+  LucideIcons.scanLine500,
+);
 const LucideGlyph glyphLoader = (
   LucideIcons.loader300,
   LucideIcons.loader,

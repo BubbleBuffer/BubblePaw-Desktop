@@ -10,6 +10,7 @@ import 'package:flutter/widgets.dart';
 
 import '../remote/host_links.dart';
 import '../remote/hosts_controller.dart';
+import '../remote/link_scanner.dart';
 import '../remote/remote_controller.dart' show lastSeenText;
 import 'action_widgets.dart';
 import 'remote_dialogs.dart';
@@ -273,6 +274,15 @@ class _AddHostDialogState extends State<AddHostDialog> {
     super.dispose();
   }
 
+  Future<void> _scan() async {
+    final scan = linkScanner;
+    if (scan == null) return;
+    final text = await scan(context);
+    if (!mounted || text == null || text.trim().isEmpty) return;
+    _link.text = text.trim();
+    await _flow.connect(text);
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: _flow,
@@ -290,13 +300,31 @@ class _AddHostDialogState extends State<AddHostDialog> {
       title: 'Add a host',
       step: 'Step 1 of 2',
       body: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Text(
-            'Paste the pairing link shown by the host.',
-            style: ts(theme.typeScale.ui, theme.ink),
+        if (linkScanner != null) ...[
+          ActionButton(
+            key: const ValueKey('add-host-scan'),
+            label: 'Scan QR code',
+            kind: ActionKind.primary,
+            glyph: glyphScanLine,
+            onTap: _flow.busy ? () {} : () => unawaited(_scan()),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: Text(
+                'or paste the pairing link',
+                style: ts(theme.typeScale.uiSmall, theme.muted),
+              ),
+            ),
+          ),
+        ] else
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Paste the pairing link shown by the host.',
+              style: ts(theme.typeScale.ui, theme.ink),
+            ),
+          ),
         LabeledField(
           label: 'Pairing link from the host',
           hint:
