@@ -521,7 +521,7 @@ class PairDialog extends StatelessWidget {
         const SizedBox(height: 12),
         GroupCard(
           children: [
-            KeyValueRow('Reaches this host by', reachLabel, mono: false),
+            SettingsKeyValueRow('Reaches this host by', reachLabel, mono: false),
           ],
         ),
       ],

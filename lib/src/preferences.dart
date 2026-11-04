@@ -13,7 +13,7 @@ enum ThemeSetting {
 
 /// How the steps of a finished turn start in a chat: shut behind the summary
 /// line, or open.
-enum TurnLayout { collapsed, open }
+enum TurnLayoutSetting { collapsed, open }
 
 /// Which releases of the app the update check looks at.
 enum UpdateChannel { stable, nightly }
@@ -21,7 +21,7 @@ enum UpdateChannel { stable, nightly }
 class AppPrefs {
   const AppPrefs({
     this.theme = ThemeSetting.system,
-    this.turnLayout = TurnLayout.collapsed,
+    this.turnLayout = TurnLayoutSetting.collapsed,
     this.openAtLogin = false,
     this.startInTray = false,
     this.keepInTray = false,
@@ -39,7 +39,7 @@ class AppPrefs {
 
   /// How a finished turn's steps start in a chat on this device. A running
   /// turn is always open, and a turn the person opened or closed keeps that.
-  final TurnLayout turnLayout;
+  final TurnLayoutSetting turnLayout;
 
   /// BubblePaw starts when the person signs in to the computer.
   final bool openAtLogin;
@@ -81,7 +81,7 @@ class AppPrefs {
 
   AppPrefs copyWith({
     ThemeSetting? theme,
-    TurnLayout? turnLayout,
+    TurnLayoutSetting? turnLayout,
     bool? openAtLogin,
     bool? startInTray,
     bool? keepInTray,
@@ -140,7 +140,7 @@ class AppPrefs {
         (t) => t.name == json['theme'],
         orElse: () => defaults.theme,
       ),
-      turnLayout: TurnLayout.values.firstWhere(
+      turnLayout: TurnLayoutSetting.values.firstWhere(
         (t) => t.name == json['turnLayout'],
         orElse: () => defaults.turnLayout,
       ),

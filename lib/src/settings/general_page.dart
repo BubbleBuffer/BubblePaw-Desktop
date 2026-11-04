@@ -63,13 +63,13 @@ class GeneralPage extends StatelessWidget {
         SettingsRow(
           label: 'Turn layout',
           description: 'How the steps of a finished turn are shown.',
-          trailing: SegmentedChoice<TurnLayout>(
+          trailing: SegmentedChoice<TurnLayoutSetting>(
             idPrefix: 'turn-layout',
-            options: TurnLayout.values,
+            options: TurnLayoutSetting.values,
             value: prefs.turnLayout,
             labelOf: (t) => switch (t) {
-              TurnLayout.collapsed => 'Collapsed',
-              TurnLayout.open => 'Open',
+              TurnLayoutSetting.collapsed => 'Collapsed',
+              TurnLayoutSetting.open => 'Open',
             },
             onChanged: (t) => set(prefs.copyWith(turnLayout: t)),
           ),

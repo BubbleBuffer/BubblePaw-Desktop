@@ -22,19 +22,19 @@ HostController _controller(MemoryConfigStore store) => HostController(
 void main() {
   group('the preference', () {
     test('starts collapsed and survives a save and a load', () {
-      expect(const AppPrefs().turnLayout, TurnLayout.collapsed);
-      const open = AppPrefs(turnLayout: TurnLayout.open);
+      expect(const AppPrefs().turnLayout, TurnLayoutSetting.collapsed);
+      const open = AppPrefs(turnLayout: TurnLayoutSetting.open);
       final loaded = AppPrefs.fromJson(jsonDecode(jsonEncode(open.toJson())));
-      expect(loaded.turnLayout, TurnLayout.open);
+      expect(loaded.turnLayout, TurnLayoutSetting.open);
       expect(loaded, open);
       expect(open, isNot(const AppPrefs()));
     });
 
     test('a missing or unknown value is collapsed', () {
-      expect(AppPrefs.fromJson(const {}).turnLayout, TurnLayout.collapsed);
+      expect(AppPrefs.fromJson(const {}).turnLayout, TurnLayoutSetting.collapsed);
       expect(
         AppPrefs.fromJson(const {'turnLayout': 'wide'}).turnLayout,
-        TurnLayout.collapsed,
+        TurnLayoutSetting.collapsed,
       );
     });
   });
@@ -59,10 +59,10 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('turn-layout-open')));
       await settle(tester);
-      expect(store.prefs.turnLayout, TurnLayout.open);
+      expect(store.prefs.turnLayout, TurnLayoutSetting.open);
       await tester.tap(find.byKey(const ValueKey('turn-layout-collapsed')));
       await settle(tester);
-      expect(store.prefs.turnLayout, TurnLayout.collapsed);
+      expect(store.prefs.turnLayout, TurnLayoutSetting.collapsed);
     });
 
     testWidgets('collapsed shows the summary line only', (tester) async {
@@ -76,7 +76,7 @@ void main() {
     ) async {
       final store = MemoryConfigStore(
         sampleConfig,
-        const AppPrefs(turnLayout: TurnLayout.open),
+        const AppPrefs(turnLayout: TurnLayoutSetting.open),
       );
       final controller = _controller(store);
       await pumpApp(tester, controller);
@@ -87,10 +87,10 @@ void main() {
       await settle(tester);
       expect(find.text('web/src/quota-bar.tsx'), findsNothing);
       await controller.updatePrefs(
-        controller.prefs.copyWith(turnLayout: TurnLayout.collapsed),
+        controller.prefs.copyWith(turnLayout: TurnLayoutSetting.collapsed),
       );
       await controller.updatePrefs(
-        controller.prefs.copyWith(turnLayout: TurnLayout.open),
+        controller.prefs.copyWith(turnLayout: TurnLayoutSetting.open),
       );
       await settle(tester);
       expect(find.text('web/src/quota-bar.tsx'), findsNothing);
@@ -104,7 +104,7 @@ void main() {
       expect(find.text('web/src/quota-bar.tsx'), findsNothing);
 
       await controller.updatePrefs(
-        controller.prefs.copyWith(turnLayout: TurnLayout.open),
+        controller.prefs.copyWith(turnLayout: TurnLayoutSetting.open),
       );
       await settle(tester);
       expect(find.text('web/src/quota-bar.tsx'), findsOneWidget);

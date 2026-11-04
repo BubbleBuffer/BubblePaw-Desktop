@@ -253,7 +253,7 @@ class _RemotePageState extends State<RemotePage> {
               ),
             ),
           ),
-          KeyValueRow(
+          SettingsKeyValueRow(
             'Device ID',
             key?.id ?? '',
             valueKey: const ValueKey('remote-device-id'),
@@ -265,7 +265,7 @@ class _RemotePageState extends State<RemotePage> {
               onTap: () => unawaited(widget.services.copy(key?.id ?? '')),
             ),
           ),
-          KeyValueRow(
+          SettingsKeyValueRow(
             'Fingerprint',
             key?.fingerprint ?? '',
             valueKey: const ValueKey('remote-fingerprint'),
@@ -679,7 +679,7 @@ class _RemotePageState extends State<RemotePage> {
           ),
         ),
         if (state.status == ShareStatus.online && address != null)
-          KeyValueRow(
+          SettingsKeyValueRow(
             'Public address',
             address,
             valueKey: const ValueKey('remote-address'),
@@ -692,7 +692,7 @@ class _RemotePageState extends State<RemotePage> {
             ),
           )
         else if (state.status == ShareStatus.connecting)
-          KeyValueRow(
+          SettingsKeyValueRow(
             'Public address',
             r.mode == ShareMode.quick
                 ? 'Waiting for Cloudflare to assign an address.'
@@ -701,7 +701,7 @@ class _RemotePageState extends State<RemotePage> {
             mono: false,
           )
         else
-          KeyValueRow(
+          SettingsKeyValueRow(
             'Public address',
             idleAddress,
             valueKey: const ValueKey('remote-address'),
@@ -717,7 +717,7 @@ class _RemotePageState extends State<RemotePage> {
     final info = r.cloudflared;
     if (info == null || !info.installed) {
       return [
-        KeyValueRow(
+        SettingsKeyValueRow(
           'cloudflared',
           r.installing ? 'Downloading…' : 'Not installed.',
           valueKey: const ValueKey('cloudflared-state'),
@@ -753,7 +753,7 @@ class _RemotePageState extends State<RemotePage> {
     }
     final version = info.version == null ? '' : ' ${info.version}';
     return [
-      KeyValueRow(
+      SettingsKeyValueRow(
         'cloudflared',
         info.managed
             ? 'cloudflared$version, managed by BubblePaw'

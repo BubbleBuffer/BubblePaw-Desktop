@@ -191,9 +191,9 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Collapsed'), findsOneWidget);
-      expect(controller.prefs.turnLayout, TurnLayout.collapsed);
+      expect(controller.prefs.turnLayout, TurnLayoutSetting.collapsed);
       await _tap(tester, 'turn-layout-open');
-      expect(controller.prefs.turnLayout, TurnLayout.open);
+      expect(controller.prefs.turnLayout, TurnLayoutSetting.open);
       expect(find.text('Open at login'), findsNothing);
       expect(find.text('Storage'), findsNothing);
     });
