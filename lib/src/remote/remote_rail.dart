@@ -163,7 +163,7 @@ class RemoteRail extends StatelessWidget {
               _RailIconButton(
                 key: const ValueKey('remote-rail-hide'),
                 glyph: glyphPanelLeftClose,
-                label: 'Hide sidebar',
+                label: 'Hide the rail',
                 onTap: scope == null
                     ? null
                     : () => scope.controller.hide(scope.sizeClass),
