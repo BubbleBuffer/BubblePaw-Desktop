@@ -149,11 +149,21 @@ class FeedbackController extends ChangeNotifier {
     );
   }
 
+  /// The file holding the whole of [chat] on this computer; null when the
+  /// chat is on a remote host (the host API gives no path) or there is no
+  /// local data folder.
+  String? chatFile(FeedbackChat chat) {
+    if (host.usingScripted || host.openHostId != null) return null;
+    final dir = host.formConfig.dataDirectory.trim();
+    return dir.isEmpty ? null : chatFilePath(dir, chat.id);
+  }
+
   /// chat.md for [chat]: the last 20 messages, redacted.
   String chatMarkdown(FeedbackChat chat) => buildChatMarkdown(
     chatId: chat.id,
     title: chat.title,
     lines: chat.lines,
+    chatFile: chatFile(chat),
     home: home,
   );
 

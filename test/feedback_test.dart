@@ -12,9 +12,13 @@ import 'package:bubblepaw_desktop/src/feedback/redact.dart';
 import 'package:bubblepaw_desktop/src/feedback/report.dart';
 import 'package:bubblepaw_desktop/src/guarded_backend.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
+import 'package:bubblepaw_desktop/src/preferences.dart';
+import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/scripted.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'fake_remote.dart';
+import 'fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
 
@@ -194,6 +198,35 @@ void main() {
       expect(md, contains('Bearer $redacted'));
       expect(md, isNot(contains('secret123')));
       expect(md, isNot(contains('/home/user')));
+    });
+
+    test('names the file with the whole chat, redacted', () {
+      final path = chatFilePath('/home/user/.local/share/bp/data/', 'c_1');
+      expect(path, '/home/user/.local/share/bp/data/chats/c_1.db');
+      expect(
+        chatFilePath(r'C:\Users\me\data', 'c_1'),
+        r'C:\Users\me\data\chats\c_1.db',
+      );
+      final md = buildChatMarkdown(
+        chatId: 'c_1',
+        title: 'Quota bar',
+        lines: lines,
+        chatFile: path,
+        home: '/home/user',
+      );
+      final rows = md.split('\n');
+      expect(rows[0], 'Chat  Quota bar (c_1)');
+      expect(
+        rows[1],
+        "Full chat  ~/.local/share/bp/data/chats/c_1.db (on the reporter's computer)",
+      );
+      expect(md, isNot(contains('/home/user')));
+      expect(md, contains('Last 20 messages'));
+    });
+
+    test('has no file line without a file', () {
+      final md = buildChatMarkdown(chatId: 'c_1', title: 'T', lines: lines);
+      expect(md, isNot(contains('Full chat')));
     });
   });
 
@@ -384,6 +417,53 @@ void main() {
         expect(feedback.savedId, isNull);
       },
     );
+
+    test('chat.md names the local chat file, redacted', () async {
+      final feedback = FeedbackController(
+        storage: FileFeedbackStorage.inside(dir),
+        host: HostController(store: MemoryConfigStore(sampleConfig)),
+        home: '/home/user',
+      );
+      final md = feedback.chatMarkdown(chat());
+      expect(
+        md,
+        contains(
+          'Full chat  ~/.local/share/bubblepaw-desktop/data/chats/c_1.db',
+        ),
+      );
+    });
+
+    testWidgets('chat.md has no file line for a remote host', (tester) async {
+      final host = fakeSavedHost();
+      Future<StartedBackend> start(HostLinks _, String _) async {
+        final backend = await playedScript();
+        return StartedBackend(backend, () async {}, attached: true);
+      }
+
+      final controller =
+          Played(
+            settings: FakeHostSettings(),
+            remote: (_) => FakeRemoteAccess(),
+            hostLinks: FakeHostLinks(hosts: [host]),
+          ).controller(
+            prefs: const AppPrefs(shareAtStart: false),
+            remoteStarter: start,
+          );
+      addTearDown(controller.close);
+      await pumpApp(tester, controller);
+      final feedback = FeedbackController(
+        storage: FileFeedbackStorage.inside(dir),
+        host: controller,
+        home: '/home/user',
+      );
+      expect(feedback.chatMarkdown(chat()), contains('Full chat'));
+      await tester.runAsync(() => controller.openRemoteHost(host.id));
+      await settle(tester);
+      expect(controller.openHostId, host.id);
+      final md = feedback.chatMarkdown(chat());
+      expect(md, isNot(contains('Full chat')));
+      expect(md, contains('Chat  T (c_1)'));
+    });
   });
 
   group('current chat and host log', () {

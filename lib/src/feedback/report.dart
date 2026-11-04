@@ -224,14 +224,29 @@ String _toolSummary(ToolRow row) {
   return '${row.name}${target.isEmpty ? '' : ' $target'}, $state$tail';
 }
 
+/// Where Core keeps the whole of chat [chatId] under [dataDirectory]:
+/// `chats/<id>.db` (Core's storage layout). A child session lives in the file
+/// of its root chat, and an archived chat in `<id>.db.zst`.
+String chatFilePath(String dataDirectory, String chatId) {
+  var dir = dataDirectory.trim();
+  final sep = dir.contains(r'\') && !dir.contains('/') ? r'\' : '/';
+  while (dir.length > 1 && (dir.endsWith('/') || dir.endsWith(r'\'))) {
+    dir = dir.substring(0, dir.length - 1);
+  }
+  return '$dir${sep}chats$sep$chatId.db';
+}
+
 /// chat.md for the last [count] of [lines]: role, time and text, oldest
-/// first, redacted. Multi-line text keeps its lines, indented under the
+/// first, redacted. [chatFile] is the file holding the whole chat on this
+/// computer; null leaves the line out (a remote host, or no known file).
+/// Multi-line text keeps its lines, indented under the
 /// first.
 String buildChatMarkdown({
   required String chatId,
   required String title,
   required List<ChatLine> lines,
   int count = chatExcerptMessages,
+  String? chatFile,
   String? home,
 }) {
   final last = lines.length > count
@@ -256,6 +271,7 @@ String buildChatMarkdown({
   final heading = title.trim().isEmpty ? chatId : '${title.trim()} ($chatId)';
   final text = [
     'Chat  $heading',
+    if (chatFile != null) "Full chat  $chatFile (on the reporter's computer)",
     'Last ${last.length} messages, oldest first',
     '',
     for (final l in last)
