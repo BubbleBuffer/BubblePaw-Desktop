@@ -8,6 +8,7 @@ import 'package:agent_kit/agent_kit.dart';
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
+import '../platform/key_files.dart' show KeyFileException;
 import '../platform/releases.dart';
 import '../remote/remote_access.dart';
 import '../remote/remote_controller.dart';
