@@ -457,13 +457,16 @@ void main() {
 
     test('a restarted host is followed through its new controller', () async {
       final accesses = <FakeRemoteAccess>[];
+      FakeRemoteAccess made(String _) {
+        final access = FakeRemoteAccess();
+        accesses.add(access);
+        return access;
+      }
+
+      // A Played serves one start, so every start gets its own.
       final r = _Rig(
         prefs: noShareAtStart,
-        remote: (_) {
-          final access = FakeRemoteAccess();
-          accesses.add(access);
-          return access;
-        },
+        starter: (config) => Played(remote: made).start(config),
       );
       await r.start();
       final first = r.host.remote;
