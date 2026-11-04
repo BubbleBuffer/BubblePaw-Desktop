@@ -225,15 +225,32 @@ String _toolSummary(ToolRow row) {
 }
 
 /// Where Core keeps the whole of chat [chatId] under [dataDirectory]:
-/// `chats/<id>.db` (Core's storage layout). A child session lives in the file
-/// of its root chat, and an archived chat in `<id>.db.zst`.
-String chatFilePath(String dataDirectory, String chatId) {
+/// `chats/<id>.db` (Core's storage layout), or `<id>.db.zst` when [archived].
+String chatFilePath(
+  String dataDirectory,
+  String chatId, {
+  bool archived = false,
+}) {
   var dir = dataDirectory.trim();
   final sep = dir.contains(r'\') && !dir.contains('/') ? r'\' : '/';
   while (dir.length > 1 && (dir.endsWith('/') || dir.endsWith(r'\'))) {
     dir = dir.substring(0, dir.length - 1);
   }
-  return '$dir${sep}chats$sep$chatId.db';
+  return '$dir${sep}chats$sep$chatId${archived ? '.db.zst' : '.db'}';
+}
+
+/// The file holding chat [chatId], or null when the app cannot tell which it
+/// is. A chat with a [parentId] is a child session (inside its root chat's
+/// file) or a fork (its own file); the host data does not say which, so no
+/// path is given rather than a wrong one.
+String? chatFileFor(
+  String dataDirectory,
+  String chatId, {
+  String? parentId,
+  bool archived = false,
+}) {
+  if (parentId != null && parentId.isNotEmpty) return null;
+  return chatFilePath(dataDirectory, chatId, archived: archived);
 }
 
 /// chat.md for the last [count] of [lines]: role, time and text, oldest

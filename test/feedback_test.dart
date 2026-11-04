@@ -200,6 +200,14 @@ void main() {
       expect(md, isNot(contains('/home/user')));
     });
 
+    test('the chat file follows the chat: archived, child, fork', () {
+      const dir = '/data';
+      expect(chatFileFor(dir, 'c_1'), '/data/chats/c_1.db');
+      expect(chatFileFor(dir, 'c_1', archived: true), '/data/chats/c_1.db.zst');
+      expect(chatFileFor(dir, 'c_2', parentId: 'c_1'), isNull);
+      expect(chatFileFor(dir, 'c_2', parentId: 'c_1', archived: true), isNull);
+    });
+
     test('names the file with the whole chat, redacted', () {
       final path = chatFilePath('/home/user/.local/share/bp/data/', 'c_1');
       expect(path, '/home/user/.local/share/bp/data/chats/c_1.db');

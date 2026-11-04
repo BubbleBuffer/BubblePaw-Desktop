@@ -50,8 +50,11 @@ app-support folder). Two saves in the same second get a `-2` suffix.
 `chat.md` has the last 20 messages oldest first: role, time and text; a tool call or a
 file edit is one line. Under the `Chat` line a `Full chat` line gives the file that holds
 the whole chat on the reporter's computer, `<Core data folder>/chats/<chat id>.db` (Core's
-layout; an archived chat is `.db.zst`). It is left out when the chat is on a remote host,
-because the host API returns no path. Both files are redacted, so the home folder shows
+layout). A chat whose snapshot says it is archived gets `<chat id>.db.zst`. The line is left
+out when the chat is on a remote host (the host API returns no path), and when the chat has a
+parent: a child session lives in its root chat's file but a fork has its own, and the snapshot
+does not say which, so no path is better than a wrong one. The BubblePaw backend does not read
+the archived flag yet, so an archived chat may still be given the `.db` path. Both files are redacted, so the home folder shows
 as `~`.
 
 After a save, `SavedNotice` shows "Saved to feedback/<id>" with Open folder and Dismiss.

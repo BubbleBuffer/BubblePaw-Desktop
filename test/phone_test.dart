@@ -2,16 +2,20 @@
 // 375x812 against fake host links, a scripted backend per host and a fake
 // device key.
 
+import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/link_scanner.dart';
+import 'package:bubblepaw_desktop/src/remote/remote_chats.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_remote.dart';
+import 'fakes.dart';
 import 'remote_chats_fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
+import 'tools_samples.dart';
 
 const phone = Size(375, 812);
 const _link = 'bubblepaw://pair?v=1&code=K7M2QX9PD4';
@@ -37,6 +41,7 @@ Future<(HostController, FakeHostLinks, _Started)> _open(
   WidgetTester tester, {
   List<SavedHostEntry> hosts = const [],
   bool failOpen = false,
+  HostSettings? settings,
 }) async {
   final links = FakeHostLinks(hosts: hosts);
   final started = _Started();
@@ -48,7 +53,20 @@ Future<(HostController, FakeHostLinks, _Started)> _open(
             kind: HostLinkErrorKind.unreachable,
             message: 'unreachable',
           )
-        : started.start,
+        : settings == null
+        ? started.start
+        : (links, id) async {
+            started.ids.add(id);
+            final f = started.fixture;
+            return StartedBackend(
+              RemoteBackend(f.backend, f.rows, rawRequest: f.raw),
+              () async {},
+              now: remoteClock,
+              attached: true,
+              remoteRows: f.rows,
+              settings: settings,
+            );
+          },
   );
   addTearDown(controller.close);
   await pumpApp(tester, controller, size: phone);
@@ -182,6 +200,49 @@ void main() {
       expect(find.byKey(const ValueKey('about-feedback')), findsNothing);
     });
 
+    testWidgets('the list rows say what the host has', (tester) async {
+      final settings = FakeHostSettings(
+        values: {...sampleToolsValues(), 'model.main': 'demo/scripted'},
+        toolList: sampleTools,
+        skillList: sampleSkills,
+        mcpList: sampleMcpServers,
+      );
+      await _open(tester, hosts: [_maya], settings: settings);
+      await _tap(tester, 'rail-settings');
+      expect(find.text('Default demo/scripted'), findsOneWidget);
+      expect(find.textContaining('Main chat uses '), findsOneWidget);
+      expect(
+        find.textContaining('${sampleMcpServers.length} servers, '),
+        findsOneWidget,
+      );
+      expect(find.textContaining(RegExp(r'^\d+ of \d+ on$')), findsOneWidget);
+    });
+
+    testWidgets('a failed read leaves the row without a summary', (
+      tester,
+    ) async {
+      await _open(tester, hosts: [_maya], settings: _Unreadable());
+      await _tap(tester, 'rail-settings');
+      expect(find.byKey(const ValueKey('settings-nav-models')), findsOneWidget);
+      expect(find.textContaining('Default '), findsNothing);
+      expect(find.textContaining('Main chat uses'), findsNothing);
+      expect(find.textContaining(' running'), findsNothing);
+      expect(find.textContaining(RegExp(r'^\d+ of \d+ on$')), findsNothing);
+      expect(find.textContaining('rror'), findsNothing);
+    });
+
+    testWidgets('Main chat uses is a full-width select', (tester) async {
+      await _open(tester, hosts: [_maya], settings: sampleToolSettings());
+      await _tap(tester, 'rail-settings');
+      await _tap(tester, 'settings-nav-tools');
+      final field = tester.getRect(
+        find.byKey(const ValueKey('main-toolset-field')),
+      );
+      expect(field.width, greaterThan(375 - 48));
+      await _tap(tester, 'main-toolset-field');
+      expect(find.byKey(const ValueKey('option-all')), findsOneWidget);
+    });
+
     testWidgets('Remote access is the device and its hosts', (tester) async {
       await _open(tester, hosts: [_maya], failOpen: true);
       await _tap(tester, 'phone-settings');
@@ -237,4 +298,18 @@ void main() {
       expect(find.byKey(const ValueKey('add-host-link')), findsOneWidget);
     });
   });
+}
+
+/// A host whose settings cannot be read.
+class _Unreadable extends FakeHostSettings {
+  @override
+  Future<List<HostSetting>> get([String? key]) async =>
+      throw const HostSettingsException('no');
+
+  @override
+  Future<HostSkills> skills() async => throw const HostSettingsException('no');
+
+  @override
+  Future<List<McpServerStatus>> mcpServers() async =>
+      throw const HostSettingsException('no');
 }

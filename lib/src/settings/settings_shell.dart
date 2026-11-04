@@ -8,6 +8,7 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/foundation.dart' show LicenseEntry;
 import 'package:flutter/widgets.dart';
 
+import '../core/host_settings.dart';
 import '../feedback/feedback_controller.dart';
 import '../feedback/glyphs.dart';
 import '../host_controller.dart';
@@ -19,6 +20,7 @@ import 'feedback_page.dart';
 import 'general_page.dart';
 import 'licences_page.dart';
 import 'mcp_page.dart';
+import 'mcp_servers.dart' show McpPhase, mcpPhase;
 import 'models_page.dart';
 import 'remote_glyphs.dart';
 import 'remote_page.dart';
@@ -26,6 +28,7 @@ import 'settings_section.dart';
 import 'settings_widgets.dart';
 import 'skills_page.dart';
 import 'tools_page.dart';
+import 'toolsets.dart' show ToolsConfig;
 
 class SettingsShell extends StatefulWidget {
   const SettingsShell({
@@ -70,6 +73,72 @@ class _SettingsShellState extends State<SettingsShell> {
   void initState() {
     super.initState();
     widget.feedback.addListener(_feedbackChanged);
+    if (widget.phone) {
+      _loadLive();
+      widget.controller.addListener(_hostChanged);
+    }
+  }
+
+  void _hostChanged() {
+    if (mounted) _loadLive();
+  }
+
+  // The phone's list rows for Models, Tools, MCP and Skills, read from the
+  // host when the list opens. Null while loading or when a read failed.
+  final Map<SettingsSection, String?> _live = {};
+  HostSettings? _liveFor;
+  int _liveTicket = 0;
+
+  Future<void> _loadLive({bool force = false}) async {
+    final settings = widget.controller.phase == HostPhase.running
+        ? widget.controller.settings
+        : null;
+    final same = identical(settings, _liveFor);
+    if (same && _live.isNotEmpty && !force) return;
+    _liveFor = settings;
+    final ticket = ++_liveTicket;
+    if (!same) _live.clear();
+    if (settings == null) return;
+    Future<void> read(
+      SettingsSection section,
+      Future<String?> Function() load,
+    ) async {
+      String? text;
+      try {
+        text = await load();
+      } catch (_) {
+        text = null;
+      }
+      if (!mounted || ticket != _liveTicket) return;
+      setState(() => _live[section] = text);
+    }
+
+    await Future.wait([
+      read(SettingsSection.models, () async {
+        final entries = {for (final e in await settings.get('model')) e.key: e};
+        final main = entries['model.main']?.value;
+        return main is String && main.isNotEmpty ? 'Default $main' : null;
+      }),
+      read(SettingsSection.tools, () async {
+        final config = ToolsConfig.parse(await settings.get('agent.toolset'));
+        return 'Main chat uses ${config.main}';
+      }),
+      read(SettingsSection.mcp, () async {
+        final servers = await settings.mcpServers();
+        final running = servers
+            .where((v) => mcpPhase(v) == McpPhase.running)
+            .length;
+        final n = servers.length;
+        return '$n server${n == 1 ? '' : 's'}, $running running';
+      }),
+      read(SettingsSection.skills, () async {
+        final found = await settings.skills();
+        final all = found.skills;
+        if (all.isEmpty) return 'None found';
+        final on = all.where((v) => v.enabled).length;
+        return '$on of ${all.length} on';
+      }),
+    ]);
   }
 
   void _feedbackChanged() {
@@ -79,12 +148,15 @@ class _SettingsShellState extends State<SettingsShell> {
   @override
   void dispose() {
     widget.feedback.removeListener(_feedbackChanged);
+    widget.controller.removeListener(_hostChanged);
     super.dispose();
   }
 
   void _select(SettingsSection? section) => setState(() {
     _section = section;
     _licences = false;
+    // Back on the list, the rows read what the pages may have changed.
+    if (widget.phone && section == null) _loadLive(force: true);
   });
 
   List<SettingsSection> get _sections => [
@@ -103,12 +175,16 @@ class _SettingsShellState extends State<SettingsShell> {
     return '$n host${n == 1 ? '' : 's'}, $online online';
   }
 
-  String _summary(SettingsSection section) => switch (section) {
+  String? _summary(SettingsSection section) => switch (section) {
     SettingsSection.general => themeSummary(widget.controller.prefs.theme),
-    SettingsSection.models => 'Default model and providers',
-    SettingsSection.tools => 'Toolsets and approvals',
-    SettingsSection.mcp => 'Servers and sign-in',
-    SettingsSection.skills => 'Discovered skills',
+    SettingsSection.models =>
+      widget.phone ? _live[section] : 'Default model and providers',
+    SettingsSection.tools =>
+      widget.phone ? _live[section] : 'Toolsets and approvals',
+    SettingsSection.mcp =>
+      widget.phone ? _live[section] : 'Servers and sign-in',
+    SettingsSection.skills =>
+      widget.phone ? _live[section] : 'Discovered skills',
     SettingsSection.remote =>
       widget.phone ? _hostsSummary() : 'Share this host and pair devices',
     SettingsSection.feedback => switch (widget.feedback.reports.length) {
@@ -398,7 +474,9 @@ class _ListRow extends StatelessWidget {
   });
 
   final String title;
-  final String summary;
+
+  /// Null or empty draws the row without a summary line.
+  final String? summary;
   final LucideGlyph glyph;
   final VoidCallback onTap;
 
@@ -407,7 +485,7 @@ class _ListRow extends StatelessWidget {
     final theme = context.bb;
     return Semantics(
       button: true,
-      label: '$title. $summary',
+      label: summary == null || summary!.isEmpty ? title : '$title. $summary',
       excludeSemantics: true,
       child: Hover(
         onTap: onTap,
@@ -425,10 +503,11 @@ class _ListRow extends StatelessWidget {
                     title,
                     style: ts(theme.typeScale.body, theme.ink, weight: 600),
                   ),
-                  Text(
-                    summary,
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
-                  ),
+                  if (summary != null && summary!.isNotEmpty)
+                    Text(
+                      summary!,
+                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                    ),
                 ],
               ),
             ),
