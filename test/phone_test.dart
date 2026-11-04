@@ -208,7 +208,7 @@ void main() {
         mcpList: sampleMcpServers,
       );
       await _open(tester, hosts: [_maya], settings: settings);
-      await _tap(tester, 'phone-settings');
+      await _tap(tester, 'rail-settings');
       expect(find.text('Default demo/scripted'), findsOneWidget);
       expect(find.textContaining('Main chat uses '), findsOneWidget);
       expect(
@@ -222,7 +222,7 @@ void main() {
       tester,
     ) async {
       await _open(tester, hosts: [_maya], settings: _Unreadable());
-      await _tap(tester, 'phone-settings');
+      await _tap(tester, 'rail-settings');
       expect(find.byKey(const ValueKey('settings-nav-models')), findsOneWidget);
       expect(find.textContaining('Default '), findsNothing);
       expect(find.textContaining('Main chat uses'), findsNothing);
@@ -233,7 +233,7 @@ void main() {
 
     testWidgets('Main chat uses is a full-width select', (tester) async {
       await _open(tester, hosts: [_maya], settings: sampleToolSettings());
-      await _tap(tester, 'phone-settings');
+      await _tap(tester, 'rail-settings');
       await _tap(tester, 'settings-nav-tools');
       final field = tester.getRect(
         find.byKey(const ValueKey('main-toolset-field')),
