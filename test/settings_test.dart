@@ -245,6 +245,21 @@ void main() {
       await pumpApp(tester, _controller(version: '0.4.0'));
       await _open(tester, 'about');
       expect(find.byKey(const ValueKey('version-Core')), findsOneWidget);
+      // Under Updates the Core row says it ships with the app.
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('update-core')),
+          matching: find.text('Core 0.4.0'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('update-core')),
+          matching: find.text('Bundled with BubblePaw. It updates with the app.'),
+        ),
+        findsOneWidget,
+      );
       expect(find.byKey(const ValueKey('about-core')), findsNothing);
       expect(find.byKey(const ValueKey('about-core-download')), findsNothing);
       expect(find.byKey(const ValueKey('about-core-update')), findsNothing);
@@ -272,7 +287,7 @@ void main() {
       );
     });
 
-    testWidgets('Check now offers a newer version and Review opens it', (
+    testWidgets('Check for updates offers a newer version and Review opens it', (
       tester,
     ) async {
       final rig = _updateRig();
@@ -280,11 +295,12 @@ void main() {
       rig.publish('0.2.0');
       await pumpApp(tester, _controller(updates: rig.updates));
       await _open(tester, 'about');
-      expect(find.byKey(const ValueKey('update-state')), findsNothing);
+      expect(find.text('Latest version not checked.'), findsOneWidget);
+      expect(find.text('Check for updates'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('update-check')));
       await settle(tester);
-      expect(_text(tester, 'update-state'), '0.2.0 available');
+      expect(find.text('Latest version 0.2.0.'), findsOneWidget);
       expect(find.byKey(const ValueKey('update-dialog')), findsNothing);
 
       await tester.tap(find.byKey(const ValueKey('update-review')));
@@ -301,7 +317,7 @@ void main() {
       await _open(tester, 'about');
       await tester.tap(find.byKey(const ValueKey('update-check')));
       await settle(tester);
-      expect(_text(tester, 'update-state'), 'Up to date');
+      expect(find.text('Up to date.'), findsOneWidget);
     });
 
     testWidgets('an offline check says what failed', (tester) async {
@@ -317,6 +333,43 @@ void main() {
       await settle(tester);
       expect(
         find.textContaining('Could not check. This computer is offline.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the status line follows the check and the download', (
+      tester,
+    ) async {
+      final rig = _updateRig();
+      addTearDown(rig.dispose);
+      final manifest = UpdateManifest(
+        channel: UpdateChannel.stable,
+        version: SemVer(0, 2, 0),
+        publishedAt: null,
+        notesUrl: null,
+        assets: const {},
+      );
+      await pumpApp(tester, _controller(updates: rig.updates));
+      await _open(tester, 'about');
+
+      rig.updates.debugShow(const UpdateChecking(), dialog: false);
+      await settle(tester);
+      expect(find.text('Checking GitHub releases…'), findsOneWidget);
+
+      rig.updates.debugShow(
+        UpdateDownloading(manifest, 21, 42),
+        dialog: false,
+      );
+      await settle(tester);
+      expect(find.text('Downloading 0.2.0, 50%.'), findsOneWidget);
+
+      rig.updates.debugShow(UpdateFailed(
+        manifest,
+        const FetchException(FetchFailure.interrupted, 'reset'),
+      ), dialog: false);
+      await settle(tester);
+      expect(
+        find.text('Latest version 0.2.0. The download failed.'),
         findsOneWidget,
       );
     });
@@ -337,12 +390,20 @@ void main() {
       expect(find.byKey(const ValueKey('nightly-notice')), findsOneWidget);
     });
 
-    testWidgets('Check automatically is on and can be switched off', (
+    testWidgets('Check for updates automatically is on and can be switched off', (
       tester,
     ) async {
       final store = MemoryConfigStore(sampleConfig);
       await pumpApp(tester, _controller(store: store));
       await _open(tester, 'about');
+      expect(find.text('Check for updates automatically'), findsOneWidget);
+      expect(
+        find.text(
+          'Looks at GitHub releases when BubblePaw starts, at most once a '
+          'day.',
+        ),
+        findsOneWidget,
+      );
       expect(store.prefs.checkUpdates, isTrue);
       await tester.tap(find.byKey(const ValueKey('toggle-auto-update')));
       await settle(tester);
