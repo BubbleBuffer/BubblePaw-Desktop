@@ -996,7 +996,7 @@ class _FullWidthSelectState extends State<_FullWidthSelect> {
             key: const ValueKey('main-toolset-field'),
             onTap: enabled ? () => setState(() => _open = !_open) : null,
             borderRadius: BorderRadius.circular(8),
-            padding: const EdgeInsets.zero,
+            padding: EdgeInsets.zero,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 border: border,
