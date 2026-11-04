@@ -477,6 +477,15 @@ void main() {
       ),
       after: (tester) => openSettings(tester, 'general'),
     ),
+    // General with every startup switch off: login, start in the tray and
+    // keep running in the tray each say what they do.
+    'settings_general_off': (
+      controller: () => HostController(
+        store: MemoryConfigStore(sampleConfig),
+        starter: Played().start,
+      ),
+      after: (tester) => openSettings(tester, 'general'),
+    ),
     // About with a newer BubblePaw on the Stable channel.
     'settings_about_update': updateScene(
       phase: UpdateAvailable(sampleManifest()),

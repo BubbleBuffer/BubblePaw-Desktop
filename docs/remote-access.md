@@ -5,6 +5,8 @@ lists the hosts this device can open, and holds the device key. The rail menu
 switches between this computer and those hosts. Core `v0.12.0` does the work; the app is a thin page
 over it.
 
+The Share tab's status block always shows a danger-toned `Stopped` pill when the tunnel or relay is not up. Under it, one line says why: `Sharing is off.` when the switch is off, the missing cloudflared, Cloudflare sign-in or hostname, or the failure text. A failure after the share started is Core's own `ShareState.lastError`, or the controller's fixed words when a start call failed; Core gives no exit code or retry period, so the page does not state them.
+
 ## Where the code is
 
 | Part | File |
