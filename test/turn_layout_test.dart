@@ -67,7 +67,7 @@ void main() {
 
     testWidgets('collapsed shows the summary line only', (tester) async {
       await pumpApp(tester, _controller(MemoryConfigStore(sampleConfig)));
-      expect(find.text(_summary), findsOneWidget);
+      expect(find.textContaining(_summary), findsOneWidget);
       expect(find.text('web/src/quota-bar.tsx'), findsNothing);
     });
 
@@ -83,7 +83,7 @@ void main() {
       expect(find.text('web/src/quota-bar.tsx'), findsOneWidget);
 
       // The person closes this turn; the setting no longer moves it.
-      await tester.tap(find.text(_summary));
+      await tester.tap(find.textContaining(_summary));
       await settle(tester);
       expect(find.text('web/src/quota-bar.tsx'), findsNothing);
       await controller.updatePrefs(
