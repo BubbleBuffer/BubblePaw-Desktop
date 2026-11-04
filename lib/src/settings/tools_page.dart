@@ -402,14 +402,15 @@ class _ToolsPageState extends State<ToolsPage> {
             onTap: _busy ? () {} : _newToolset,
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 6),
-          child: Text(
-            'The parent agent picks a toolset when it starts a subagent.',
-            key: const ValueKey('toolsets-hint'),
-            style: ts(theme.typeScale.uiSmall, theme.muted),
+        if (widget.onBack != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 6),
+            child: Text(
+              'The parent agent picks a toolset when it starts a subagent.',
+              key: const ValueKey('toolsets-hint'),
+              style: ts(theme.typeScale.uiSmall, theme.muted),
+            ),
           ),
-        ),
         for (final name in _setNames)
           _ToolsetRow(
             key: ValueKey('toolset-$name'),
