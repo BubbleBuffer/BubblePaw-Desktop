@@ -70,7 +70,8 @@ previous nightly.
 
 Moving to a new Core means changing the `tag` in `native/Cargo.toml` and `CORE_VERSION`
 together, regenerating nothing unless the API changed, and releasing the app. Settings >
-About shows the embedded version.
+About shows the embedded version, and its Updates section has a Core row, "Bundled with
+BubblePaw. It updates with the app.", because Core has no update of its own.
 
 ## App updates
 
@@ -89,6 +90,12 @@ are injected (`HttpFetcher`, a download folder, `UpdateInstaller`).
   check is over 24 hours old; it opens the dialog for a new version and stays quiet
   about a skipped one. Check now always shows what it finds. Switching channel clears
   the skip and the offer; it never downgrades.
+- **About.** The Updates section reads, in the mockups' wording: the automatic-check
+  switch ("Check for updates automatically"), the BubblePaw row with its status line
+  (`Latest version not checked.`, `Checking GitHub releases…`, `Latest version X.`,
+  `Downloading X, N%.`, `X is ready to install.` or `X is downloaded.` on Linux,
+  `Up to date.`, `Could not check. ...`) and the Check for updates button (Review update
+  appears beside it while a build is offered), the channel, the Core row and Last checked.
 - **Download.** Verified against the manifest's SHA256. A mismatch
   deletes the file and the dialog shows the expected and received hashes with Retry.
 - **Install.** Windows: "Install and restart" runs the Inno installer with `/VERYSILENT
