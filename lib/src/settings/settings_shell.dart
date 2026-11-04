@@ -187,6 +187,7 @@ class _SettingsShellState extends State<SettingsShell> {
                 onViewFeedback: () => _select(SettingsSection.feedback),
                 onLicences: () => setState(() => _licences = true),
                 onBack: onBack,
+                phone: widget.phone,
               ),
     };
   }

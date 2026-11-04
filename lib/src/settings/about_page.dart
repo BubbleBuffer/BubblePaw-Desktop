@@ -43,6 +43,7 @@ class AboutPage extends StatefulWidget {
     required this.onLicences,
     this.onBack,
     this.now,
+    this.phone = false,
   });
 
   final HostController controller;
@@ -52,6 +53,10 @@ class AboutPage extends StatefulWidget {
   final VoidCallback onViewFeedback;
   final VoidCallback onLicences;
   final VoidCallback? onBack;
+
+  /// The phone has no updater, no Core of its own and no Feedback page: it
+  /// shows the versions and the licences.
+  final bool phone;
 
   /// The clock "Last checked" is read against; the wall clock when null.
   final DateTime Function()? now;
@@ -80,8 +85,38 @@ class _AboutPageState extends State<AboutPage> {
     if (mounted) setState(() {});
   }
 
+  Widget _phonePage(BuildContext context) {
+    final theme = context.bb;
+    return SettingsPage(
+      title: 'About',
+      onBack: widget.onBack,
+      backKey: const ValueKey('settings-page-back'),
+      children: [
+        const SettingsHeading('Versions'),
+        GroupCard(
+          children: [
+            _Version('Agent kit', kitVersion),
+            _Version('Protocol', BubblePawBackend.protocolVersion),
+          ],
+        ),
+        const SettingsHeading('Licences', top: 24),
+        SettingsRow(
+          label: 'Open source licences',
+          description: 'Packages, crates, fonts and icons bundled with this app.',
+          trailing: OutlineButton(
+            key: const ValueKey('about-licences'),
+            label: 'View',
+            icon: Icon20(Ico.chevronRight, size: 16, color: theme.ink),
+            onTap: widget.onLicences,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.phone) return _phonePage(context);
     final theme = context.bb;
     final prefs = _host.prefs;
     final phase = _updates.phase;
