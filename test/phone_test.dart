@@ -226,7 +226,7 @@ void main() {
       expect(find.byKey(const ValueKey('settings-nav-models')), findsOneWidget);
       expect(find.textContaining('Default '), findsNothing);
       expect(find.textContaining('Main chat uses'), findsNothing);
-      expect(find.textContaining('servers'), findsNothing);
+      expect(find.textContaining(' running'), findsNothing);
       expect(find.textContaining(' on'), findsNothing);
       expect(find.textContaining('rror'), findsNothing);
     });
