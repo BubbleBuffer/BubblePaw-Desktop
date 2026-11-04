@@ -19,7 +19,7 @@ On start the phone opens the saved host it connected to last (`HostController._o
 
 ## Settings
 
-General (theme only), Models, Tools, MCP servers and Skills (each against the open host through the host API), Remote access and About. Remote access shows this device (name, ID, fingerprint, Manage key) and the hosts you can open; the Share tab is not there (`RemotePage(phone: true)`). The list rows of Models, Tools, MCP servers and Skills are read from the host when the list opens ("Default <model>", "Main chat uses <toolset>", "N servers, M running", "K of N on"); while that loads or if it fails the row has no summary line. General has the theme only: the mockup's Turn layout row is left out because the app has no such setting (`settings_test.dart` asserts it). "Main chat uses" on the Tools page is a full-width select on the phone.
+General (theme and turn layout), Models, Tools, MCP servers and Skills (each against the open host through the host API), Remote access and About. Remote access shows this device (name, ID, fingerprint, Manage key) and the hosts you can open; the Share tab is not there (`RemotePage(phone: true)`). The list rows of Models, Tools, MCP servers and Skills are read from the host when the list opens ("Default <model>", "Main chat uses <toolset>", "N servers, M running", "K of N on"); while that loads or if it fails the row has no summary line. General has the theme and the Turn layout (Collapsed or Open, a preference of this device, not sent to the host); it has no startup, tray or data directory. "Main chat uses" on the Tools page is a full-width select on the phone.
 
 ## Adding a host
 

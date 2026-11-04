@@ -21,7 +21,7 @@ Version 0.1. The wiki is in [`docs/`](docs/README.md).
 
 - **Chat with a BubblePaw agent.** Chats run in the agent kit's workbench: the session list, the transcript, the composer, approvals, and a diff review for edits.
 - **A host inside the app.** Core is linked into the app as a Rust library (`native/`, on `bubblepaw-sdk`) and reached through flutter_rust_bridge. If a BubblePaw host is already running on the same data directory, the app attaches to it; otherwise it embeds one. Switching workspace starts a new host. A failed or stopped host shows a notice with Restart and Settings.
-- **Settings.** General (theme, start at login, tray), Models (the host's providers and default model, and which paired computer carries a provider's model traffic; keys are never shown), Tools (toolsets and approvals), Skills (what the host found, with a switch each), About (versions, updates and licences), and Feedback.
+- **Settings.** General (theme, turn layout, start at login, tray), Models (the host's providers and default model, and which paired computer carries a provider's model traffic; keys are never shown), Tools (toolsets and approvals), Skills (what the host found, with a switch each), About (versions, updates and licences), and Feedback.
 - **Local feedback.** Ctrl+Shift+F opens a sheet that saves a report, a screenshot and redacted diagnostics in a folder on this computer. Nothing is sent anywhere.
 - **Tray and background.** A tray menu with Open BubblePaw, the host's status, the number of chats waiting for you, Restart host and Quit. With "Keep running in the tray" on, closing the window hides it.
 - **App updates.** The Stable and Nightly channels read `update.json` manifests from GitHub Releases, and each download is checked against its SHA-256. Windows updates run the Inno installer. On Linux the app shows where the tarball is.
@@ -42,7 +42,7 @@ flowchart LR
 | `bubblepaw_desktop_native` | [`native/`](native) | Rust crate on `bubblepaw-sdk` (Core `v0.12.0`): open, call, notifications and close, as JSON-RPC text. [`rust_builder/`](rust_builder) is the Cargokit glue that builds it with the app |
 | `agent_kit_core` | [`packages/agent_kit_core`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit_core) | Pure Dart agent UI core: view models, the `AgentBackend` port, the event reducer and a scripted fake backend |
 | `agent_kit_bubblepaw` | [`packages/agent_kit_bubblepaw`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit_bubblepaw) | Pure Dart BubblePaw stdio JSON-RPC backend for the agent kit |
-| `bb_ui` | [`packages/bb_ui`](https://github.com/BubbleBuffer/bb-ui/tree/v0.6.0/packages/bb_ui) | BubbleBuffer UI primitives for Flutter without Material |
+| `bb_ui` | [`packages/bb_ui`](https://github.com/BubbleBuffer/bb-ui/tree/v0.7.2/packages/bb_ui) | BubbleBuffer UI primitives for Flutter without Material |
 
 ## Build
 

@@ -438,10 +438,10 @@ class _AddHostDialogState extends State<AddHostDialog> {
         const SizedBox(height: 12),
         GroupCard(
           children: [
-            KeyValueRow('Host', host.label, mono: false),
-            KeyValueRow('Address type', viaName(host.via), mono: false),
+            SettingsKeyValueRow('Host', host.label, mono: false),
+            SettingsKeyValueRow('Address type', viaName(host.via), mono: false),
             if (host.profile.isNotEmpty)
-              KeyValueRow(
+              SettingsKeyValueRow(
                 'Your permissions',
                 profileName(host.profile),
                 mono: false,

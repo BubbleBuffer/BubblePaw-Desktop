@@ -60,6 +60,49 @@ ChatScript finishedScript() => ChatScript(
   ],
 );
 
+/// A finished chat whose turn has one tool call with arguments and output, for
+/// the steps of a finished turn.
+ChatScript toolTurnScript() => ChatScript(
+  chatId: 'tool-chat',
+  title: 'Find the quota label',
+  steps: [
+    const ScriptStep(Duration.zero, {
+      'kind': 'message.user',
+      'itemId': 'u1',
+      'text': 'Where is the quota label set?',
+    }),
+    const ScriptStep(Duration.zero, {
+      'kind': 'run.started',
+      'runId': 'run-tool-1',
+    }),
+    const ScriptStep(Duration.zero, {
+      'kind': 'tool.started',
+      'callId': 'c1',
+      'name': 'read',
+      'toolKind': 'read',
+      'target': 'web/src/quota-bar.tsx',
+      'arguments': '{"path":"web/src/quota-bar.tsx","limit":40}',
+      'runId': 'run-tool-1',
+    }),
+    const ScriptStep(Duration.zero, {
+      'kind': 'tool.finished',
+      'callId': 'c1',
+      'meta': '40 lines',
+    }),
+    const ScriptStep(Duration(seconds: 1), {
+      'kind': 'message.assistant',
+      'itemId': 'a1',
+      'markdown': 'It is set in the quota bar.',
+      'runId': 'run-tool-1',
+    }),
+    const ScriptStep(Duration.zero, {
+      'kind': 'run.finished',
+      'runId': 'run-tool-1',
+      'outcome': 'completed',
+    }),
+  ],
+);
+
 /// A chat with a plan in progress, for the checklist.
 ChatScript planScript() => ChatScript(
   chatId: 'plan-chat',

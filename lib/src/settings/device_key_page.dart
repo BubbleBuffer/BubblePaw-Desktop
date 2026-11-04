@@ -63,7 +63,7 @@ class DeviceKeyPage extends StatelessWidget {
         const SettingsHeading('Current key'),
         GroupCard(
           children: [
-            KeyValueRow(
+            SettingsKeyValueRow(
               'Device ID',
               key?.id ?? '',
               valueKey: const ValueKey('key-id'),
@@ -75,7 +75,7 @@ class DeviceKeyPage extends StatelessWidget {
                 onTap: () => unawaited(services.copy(key?.id ?? '')),
               ),
             ),
-            KeyValueRow(
+            SettingsKeyValueRow(
               'Fingerprint',
               _spaced(key?.fingerprint ?? ''),
               valueKey: const ValueKey('key-fingerprint'),
