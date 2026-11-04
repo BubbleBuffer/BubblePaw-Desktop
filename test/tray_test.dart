@@ -468,6 +468,9 @@ void main() {
       await r.start();
       final first = r.host.remote;
       r.tray.choose(TrayItem.restart);
+      for (var i = 0; i < 40 && accesses.length < 2; i++) {
+        await _pump();
+      }
       await _pump();
       expect(accesses, hasLength(2));
       expect(r.host.remote, isNot(same(first)));
