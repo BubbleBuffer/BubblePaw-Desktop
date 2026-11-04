@@ -102,7 +102,8 @@ class _AboutPageState extends State<AboutPage> {
         const SettingsHeading('Licences', top: 24),
         SettingsRow(
           label: 'Open source licences',
-          description: 'Packages, crates, fonts and icons bundled with this app.',
+          description:
+              'Packages, crates, fonts and icons bundled with this app.',
           trailing: OutlineButton(
             key: const ValueKey('about-licences'),
             label: 'View',

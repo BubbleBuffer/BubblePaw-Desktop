@@ -40,54 +40,72 @@ HostController _controller(
   FakeHostLinks links,
   bool failOpen,
   HostSettings? settings,
-) =>
-    Played(hostLinks: links).controller(
-      localHost: false,
-      phoneAccess: (_) => FakeRemoteAccess(),
-      remoteStarter: (links, id) async {
-        if (failOpen) {
-          throw const HostLinkError(
-            kind: HostLinkErrorKind.unreachable,
-            message: 'unreachable',
-          );
-        }
-        final fixture = RemoteFixture();
-        if (settings == null) return fixture.start(links, id);
-        return StartedBackend(
-          RemoteBackend(fixture.backend, fixture.rows, rawRequest: fixture.raw),
-          () async {},
-          now: remoteClock,
-          attached: true,
-          remoteRows: fixture.rows,
-          settings: settings,
-        );
-      },
+) => Played(hostLinks: links).controller(
+  localHost: false,
+  phoneAccess: (_) => FakeRemoteAccess(),
+  remoteStarter: (links, id) async {
+    if (failOpen) {
+      throw const HostLinkError(
+        kind: HostLinkErrorKind.unreachable,
+        message: 'unreachable',
+      );
+    }
+    final fixture = RemoteFixture();
+    if (settings == null) return fixture.start(links, id);
+    return StartedBackend(
+      RemoteBackend(fixture.backend, fixture.rows, rawRequest: fixture.raw),
+      () async {},
+      now: remoteClock,
+      attached: true,
+      remoteRows: fixture.rows,
+      settings: settings,
     );
+  },
+);
 
 void main() {
   final maya = fakeSavedHost(lastConnected: 1700000100);
   final scenes = <String, _Scene>{
-    'phone-no-host': (hosts: const [], failOpen: false, settings: null, after: null),
-    'phone-chats': (hosts: [maya], failOpen: false, settings: null, after: null),
+    'phone-no-host': (
+      hosts: const [],
+      failOpen: false,
+      settings: null,
+      after: null,
+    ),
+    'phone-chats': (
+      hosts: [maya],
+      failOpen: false,
+      settings: null,
+      after: null,
+    ),
     'phone-chat-open': (
       hosts: [maya],
-      failOpen: false, settings: null,
+      failOpen: false,
+      settings: null,
       after: (tester, _) => _tap(tester, 'needs-row-c1'),
     ),
-    'phone-open-failed': (hosts: [maya], failOpen: true, settings: null, after: null),
+    'phone-open-failed': (
+      hosts: [maya],
+      failOpen: true,
+      settings: null,
+      after: null,
+    ),
     'phone-host-menu': (
       hosts: [maya],
-      failOpen: true, settings: null,
+      failOpen: true,
+      settings: null,
       after: (tester, _) => _tap(tester, 'phone-host-button'),
     ),
     'phone-settings': (
       hosts: [maya],
-      failOpen: false, settings: null,
+      failOpen: false,
+      settings: null,
       after: (tester, _) => _tap(tester, 'rail-settings'),
     ),
     'phone-remote-access': (
       hosts: [maya],
-      failOpen: true, settings: null,
+      failOpen: true,
+      settings: null,
       after: (tester, _) async {
         await _tap(tester, 'phone-settings');
         await _tap(tester, 'settings-nav-remote');
@@ -95,7 +113,8 @@ void main() {
     ),
     'phone-add-host': (
       hosts: const [],
-      failOpen: false, settings: null,
+      failOpen: false,
+      settings: null,
       after: (tester, _) async {
         await _tap(tester, 'phone-settings');
         await _tap(tester, 'settings-nav-remote');
@@ -104,7 +123,8 @@ void main() {
     ),
     'phone-add-host-compare': (
       hosts: const [],
-      failOpen: false, settings: null,
+      failOpen: false,
+      settings: null,
       after: (tester, _) async {
         await _tap(tester, 'phone-settings');
         await _tap(tester, 'settings-nav-remote');
@@ -138,7 +158,11 @@ void main() {
       final name = '${scene.key}_${theme.key}';
       testWidgets(name, (tester) async {
         final links = FakeHostLinks(hosts: scene.value.hosts);
-        final controller = _controller(links, scene.value.failOpen, scene.value.settings);
+        final controller = _controller(
+          links,
+          scene.value.failOpen,
+          scene.value.settings,
+        );
         addTearDown(controller.close);
         await pumpApp(
           tester,

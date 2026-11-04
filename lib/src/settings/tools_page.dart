@@ -402,6 +402,14 @@ class _ToolsPageState extends State<ToolsPage> {
             onTap: _busy ? () {} : _newToolset,
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 6),
+          child: Text(
+            'The parent agent picks a toolset when it starts a subagent.',
+            key: const ValueKey('toolsets-hint'),
+            style: ts(theme.typeScale.uiSmall, theme.muted),
+          ),
+        ),
         for (final name in _setNames)
           _ToolsetRow(
             key: ValueKey('toolset-$name'),
@@ -728,7 +736,7 @@ class _ToolsetRow extends StatelessWidget {
               ),
             ),
             if (builtin) ...[
-              const StatePill('Built-in'),
+              const _BuiltInTag(),
               const SizedBox(width: 8),
             ],
             glyphIcon(_glyphChevronRight, size: 18, color: theme.muted),
@@ -915,6 +923,29 @@ class _ApprovalChoice extends StatelessWidget {
           value: value,
           labelOf: (m) => '${m![0].toUpperCase()}${m.substring(1)}',
           onChanged: (m) => onChanged?.call(m!),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Built-in": the small mono tag on a toolset the app ships.
+class _BuiltInTag extends StatelessWidget {
+  const _BuiltInTag();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.bb;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.surface2,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        child: Text(
+          'Built-in',
+          style: ts(theme.typeScale.uiSmall, theme.muted, mono: true),
         ),
       ),
     );

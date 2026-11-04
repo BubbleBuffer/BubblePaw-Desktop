@@ -126,7 +126,9 @@ void main() {
 
     testWidgets('a long open error wraps inside the screen', (tester) async {
       await _open(tester, hosts: [_maya], failOpen: true);
-      final box = tester.getRect(find.byKey(const ValueKey('host-open-notice')));
+      final box = tester.getRect(
+        find.byKey(const ValueKey('host-open-notice')),
+      );
       expect(box.left, greaterThanOrEqualTo(0));
       expect(box.right, lessThanOrEqualTo(phone.width));
     });
