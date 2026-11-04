@@ -1,5 +1,5 @@
 // The dialogs of Remote access: Pair a device (permissions, code, number to
-// compare, done) and Revoke. Each is a modal panel over Settings.
+// compare and device name, done) and Revoke. Each is a modal panel over Settings.
 
 import 'dart:async';
 
@@ -15,6 +15,7 @@ import '../remote/remote_controller.dart';
 import 'action_widgets.dart';
 import 'remote_glyphs.dart';
 import 'settings_widgets.dart';
+import 'text_box.dart';
 
 /// The frame every Remote access dialog shares: a title with an optional
 /// step line, the body and a footer row of actions.
@@ -298,6 +299,8 @@ class PairDialog extends StatelessWidget {
           'You can revoke the device later in Share this host.',
           style: ts(theme.typeScale.uiSmall, theme.muted),
         ),
+        const SizedBox(height: 16),
+        _DeviceNameField(flow: flow),
         if (flow.error != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -494,11 +497,16 @@ class PairDialog extends StatelessWidget {
             await navigator.maybePop();
           },
         ),
-        ActionButton(
-          key: const ValueKey('pair-match'),
-          label: 'They match',
-          kind: ActionKind.primary,
-          onTap: flow.busy ? () {} : () => unawaited(flow.approve()),
+        Opacity(
+          opacity: flow.canApprove ? 1 : .5,
+          child: ActionButton(
+            key: const ValueKey('pair-match'),
+            label: 'They match',
+            kind: ActionKind.primary,
+            onTap: flow.busy || !flow.canApprove
+                ? () {}
+                : () => unawaited(flow.approve()),
+          ),
         ),
       ]),
     );
@@ -539,6 +547,41 @@ class PairDialog extends StatelessWidget {
       ]),
     );
   }
+}
+
+/// The "Device name" field of the number step: starts as the name the device
+/// announced and keeps what the person types in the flow.
+class _DeviceNameField extends StatefulWidget {
+  const _DeviceNameField({required this.flow});
+
+  final PairingFlow flow;
+
+  @override
+  State<_DeviceNameField> createState() => _DeviceNameFieldState();
+}
+
+class _DeviceNameFieldState extends State<_DeviceNameField> {
+  late final _controller = TextEditingController(
+    text: widget.flow.deviceName,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => LabeledField(
+    label: 'Device name',
+    bottom: 0,
+    child: TextBox(
+      controller: _controller,
+      fieldKey: const ValueKey('pair-name'),
+      label: 'Device name',
+      onChanged: widget.flow.setDeviceName,
+    ),
+  );
 }
 
 /// A QR code for [data]: dark modules on a light plate, whatever the theme,

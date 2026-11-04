@@ -2,6 +2,7 @@
 // paired devices and the device key. The page runs against a fake
 // RemoteAccess, so each test reads what the page asked of it.
 
+import 'package:bubblepaw_desktop/src/platform/key_files.dart';
 import 'package:bubblepaw_desktop/src/platform/releases.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
@@ -29,6 +30,8 @@ Future<void> _openRemote(
   FakeHostSettings? settings,
   List<String>? copied,
   List<Uri>? opened,
+  Future<String?> Function(String name)? saveKeyFile,
+  bool? keyFileInDownloads,
 }) async {
   final host = settings ?? FakeHostSettings();
   await pumpApp(
@@ -41,7 +44,8 @@ Future<void> _openRemote(
     services: PlatformServices(
       copy: (text) async => copied?.add(text),
       open: (url) async => opened?.add(url),
-      saveKeyFile: (name) async => '/tmp/$name',
+      saveKeyFile: saveKeyFile ?? (name) async => '/tmp/$name',
+      keyFileInDownloads: keyFileInDownloads,
       pickKeyFile: () async => '/tmp/key.bpkey',
     ),
   );
@@ -274,6 +278,94 @@ void main() {
       await _tap(tester, 'export-save');
       expect(access.exported, 'long enough');
       expect(find.byKey(const ValueKey('export-saved')), findsOneWidget);
+    });
+
+    testWidgets('the number step asks for the device name before adding', (
+      tester,
+    ) async {
+      final access = FakeRemoteAccess();
+      await _openRemote(tester, access);
+      await _tap(tester, 'toggle-share');
+      await _tap(tester, 'remote-pair');
+      await _tap(tester, 'pair-continue');
+      access.offers.last.requests.add(FakeRequest(access, 'edit'));
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await settle(tester);
+      // The field starts as the name the device announced.
+      final field = find.byKey(const ValueKey('pair-name'));
+      expect(field, findsOneWidget);
+      expect(find.text("Maya's phone"), findsOneWidget);
+      // An empty name cannot be added.
+      await _type(tester, 'pair-name', '   ');
+      await _tap(tester, 'pair-match');
+      expect(find.byKey(const ValueKey('pair-added')), findsNothing);
+      expect(access.deviceList, isEmpty);
+      // The chosen name is the one stored and shown.
+      await _type(tester, 'pair-name', 'Kitchen tablet');
+      await _tap(tester, 'pair-match');
+      expect(
+        find.text('Kitchen tablet can now open this computer with the Edit '
+            'profile.'),
+        findsOneWidget,
+      );
+      expect(access.deviceList.single.label, 'Kitchen tablet');
+    });
+
+    testWidgets('the key file is saved to Downloads without a picker', (
+      tester,
+    ) async {
+      final access = FakeRemoteAccess();
+      final asked = <String>[];
+      await _openRemote(
+        tester,
+        access,
+        keyFileInDownloads: true,
+        saveKeyFile: (name) async {
+          asked.add(name);
+          return '/home/maya/Downloads/$name';
+        },
+      );
+      await _tap(tester, 'remote-manage-key');
+      await _tap(tester, 'key-export');
+      await _type(tester, 'export-pass1', 'long enough');
+      await _type(tester, 'export-pass2', 'long enough');
+      await _tap(tester, 'export-save');
+      expect(asked, ['bubblepaw-D3SK-7XQ2.bpkey']);
+      expect(access.calls, contains(
+        'export:/home/maya/Downloads/bubblepaw-D3SK-7XQ2.bpkey',
+      ));
+      expect(find.text('Key file saved'), findsOneWidget);
+      expect(
+        find.text('Saved bubblepaw-D3SK-7XQ2.bpkey to Downloads.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a Downloads folder that cannot be used says so', (
+      tester,
+    ) async {
+      final access = FakeRemoteAccess();
+      await _openRemote(
+        tester,
+        access,
+        keyFileInDownloads: true,
+        saveKeyFile: (name) async => throw const KeyFileException(
+          'Could not find the Downloads folder. The key file was not saved.',
+        ),
+      );
+      await _tap(tester, 'remote-manage-key');
+      await _tap(tester, 'key-export');
+      await _type(tester, 'export-pass1', 'long enough');
+      await _type(tester, 'export-pass2', 'long enough');
+      await _tap(tester, 'export-save');
+      expect(access.exported, isNull);
+      expect(find.byKey(const ValueKey('export-saved')), findsNothing);
+      expect(
+        find.text(
+          'Could not find the Downloads folder. The key file was not saved.',
+        ),
+        findsOneWidget,
+      );
     });
   });
 }
