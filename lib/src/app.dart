@@ -386,7 +386,8 @@ class _AppShellState extends State<AppShell> {
         remoteRows: controller.remoteRows,
         remoteRail: controller.remoteRail,
         remoteName: controller.openHost?.label ?? 'Host',
-        finishedTurnsOpen: controller.prefs.turnLayout == TurnLayoutSetting.open,
+        finishedTurnsOpen:
+            controller.prefs.turnLayout == TurnLayoutSetting.open,
       ),
     };
   }

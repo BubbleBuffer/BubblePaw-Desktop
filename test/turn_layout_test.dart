@@ -31,7 +31,10 @@ void main() {
     });
 
     test('a missing or unknown value is collapsed', () {
-      expect(AppPrefs.fromJson(const {}).turnLayout, TurnLayoutSetting.collapsed);
+      expect(
+        AppPrefs.fromJson(const {}).turnLayout,
+        TurnLayoutSetting.collapsed,
+      );
       expect(
         AppPrefs.fromJson(const {'turnLayout': 'wide'}).turnLayout,
         TurnLayoutSetting.collapsed,
