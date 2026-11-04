@@ -421,17 +421,25 @@ class _ToolsPageState extends State<ToolsPage> {
             onTap: () => _openToolset(name),
           ),
         const SettingsHeading('Main chat uses', top: 24),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: SelectButton<String>(
+        if (widget.onBack != null)
+          _FullWidthSelect(
             key: const ValueKey('main-toolset'),
             value: _setNames.contains(_config.main) ? _config.main : 'all',
             options: _setNames,
-            labelOf: (n) => n,
-            title: 'Main chat uses',
             onChanged: _busy ? null : _chooseMain,
+          )
+        else
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SelectButton<String>(
+              key: const ValueKey('main-toolset'),
+              value: _setNames.contains(_config.main) ? _config.main : 'all',
+              options: _setNames,
+              labelOf: (n) => n,
+              title: 'Main chat uses',
+              onChanged: _busy ? null : _chooseMain,
+            ),
           ),
-        ),
         const SettingsHeading('Approvals', top: 24),
         if (categories.isEmpty)
           Text(
@@ -946,6 +954,105 @@ class _BuiltInTag extends StatelessWidget {
           style: ts(theme.typeScale.uiSmall, theme.muted, mono: true),
         ),
       ),
+    );
+  }
+}
+
+/// The phone's select: a field as wide as the page, with its options listed
+/// under it while it is open (the mockup's full-width select).
+class _FullWidthSelect extends StatefulWidget {
+  const _FullWidthSelect({
+    super.key,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final String value;
+  final List<String> options;
+  final ValueChanged<String>? onChanged;
+
+  @override
+  State<_FullWidthSelect> createState() => _FullWidthSelectState();
+}
+
+class _FullWidthSelectState extends State<_FullWidthSelect> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.bb;
+    final enabled = widget.onChanged != null;
+    final border = Border.all(color: theme.seam);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          button: true,
+          enabled: enabled,
+          label: 'Main chat uses ${widget.value}',
+          excludeSemantics: true,
+          child: Hover(
+            key: const ValueKey('main-toolset-field'),
+            onTap: enabled ? () => setState(() => _open = !_open) : null,
+            borderRadius: BorderRadius.circular(8),
+            padding: const EdgeInsets.zero,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: border,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.value,
+                        style: ts(
+                          theme.typeScale.ui,
+                          enabled ? theme.ink : theme.muted,
+                        ),
+                      ),
+                    ),
+                    glyphIcon(glyphChevronDown, size: 16, color: theme.muted),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (_open)
+          for (final o in widget.options)
+            Hover(
+              key: ValueKey('option-$o'),
+              onTap: () {
+                setState(() => _open = false);
+                if (o != widget.value) widget.onChanged?.call(o);
+              },
+              borderRadius: BorderRadius.circular(6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      o,
+                      style: ts(
+                        theme.typeScale.ui,
+                        theme.ink,
+                        weight: o == widget.value ? 600 : 400,
+                      ),
+                    ),
+                  ),
+                  if (o == widget.value)
+                    glyphIcon(glyphCheck, size: 16, color: theme.ink),
+                ],
+              ),
+            ),
+      ],
     );
   }
 }
