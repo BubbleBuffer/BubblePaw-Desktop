@@ -304,8 +304,10 @@ void main() {
       await _type(tester, 'pair-name', 'Kitchen tablet');
       await _tap(tester, 'pair-match');
       expect(
-        find.text('Kitchen tablet can now open this computer with the Edit '
-            'profile.'),
+        find.text(
+          'Kitchen tablet can now open this computer with the Edit '
+          'profile.',
+        ),
         findsOneWidget,
       );
       expect(access.deviceList.single.label, 'Kitchen tablet');
@@ -331,9 +333,10 @@ void main() {
       await _type(tester, 'export-pass2', 'long enough');
       await _tap(tester, 'export-save');
       expect(asked, ['bubblepaw-D3SK-7XQ2.bpkey']);
-      expect(access.calls, contains(
-        'export:/home/maya/Downloads/bubblepaw-D3SK-7XQ2.bpkey',
-      ));
+      expect(
+        access.calls,
+        contains('export:/home/maya/Downloads/bubblepaw-D3SK-7XQ2.bpkey'),
+      );
       expect(find.text('Key file saved'), findsOneWidget);
       expect(
         find.text('Saved bubblepaw-D3SK-7XQ2.bpkey to Downloads.'),

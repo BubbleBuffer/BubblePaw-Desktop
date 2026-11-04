@@ -21,7 +21,11 @@ XDG_DESKTOP_DIR="\$HOME/Desktop"
 XDG_DOWNLOAD_DIR="\$HOME/Files"
 ''';
       expect(
-        downloadsPath(windows: false, env: {'HOME': '/home/maya'}, userDirs: dirs),
+        downloadsPath(
+          windows: false,
+          env: {'HOME': '/home/maya'},
+          userDirs: dirs,
+        ),
         '/home/maya/Files',
       );
     });

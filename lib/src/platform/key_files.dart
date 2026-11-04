@@ -41,7 +41,11 @@ String? downloadsPath({
     r'^\s*XDG_DOWNLOAD_DIR\s*=\s*"?([^"\r\n]+?)"?\s*$',
     multiLine: true,
   ).firstMatch(userDirs ?? '');
-  final dir = line?.group(1)?.replaceFirst(r'$HOME', home);
+  final dir = line
+      ?.group(1)
+      ?.replaceFirst(r'$HOME', home)
+      .replaceAll(RegExp(r'/+$'), '');
+  // XDG sets the folder to $HOME itself when there is none.
   if (dir == null || dir.isEmpty || dir == home) return '$home/Downloads';
   return dir;
 }

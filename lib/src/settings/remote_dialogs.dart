@@ -299,8 +299,6 @@ class PairDialog extends StatelessWidget {
           'You can revoke the device later in Share this host.',
           style: ts(theme.typeScale.uiSmall, theme.muted),
         ),
-        const SizedBox(height: 16),
-        _DeviceNameField(flow: flow),
         if (flow.error != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -478,6 +476,8 @@ class PairDialog extends StatelessWidget {
           "They don't match; the code is cancelled.",
           style: ts(theme.typeScale.uiSmall, theme.muted),
         ),
+        const SizedBox(height: 16),
+        _DeviceNameField(flow: flow),
         if (flow.error != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -561,9 +561,7 @@ class _DeviceNameField extends StatefulWidget {
 }
 
 class _DeviceNameFieldState extends State<_DeviceNameField> {
-  late final _controller = TextEditingController(
-    text: widget.flow.deviceName,
-  );
+  late final _controller = TextEditingController(text: widget.flow.deviceName);
 
   @override
   void dispose() {
