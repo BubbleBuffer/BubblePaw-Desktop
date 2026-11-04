@@ -116,7 +116,7 @@ cause (a locked store, a bad config).
   - **General**: theme (System, Light, Dark), Turn layout (Collapsed or Open; how the steps of a finished turn start in a chat, default Collapsed), Open at login, Start in the tray (on only
     with Open at login), Keep running in the tray when the window is closed. These are
     app preferences in `preferences.json` (`AppPrefs`), beside `config.json`, and apply
-    at once. No tray on the system: the Keep switch is off and closing quits. Turn
+    at once. Each row's line follows its switch: Open at login adds that remote access only works while BubblePaw runs, Start in the tray says it starts hidden at login (or Needs Open at login), and Keep running says closing hides to the tray or, when off, quits. No tray on the system: the Keep switch is off and closing quits. Turn
     layout reaches the transcript as `TranscriptActions.finishedActivityOpen`: a running turn is always open, and a turn the person opened or closed keeps that. The phone shows the theme and the turn layout.
   - **Storage** (on the General page): the data directory, where the chats are stored. "Save and restart" writes `config.json` and opens the host again on the new directory (`HostController.setDataDirectory`); chats already stored in the old directory stay there.
   - **Models**: the host's providers (kind, base URL, whether the host found the key, never

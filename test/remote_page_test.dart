@@ -5,6 +5,7 @@
 import 'package:bubblepaw_desktop/src/platform/releases.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
+import 'package:bubblepaw_desktop/src/settings/settings_widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -80,6 +81,24 @@ void main() {
       expect(find.byKey(const ValueKey('remote-relay')), findsOneWidget);
       expect(find.byKey(const ValueKey('remote-no-devices')), findsOneWidget);
       expect(access.calls, isNot(contains('start')));
+    });
+
+    testWidgets('a share that is off says so under a danger Stopped pill', (
+      tester,
+    ) async {
+      final access = FakeRemoteAccess();
+      await _openRemote(tester, access);
+      final pill = tester.widget<StatePill>(
+        find.byKey(const ValueKey('remote-pill')),
+      );
+      expect(pill.label, 'Stopped');
+      expect(pill.tone, PillTone.bad);
+      expect(find.text('Sharing is off.'), findsOneWidget);
+
+      await _tap(tester, 'toggle-share');
+      expect(find.text('Sharing is off.'), findsNothing);
+      await _tap(tester, 'toggle-share');
+      expect(find.text('Sharing is off.'), findsOneWidget);
     });
 
     testWidgets('the share switch starts and stops the relay', (tester) async {

@@ -112,6 +112,42 @@ void main() {
       expect(store.saved, sampleConfig);
     });
 
+    testWidgets('the Startup rows say what each switch does', (tester) async {
+      final controller = _controller();
+      await pumpApp(tester, controller);
+      await _open(tester, 'general');
+      expect(
+        find.text(
+          'BubblePaw starts with this computer. Remote access only works '
+          'while it is running.',
+        ),
+        findsOneWidget,
+      );
+      // Keep running in the tray is off: closing the window quits.
+      expect(find.text('Closing the window quits BubblePaw.'), findsOneWidget);
+      expect(find.text('Needs Open at login.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('toggle-open-at-login')));
+      await settle(tester);
+      expect(
+        find.text(
+          'At login, BubblePaw starts hidden in the tray instead of opening '
+          'the window.',
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('toggle-keep-in-tray')));
+      await settle(tester);
+      expect(find.text('Closing the window quits BubblePaw.'), findsNothing);
+      expect(
+        find.text(
+          'Closing the window hides it to the tray. Quit from the tray menu.',
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('Start in the tray needs Open at login', (tester) async {
       final controller = _controller();
       await pumpApp(tester, controller);
