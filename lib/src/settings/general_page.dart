@@ -79,7 +79,9 @@ class GeneralPage extends StatelessWidget {
           SwitchRow(
             id: 'open-at-login',
             label: 'Open at login',
-            description: 'BubblePaw starts with this computer.',
+            description:
+                'BubblePaw starts with this computer. Remote access only '
+                'works while it is running.',
             value: prefs.openAtLogin,
             onChanged: (v) => set(prefs.copyWith(openAtLogin: v)),
           ),
@@ -87,7 +89,8 @@ class GeneralPage extends StatelessWidget {
             id: 'start-in-tray',
             label: 'Start in the tray',
             description: prefs.openAtLogin
-                ? 'The window stays hidden when BubblePaw starts at login.'
+                ? 'At login, BubblePaw starts hidden in the tray instead of '
+                      'opening the window.'
                 : 'Needs Open at login.',
             value: prefs.effectiveStartInTray,
             enabled: prefs.openAtLogin && tray,
@@ -96,10 +99,12 @@ class GeneralPage extends StatelessWidget {
           SwitchRow(
             id: 'keep-in-tray',
             label: 'Keep running in the tray when the window is closed',
-            description: tray
+            description: !tray
+                ? 'This system shows no tray icon, so closing the window quits.'
+                : prefs.keepInTray
                 ? 'Closing the window hides it to the tray. Quit from the tray '
                       'menu.'
-                : 'This system shows no tray icon, so closing the window quits.',
+                : 'Closing the window quits BubblePaw.',
             value: prefs.keepInTray && tray,
             enabled: tray,
             onChanged: (v) => set(prefs.copyWith(keepInTray: v)),

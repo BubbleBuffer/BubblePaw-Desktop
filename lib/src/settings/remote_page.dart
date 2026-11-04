@@ -605,12 +605,11 @@ class _RemotePageState extends State<RemotePage> {
       ShareStatus.online => ('Connected', PillTone.good),
       ShareStatus.connecting => ('Starting', PillTone.attention),
       ShareStatus.offline => ('Stopped', PillTone.bad),
-      ShareStatus.off =>
-        r.wantOn || r.block != ShareBlock.none
-            ? ('Stopped', PillTone.bad)
-            : ('Stopped', PillTone.plain),
+      ShareStatus.off => ('Stopped', PillTone.bad),
     };
-    final why = _blockWords(r);
+    final why = !r.wantOn && state.status == ShareStatus.off
+        ? 'Sharing is off.'
+        : _blockWords(r);
     final canRetry =
         r.wantOn &&
         !r.busy &&
