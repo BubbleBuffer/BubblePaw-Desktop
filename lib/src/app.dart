@@ -224,14 +224,20 @@ class _AppShellState extends State<AppShell> {
             ),
           if (controller.openError != null)
             Positioned(
+              left: 16,
               right: 16,
               bottom:
                   (controller.trayNoticePending ? 72 : 16) +
                   (controller.needsSetupPending ? 56 : 0) +
                   (feedback.savedId != null ? 56 : 0),
-              child: HostOpenNotice(
-                message: controller.openError!,
-                onDismiss: controller.dismissOpenError,
+              // Bounded on both sides, so a long message wraps on a phone.
+              child: Align(
+                alignment: Alignment.bottomRight,
+                heightFactor: 1,
+                child: HostOpenNotice(
+                  message: controller.openError!,
+                  onDismiss: controller.dismissOpenError,
+                ),
               ),
             ),
           if (controller.updates.dialogOpen)

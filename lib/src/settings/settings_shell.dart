@@ -11,6 +11,7 @@ import 'package:flutter/widgets.dart';
 import '../feedback/feedback_controller.dart';
 import '../feedback/glyphs.dart';
 import '../host_controller.dart';
+import '../rust/api/hosts.dart' show HostPresenceKind;
 import '../platform/releases.dart';
 import '../versions.dart';
 import 'about_page.dart';
@@ -91,6 +92,17 @@ class _SettingsShellState extends State<SettingsShell> {
       if (!(widget.phone && s == SettingsSection.feedback)) s,
   ];
 
+  /// "2 hosts, 1 online" for the phone's list.
+  String _hostsSummary() {
+    final hosts = widget.controller.hosts;
+    if (hosts == null || !hosts.loaded) return 'Hosts you can open';
+    final n = hosts.hosts.length;
+    final online = hosts.hosts
+        .where((h) => hosts.presenceOf(h.id) == HostPresenceKind.online)
+        .length;
+    return '$n host${n == 1 ? '' : 's'}, $online online';
+  }
+
   String _summary(SettingsSection section) => switch (section) {
     SettingsSection.general => themeSummary(widget.controller.prefs.theme),
     SettingsSection.models => 'Default model and providers',
@@ -98,9 +110,7 @@ class _SettingsShellState extends State<SettingsShell> {
     SettingsSection.mcp => 'Servers and sign-in',
     SettingsSection.skills => 'Discovered skills',
     SettingsSection.remote =>
-      widget.phone
-          ? 'Hosts and device key'
-          : 'Share this host and pair devices',
+      widget.phone ? _hostsSummary() : 'Share this host and pair devices',
     SettingsSection.feedback => switch (widget.feedback.reports.length) {
       0 => 'No reports saved',
       1 => '1 report saved',
@@ -187,6 +197,7 @@ class _SettingsShellState extends State<SettingsShell> {
                 onViewFeedback: () => _select(SettingsSection.feedback),
                 onLicences: () => setState(() => _licences = true),
                 onBack: onBack,
+                phone: widget.phone,
               ),
     };
   }
@@ -203,20 +214,26 @@ class _SettingsShellState extends State<SettingsShell> {
             if (section != null) {
               return _page(section, onBack: () => _select(null));
             }
-            return SettingsPage(
-              title: 'Settings',
-              onBack: widget.onClose,
-              backKey: const ValueKey('settings-back'),
-              children: [
-                for (final s in _sections)
-                  _ListRow(
-                    key: ValueKey('settings-nav-${s.name}'),
-                    title: s.title,
-                    summary: _summary(s),
-                    glyph: _glyph(s),
-                    onTap: () => _select(s),
-                  ),
-              ],
+            final hosts = widget.controller.hosts;
+            return ListenableBuilder(
+              listenable: hosts == null
+                  ? widget.controller
+                  : Listenable.merge([widget.controller, hosts]),
+              builder: (context, _) => SettingsPage(
+                title: 'Settings',
+                onBack: widget.onClose,
+                backKey: const ValueKey('settings-back'),
+                children: [
+                  for (final s in _sections)
+                    _ListRow(
+                      key: ValueKey('settings-nav-${s.name}'),
+                      title: s.title,
+                      summary: _summary(s),
+                      glyph: _glyph(s),
+                      onTap: () => _select(s),
+                    ),
+                ],
+              ),
             );
           }
           final section = _section ?? SettingsSection.general;

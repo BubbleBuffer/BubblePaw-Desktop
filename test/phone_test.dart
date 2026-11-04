@@ -124,6 +124,15 @@ void main() {
       expect(find.byKey(const ValueKey('phone-home-message')), findsOneWidget);
     });
 
+    testWidgets('a long open error wraps inside the screen', (tester) async {
+      await _open(tester, hosts: [_maya], failOpen: true);
+      final box = tester.getRect(
+        find.byKey(const ValueKey('host-open-notice')),
+      );
+      expect(box.left, greaterThanOrEqualTo(0));
+      expect(box.right, lessThanOrEqualTo(phone.width));
+    });
+
     testWidgets('the host menu lists them', (tester) async {
       await _open(tester, hosts: [_maya], failOpen: true);
       await _tap(tester, 'phone-host-button');
@@ -159,6 +168,18 @@ void main() {
       expect(find.text('Theme'), findsOneWidget);
       expect(find.text('Open at login'), findsNothing);
       expect(find.text('Storage'), findsNothing);
+    });
+
+    testWidgets('About shows the versions and licences only', (tester) async {
+      await _open(tester);
+      await _tap(tester, 'phone-settings');
+      await _tap(tester, 'settings-nav-about');
+      expect(find.text('Versions'), findsOneWidget);
+      expect(find.text('Agent kit'), findsOneWidget);
+      expect(find.byKey(const ValueKey('about-licences')), findsOneWidget);
+      expect(find.byKey(const ValueKey('update-check')), findsNothing);
+      expect(find.text('Core'), findsNothing);
+      expect(find.byKey(const ValueKey('about-feedback')), findsNothing);
     });
 
     testWidgets('Remote access is the device and its hosts', (tester) async {
