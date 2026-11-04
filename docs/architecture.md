@@ -146,16 +146,25 @@ cause (a locked store, a bad config).
 - **Tray and background** (`lib/src/platform/`): `DesktopIntegration` talks to three
   adapters (`TrayAdapter`, `WindowAdapter`, `StartupAdapter`), implemented with
   `tray_manager`, `window_manager` and `launch_at_startup`, so the logic runs headless.
-  The tray menu (`trayMenu`) is Open BubblePaw, the host status line, "N chats waiting for
-  you" when any chat needs the person (counted from `listChats` on each phase change and
-  every 20 s), Restart host and Quit BubblePaw. With Keep running in the tray, closing
+  The tray menu (`trayMenu`) is Open BubblePaw, the host status line ("Host running",
+  "Host running · shared via relay" or "shared via Cloudflare Tunnel", "Host starting",
+  "Host stopped"), the check item "Share this host" (only while the host runs and has a
+  sharing side, `HostController.remote`), "N chats waiting for you" when any chat needs the
+  person (counted from `listChats` on each phase change and every 20 s), Restart host and
+  Quit BubblePaw. `DesktopIntegration` also listens to `host.remote` (replaced on every
+  host restart) so the menu and icon follow sharing; see "From the tray" in
+  [remote-access.md](remote-access.md). With Keep running in the tray, closing
   the window hides it and the first time `TrayNotice` is shown when the window comes back;
   otherwise closing quits. The login entry starts the app with `--hidden` when Start in
   the tray is on; the native runners then skip showing the first frame. The icon files
   are named in `trayIconAsset` (`assets/icon/tray/`): the colour BubblePaw mark without
   its tile (`tray.svg`, cropped from `assets/icon/bubblepaw-icon.svg`; `tray.ico` holds
   16, 20, 24, 32 and 48 px, `tray-{16,20,24,32}.png` serve Linux). It reads on light and
-  dark taskbars, so there is one set and no theme choice. Linux needs libayatana-appindicator to build.
+  dark taskbars, so there is one set and no theme choice. The state dot is part of the
+  icon file (`TrayDot`: none while running or starting, green while shared, red while
+  stopped or failed): `tray-{shared,stopped}.ico` and `tray-{16,20,24,32}-{shared,stopped}.png`
+  are made from the plain files by `assets/icon/tray/make_tray_dots.py` (Pillow; run it
+  after changing the mark), and `DesktopIntegration` calls `setIcon` when the dot changes. Linux needs libayatana-appindicator to build.
 - **Rail avatar**: two letters from the workspace folder name (`my-cool_app` is
   MC, `BubblePaw` is BP). The kit draws the circle; it cannot be left out.
 - **Plan, question, usage, context meter, branch**: the kit's chat pane already
@@ -208,7 +217,7 @@ Settings > Remote access is described in [remote-access.md](remote-access.md). `
 | `test/turn_layout_test.dart` | The Turn layout preference (default, save and load) and its row in General; collapsed and open turns in the transcript, a toggled turn keeping its state |
 | `test/settings_test.dart` | General switches and theme, Models, About (versions, Core row, Updates, Licences search and expand), the tray notice, version constants |
 | `test/semver_test.dart`, `test/download_test.dart`, `test/updates_test.dart`, `test/update_dialog_test.dart` | Versions, the verified download, app updates and the dialog; see [core-and-updates.md](core-and-updates.md) |
-| `test/tray_test.dart` | The tray menu model, icon file choice, and the integration against fake tray, window and login adapters (close-to-tray, quit, waiting count, login entry) |
+| `test/tray_test.dart` | The tray menu model (status line, Share row), icon file choice and that every icon file exists, and the integration against fake tray, window and login adapters (close-to-tray, quit, waiting count, login entry, share toggle and its blocked case, icon dot follows host and share state) |
 | `test/golden_test.dart` | Main screen, General, Models (and the model traffic picker, with an unavailable host), Tools (list, editor, a partial category, a built-in toolset), Skills (list, empty), Feedback (page, sheet, chat attached, saved), About (with updates), the update dialog states, Licences, a failure notice, plan, question, crew (with Cancel) and the context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
 | `test/feedback_test.dart`, `test/feedback_ui_test.dart` | Local feedback: redaction, report and chat files, storage, the sheet and the Feedback page (see [feedback.md](feedback.md)) |
 
