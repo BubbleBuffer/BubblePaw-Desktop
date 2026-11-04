@@ -110,9 +110,7 @@ class _SettingsShellState extends State<SettingsShell> {
     SettingsSection.mcp => 'Servers and sign-in',
     SettingsSection.skills => 'Discovered skills',
     SettingsSection.remote =>
-      widget.phone
-          ? _hostsSummary()
-          : 'Share this host and pair devices',
+      widget.phone ? _hostsSummary() : 'Share this host and pair devices',
     SettingsSection.feedback => switch (widget.feedback.reports.length) {
       0 => 'No reports saved',
       1 => '1 report saved',

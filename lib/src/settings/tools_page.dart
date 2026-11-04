@@ -735,10 +735,7 @@ class _ToolsetRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (builtin) ...[
-              const _BuiltInTag(),
-              const SizedBox(width: 8),
-            ],
+            if (builtin) ...[const _BuiltInTag(), const SizedBox(width: 8)],
             glyphIcon(_glyphChevronRight, size: 18, color: theme.muted),
           ],
         ),
