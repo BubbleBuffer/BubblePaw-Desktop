@@ -105,6 +105,10 @@ Scene _remoteScene({
   },
 );
 
+/// The sharing side of the pairing scene being built, so its steps can make
+/// a device ask.
+FakeRemoteAccess? _pairAccess;
+
 /// The hosts of the scene being built, for the steps that answer as a host.
 FakeHostLinks? _links;
 
@@ -824,6 +828,19 @@ void main() {
         await tapVisible(tester, 'pair-continue');
       },
     ),
+    // The number step: the device's announced name, ready to change.
+    'settings_remote_pair_confirm': _remoteScene(
+      access: (host) => _pairAccess = FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'toggle-share');
+        await tapVisible(tester, 'remote-pair');
+        await tapVisible(tester, 'pair-continue');
+        final access = _pairAccess!;
+        access.offers.last.requests.add(FakeRequest(access, 'edit'));
+        await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+        await settle(tester);
+      },
+    ),
     'settings_remote_key': _remoteScene(
       access: (host) =>
           FakeRemoteAccess(hostSettings: host, devices: _sampleDevices),
@@ -834,6 +851,24 @@ void main() {
       after: (tester) async {
         await tapVisible(tester, 'remote-manage-key');
         await tapVisible(tester, 'key-export');
+      },
+    ),
+    // Saved straight to Downloads: no picker, the note names the folder.
+    'settings_remote_key_saved': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'remote-manage-key');
+        await tapVisible(tester, 'key-export');
+        await tester.enterText(
+          find.byKey(const ValueKey('export-pass1')),
+          'long enough',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('export-pass2')),
+          'long enough',
+        );
+        await settle(tester);
+        await tapVisible(tester, 'export-save');
       },
     ),
     'settings_remote_key_regenerate': _remoteScene(
@@ -990,7 +1025,11 @@ void main() {
             brightness: theme.value,
             licenceSource: sampleLicences,
             // A sign-in opens nothing in a golden.
-            services: PlatformServices(open: (_) async {}),
+            services: PlatformServices(
+              open: (_) async {},
+              saveKeyFile: (name) async => '/home/maya/Downloads/$name',
+              keyFileInDownloads: true,
+            ),
           );
           await scene.value.after?.call(tester);
           await expectLater(

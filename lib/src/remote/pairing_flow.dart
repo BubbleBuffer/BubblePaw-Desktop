@@ -35,6 +35,7 @@ class PairingFlow extends ChangeNotifier {
   bool _expired = false;
   bool _busy = false;
   String? _error;
+  String _deviceName = '';
   Timer? _timer;
   int _ticket = 0;
   bool _disposed = false;
@@ -53,6 +54,19 @@ class PairingFlow extends ChangeNotifier {
   bool get expired => _expired;
   bool get busy => _busy;
   String? get error => _error;
+
+  /// The name the device is stored under: the one it announced, until the
+  /// person types another.
+  String get deviceName => _deviceName;
+
+  /// Whether the name is usable: "Add device" waits for one.
+  bool get canApprove => _deviceName.trim().isNotEmpty;
+
+  void setDeviceName(String value) {
+    if (_deviceName == value) return;
+    _deviceName = value;
+    _notify();
+  }
 
   void chooseProfile(String value) {
     if (_profile == value) return;
@@ -117,6 +131,7 @@ class PairingFlow extends ChangeNotifier {
       }
       _timer?.cancel();
       _request = request;
+      _deviceName = request.deviceName;
       _step = PairingStep.compare;
       _notify();
     } on Object {
@@ -129,15 +144,15 @@ class PairingFlow extends ChangeNotifier {
   /// "New code" on the code step: replaces the offer.
   Future<void> newCode() => createCode();
 
-  /// "They match": stores the device with the chosen profile.
+  /// "Add device": stores the device under its name, with the chosen profile.
   Future<void> approve() async {
     final request = _request;
-    if (request == null || _busy) return;
+    if (request == null || _busy || !canApprove) return;
     _busy = true;
     _error = null;
     _notify();
     try {
-      final device = await request.approve(request.deviceName);
+      final device = await request.approve(_deviceName.trim());
       _added = device;
       _step = PairingStep.added;
       onAdded?.call(device);

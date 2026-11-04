@@ -30,15 +30,24 @@ Future<void> openFolder(String path) async {
 class PlatformServices {
   const PlatformServices({
     this.open = openLink,
-    this.saveKeyFile = saveKeyFilePath,
+    this.saveKeyFile = saveKeyFileDefault,
+    this.keyFileInDownloads,
     this.pickKeyFile = pickKeyFilePath,
     this.copy = copyToClipboard,
   });
 
   final Future<void> Function(Uri url) open;
 
-  /// Where to save an exported key file; null when cancelled.
+  /// Where to save an exported key file; null when cancelled. On desktop it
+  /// is a new file in Downloads and never asks; it throws [KeyFileException]
+  /// when that cannot be done.
   final Future<String?> Function(String suggestedName) saveKeyFile;
+
+  /// Whether [saveKeyFile] puts the file in Downloads (the platform's answer
+  /// when null), so the saved note can say so.
+  final bool? keyFileInDownloads;
+
+  bool get savesKeyToDownloads => keyFileInDownloads ?? keyFilesGoToDownloads;
 
   /// A key file to import; null when cancelled.
   final Future<String?> Function() pickKeyFile;

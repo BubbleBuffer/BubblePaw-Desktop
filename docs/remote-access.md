@@ -142,7 +142,25 @@ Limits:
 The profile (read, edit, full) is fixed when the offer is created, so the
 dialog asks for it first: permissions, then a QR code and a 10-character code
 (valid 5 minutes), then the 6-digit number both sides compare, then done.
-Revoking a device closes its live connection.
+The number step also has a "Device name" field, filled with the name the
+device announced (`PairingRequest.deviceName`); "They match" waits while it is
+empty and `PairingFlow.approve` stores the device under the trimmed name, which
+the Device added line and the Paired devices list then show. The mockup asks
+for the name in a step of its own after the number check; here both are one
+step because the profile is already fixed. Revoking a device closes its live connection.
+
+## Exporting the device key
+
+"Export key file" asks for a passphrase (twice, at least 8 characters) and
+saves `bubblepaw-<first 9 characters of the key ID>.bpkey` straight to the
+Downloads folder, with no save picker, then says "Saved <file> to Downloads."
+`lib/src/platform/key_files.dart` finds the folder: `%USERPROFILE%\Downloads` on
+Windows, `XDG_DOWNLOAD_DIR` from `~/.config/user-dirs.dirs` else `~/Downloads`
+elsewhere. An existing file is never replaced: the name becomes
+`bubblepaw-<id> (2).bpkey`, `(3)` and so on. A missing or unwritable folder shows
+an error under the passphrases and no file is written. On a phone, which has no
+such folder, the save picker is still used. The adapter is
+`PlatformServices.saveKeyFile`, which tests replace.
 
 ## Model traffic through a paired device
 
@@ -193,6 +211,10 @@ Model traffic: `test/model_egress_test.dart` (picker, writes, unavailable
 `model_traffic_is_granted_only_when_the_host_owner_allows_it` (a real grant shows
 on the host's device list and on the saved host); goldens `settings_models_via*`,
 `settings_remote_pair_egress` and `settings_remote_devices_egress`.
+Pairing name and key export: `test/remote_page_test.dart` (the device name field,
+the save to Downloads and its error), `test/key_files_test.dart` (folder lookup
+and free file names); goldens `settings_remote_pair_confirm` and
+`settings_remote_key_saved`.
 Chat list: `test/remote_chats_test.dart` runs scripted `session.list` rows through
 the kit's backend and the wrapper (statuses, folder names, snapshot path, grouping,
 `session.open` with a workspace, refusals, `waiting_for`);

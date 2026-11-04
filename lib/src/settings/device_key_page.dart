@@ -8,6 +8,7 @@ import 'package:agent_kit/agent_kit.dart';
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
+import '../platform/key_files.dart' show KeyFileException;
 import '../platform/releases.dart';
 import '../remote/remote_access.dart';
 import '../remote/remote_controller.dart';
@@ -224,21 +225,28 @@ class _ExportDialogState extends State<_ExportDialog> {
   Future<void> _save() async {
     final id = widget.remote.key?.id ?? 'key';
     final name = 'bubblepaw-${id.length >= 9 ? id.substring(0, 9) : id}.bpkey';
-    final path = await widget.services.saveKeyFile(name);
-    if (path == null || !mounted) return;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
+      final path = await widget.services.saveKeyFile(name);
+      if (path == null || !mounted) {
+        if (mounted) setState(() => _busy = false);
+        return;
+      }
       await widget.remote.exportKey(path, _first.text);
       if (mounted) setState(() => _savedAs = path);
+    } on KeyFileException catch (e) {
+      if (mounted) setState(() => _error = e.message);
     } on Object {
       if (mounted) {
         setState(
-          () => _error =
-              'Could not save the key file. Choose a file name that does '
-              'not exist yet.',
+          () => _error = widget.services.savesKeyToDownloads
+              ? 'Could not save the key file to Downloads. Check that the '
+                    'folder can be written to.'
+              : 'Could not save the key file. Choose a file name that does '
+                    'not exist yet.',
         );
       }
     }
@@ -256,7 +264,10 @@ class _ExportDialogState extends State<_ExportDialog> {
           NoticeBox(
             key: const ValueKey('export-saved'),
             tone: NoticeTone.good,
-            child: Text('Saved ${saved.split(RegExp(r'[\\/]')).last}.'),
+            child: Text(
+              'Saved ${saved.split(RegExp(r'[\\/]')).last}'
+              '${widget.services.savesKeyToDownloads ? ' to Downloads' : ''}.',
+            ),
           ),
           const SizedBox(height: 12),
           Text(
