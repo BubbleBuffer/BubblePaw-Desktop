@@ -57,6 +57,13 @@ void main() {
     expect(find.text('1 running · 1 waiting'), findsNWidgets(2));
   });
 
+  testWidgets('the hide button reads Hide the rail', (tester) async {
+    await _open(tester);
+
+    expect(find.bySemanticsLabel('Hide the rail'), findsOneWidget);
+    expect(find.bySemanticsLabel('Hide sidebar'), findsNothing);
+  });
+
   testWidgets('a project opens and closes', (tester) async {
     await _open(tester);
 
