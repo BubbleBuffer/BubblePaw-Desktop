@@ -649,7 +649,7 @@ class _WorkbenchState extends State<Workbench> {
                             builder: (context, _) => _search.active
                                 ? ChatSearchResults(
                                     search: _search,
-                                    hostName: 'This computer',
+                                    hostName: 'this computer',
                                     pathOf: widget.localWorkspaceOf,
                                     selectedId: selectedId,
                                     now: widget.now,
