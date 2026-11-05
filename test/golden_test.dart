@@ -818,14 +818,8 @@ void main() {
     // Core v0.13.0: choose the cloudflared file, and the failure copy.
     'settings_remote_cloudflared_chosen': _remoteScene(
       values: {'remote.mode': 'quick'},
-      access: (host) => FakeRemoteAccess(
-        hostSettings: host,
-        cloudflaredStatus: _managedCloudflared,
-      ),
-      after: (tester) async {
-        await tapVisible(tester, 'toggle-share');
-        await tapVisible(tester, 'cloudflared-choose');
-      },
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) => tapVisible(tester, 'cloudflared-choose'),
     ),
     'settings_remote_cloudflared_refused': _remoteScene(
       values: {'remote.mode': 'quick'},
