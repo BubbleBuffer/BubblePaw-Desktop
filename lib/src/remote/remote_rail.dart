@@ -6,12 +6,22 @@
 import 'package:agent_kit/agent_kit.dart';
 import 'package:agent_kit_core/agent_kit_core.dart' show ChatSummary;
 import 'package:bb_ui/bb_ui.dart'
-    show Hover, Ico, LucideGlyph, PrimaryButton, TypeSpec, ts;
+    show
+        Hover,
+        Ico,
+        LucideGlyph,
+        PrimaryButton,
+        TypeSpec,
+        noteSelectionControls,
+        ts;
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 
-import '../feedback/glyphs.dart' show glyphCheck, glyphChevronDown;
+import '../feedback/glyphs.dart'
+    show glyphCheck, glyphChevronDown, glyphClose;
 import '../settings/remote_glyphs.dart';
 import '../settings/settings_widgets.dart' show glyphIcon;
+import 'chat_search.dart';
 import 'project_groups.dart';
 import 'remote_chats.dart' show RemoteWait;
 
@@ -44,6 +54,9 @@ class RemoteRail extends StatelessWidget {
     this.onNewChat,
     this.onNewChatIn,
     this.waitingOf,
+    this.search,
+    this.pathOf,
+    this.showKeyHint = false,
     this.projects = const [],
     this.pickedPath,
     this.pickerOpen = false,
@@ -75,6 +88,17 @@ class RemoteRail extends StatelessWidget {
   /// What a chat waits for; null (or a null answer) for a host that does
   /// not say, which reads "Waiting for you".
   final RemoteWait? Function(String chatId)? waitingOf;
+
+  /// The search box above the list; null for a host that cannot search chat
+  /// titles, which has no box. While a query is typed the list is the host's
+  /// answer to it.
+  final ChatSearchController? search;
+
+  /// A chat's project path on the host, to group the search results.
+  final String? Function(String chatId)? pathOf;
+
+  /// The box names its shortcut (Ctrl K); the phone has none.
+  final bool showKeyHint;
 
   /// The host's known projects, for the picker beside New chat.
   final List<PickableProject> projects;
@@ -199,55 +223,20 @@ class RemoteRail extends StatelessWidget {
             ),
           ),
         ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 8),
-            children: [
-              if (needsYou.isNotEmpty) ...[
-                _Label('Needs you', count: needsYou.length),
-                for (final chat in needsYou)
-                  _ChatRow(
-                    key: ValueKey('needs-row-${chat.id}'),
-                    chat: chat,
-                    detail: railDetail(chat, clock),
-                    label: waitingOf?.call(chat.id)?.label,
-                    project: projectOf(chat),
-                    selected: chat.id == selectedId,
-                    onTap: () => select(chat),
-                  ),
-              ],
-              const _Label('Projects'),
-              for (final group in groups) ...[
-                _GroupHead(
-                  key: ValueKey('project-${group.key}'),
-                  group: group,
-                  open: state.isOpen(group.key),
-                  now: clock,
-                  onToggle: () => state.toggle(group.key),
-                  onNewChat: onNewChatIn == null
-                      ? null
-                      : () => onNewChatIn!(group),
-                ),
-                if (state.isOpen(group.key))
-                  for (final chat in group.chats)
-                    _ChatRow(
-                      key: ValueKey('rail-row-${chat.id}'),
-                      chat: chat,
-                      detail: railDetail(chat, clock),
-                      label: waitingOf?.call(chat.id)?.label,
-                      selected: chat.id == selectedId,
-                      bar: true,
-                      onTap: () => select(chat),
-                    ),
-              ],
-              if (hasMore)
-                _MoreRow(
-                  loading: loadingMore,
-                  failed: loadMoreFailed,
-                  onTap: onLoadMore,
-                ),
-            ],
+        if (search != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+            child: _SearchBox(search: search!, showKeyHint: showKeyHint),
           ),
+        Expanded(
+          child: search == null
+              ? _list(clock, select)
+              : ListenableBuilder(
+                  listenable: search!,
+                  builder: (context, _) => search!.active
+                      ? _results(clock, select, search!)
+                      : _list(clock, select),
+                ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
@@ -261,6 +250,119 @@ class RemoteRail extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  /// The chats of the open host: Needs you, then the projects.
+  Widget _list(DateTime clock, void Function(ChatSummary) select) {
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 8),
+      children: [
+        if (needsYou.isNotEmpty) ...[
+          _Label('Needs you', count: needsYou.length),
+          for (final chat in needsYou)
+            _ChatRow(
+              key: ValueKey('needs-row-${chat.id}'),
+              chat: chat,
+              detail: railDetail(chat, clock),
+              label: waitingOf?.call(chat.id)?.label,
+              project: projectOf(chat),
+              selected: chat.id == selectedId,
+              onTap: () => select(chat),
+            ),
+        ],
+        const _Label('Projects'),
+        for (final group in groups) ...[
+          _GroupHead(
+            key: ValueKey('project-${group.key}'),
+            group: group,
+            open: state.isOpen(group.key),
+            now: clock,
+            onToggle: () => state.toggle(group.key),
+            onNewChat: onNewChatIn == null
+                ? null
+                : () => onNewChatIn!(group),
+          ),
+          if (state.isOpen(group.key))
+            for (final chat in group.chats)
+              _ChatRow(
+                key: ValueKey('rail-row-${chat.id}'),
+                chat: chat,
+                detail: railDetail(chat, clock),
+                label: waitingOf?.call(chat.id)?.label,
+                selected: chat.id == selectedId,
+                bar: true,
+                onTap: () => select(chat),
+              ),
+        ],
+        if (hasMore)
+          _MoreRow(
+            loading: loadingMore,
+            failed: loadMoreFailed,
+            onTap: onLoadMore,
+          ),
+      ],
+    );
+  }
+
+  /// The host's answer to the typed query: the matching chats of every
+  /// project, grouped by project, or why there are none.
+  Widget _results(
+    DateTime clock,
+    void Function(ChatSummary) select,
+    ChatSearchController search,
+  ) {
+    final results = search.results;
+    final groups = groupByProject(results, pathOf ?? (_) => null);
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 8),
+      children: [
+        if (search.phase == ChatSearchPhase.failed)
+          _SearchNote(
+            key: const ValueKey('search-failed'),
+            title: 'Search failed',
+            body: search.error ?? '',
+            action: 'Try again',
+            onAction: search.retry,
+          )
+        else if (results.isEmpty && search.phase == ChatSearchPhase.searching)
+          const _SearchNote(
+            key: ValueKey('search-searching'),
+            title: 'Searching…',
+          )
+        else if (results.isEmpty)
+          _SearchNote(
+            key: const ValueKey('search-empty'),
+            title: 'No chats match "${search.query}"',
+            body: 'Search looks at chat titles on $hostName.',
+          )
+        else ...[
+          for (final group in groups) ...[
+            _Label(group.name),
+            for (final chat in group.chats)
+              _ChatRow(
+                key: ValueKey('search-row-${chat.id}'),
+                chat: chat,
+                detail: railDetail(chat, clock),
+                label: waitingOf?.call(chat.id)?.label,
+                selected: chat.id == selectedId,
+                bar: true,
+                highlight: search.query,
+                onTap: () => select(chat),
+              ),
+          ],
+          if (search.hasMore)
+            _MoreRow(
+              key: const ValueKey('search-load-more'),
+              loading: search.loadingMore,
+              failed: search.moreFailed,
+              onTap: search.loadMore,
+              idle: 'Show more matches',
+              busy: 'Loading more matches…',
+              failure: 'Could not load more matches. Try again',
+            ),
+        ],
       ],
     );
   }
@@ -312,6 +414,7 @@ class _ChatRow extends StatelessWidget {
     this.project,
     this.label,
     this.bar = false,
+    this.highlight,
   });
 
   final ChatSummary chat;
@@ -325,8 +428,45 @@ class _ChatRow extends StatelessWidget {
 
   /// The selection bar of a row inside a group.
   final bool bar;
+
+  /// The typed search text, marked in the title; null outside a search.
+  final String? highlight;
   final bool selected;
   final VoidCallback onTap;
+
+  /// The title; with [highlight], the typed text marked.
+  Widget _title(BbTheme theme) {
+    final style = ts(
+      theme.typeScale.ui,
+      theme.railInk.withValues(alpha: selected ? 1 : .86),
+      weight: selected ? 700 : 500,
+    );
+    final typed = highlight;
+    if (typed == null) {
+      return Text(
+        chat.title,
+        style: style,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+    return Text.rich(
+      TextSpan(
+        children: [
+          for (final piece in highlightTitle(chat.title, typed))
+            TextSpan(
+              text: piece.text,
+              style: piece.match
+                  ? TextStyle(backgroundColor: theme.attention)
+                  : null,
+            ),
+        ],
+      ),
+      style: style,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -352,16 +492,7 @@ class _ChatRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    chat.title,
-                    style: ts(
-                      theme.typeScale.ui,
-                      theme.railInk.withValues(alpha: selected ? 1 : .86),
-                      weight: selected ? 700 : 500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  _title(theme),
                   const SizedBox(height: 2),
                   // The project tag goes under the status when both do not fit.
                   Wrap(
@@ -816,23 +947,33 @@ class _HostButton extends StatelessWidget {
 
 class _MoreRow extends StatelessWidget {
   const _MoreRow({
+    super.key,
     required this.loading,
     required this.failed,
     required this.onTap,
+    this.idle = 'Show older chats',
+    this.busy = 'Loading older chats…',
+    this.failure = 'Could not load older chats. Try again',
   });
 
   final bool loading;
   final bool failed;
   final VoidCallback? onTap;
 
+  /// The row's text when it can be pressed, while it loads and after a
+  /// failed load.
+  final String idle;
+  final String busy;
+  final String failure;
+
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
     final label = loading
-        ? 'Loading older chats…'
+        ? busy
         : failed
-        ? 'Could not load older chats. Try again'
-        : 'Show older chats';
+        ? failure
+        : idle;
     final enabled = !loading && onTap != null;
     return Semantics(
       button: true,
@@ -897,6 +1038,212 @@ class _SettingsLink extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The box above the list: a magnifier, the text and, once something is
+/// typed, a clear button.
+class _SearchBox extends StatelessWidget {
+  const _SearchBox({required this.search, required this.showKeyHint});
+
+  final ChatSearchController search;
+  final bool showKeyHint;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.bb;
+    final style = ts(theme.typeScale.ui, theme.railInk, weight: 500);
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          if (search.text.text.isNotEmpty) search.clear();
+          search.focus.unfocus();
+        },
+      },
+      child: ListenableBuilder(
+        listenable: Listenable.merge([search.text, search.focus]),
+        builder: (context, _) {
+          final filled = search.text.text.isNotEmpty;
+          final on = filled || search.focus.hasFocus;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: search.focus.requestFocus,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: on ? theme.railHover : null,
+                borderRadius: theme.radii.ctl,
+                border: on ? Border.all(color: theme.railLine) : null,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 32),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    children: [
+                      glyphIcon(glyphSearch, size: 16, color: theme.railMuted),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Semantics(
+                          label: searchPlaceholder,
+                          textField: true,
+                          child: Stack(
+                            alignment: Alignment.centerLeft,
+                            children: [
+                              if (!filled)
+                                IgnorePointer(
+                                  child: Text(
+                                    searchPlaceholder,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.clip,
+                                    style: style.copyWith(
+                                      color: theme.railMuted,
+                                    ),
+                                  ),
+                                ),
+                              EditableText(
+                                key: const ValueKey('chat-search-field'),
+                                controller: search.text,
+                                focusNode: search.focus,
+                                style: style,
+                                cursorColor: theme.railInk,
+                                backgroundCursorColor: theme.railMuted,
+                                selectionColor: theme.accent.withValues(
+                                  alpha: .3,
+                                ),
+                                selectionControls: noteSelectionControls,
+                                maxLines: 1,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (filled)
+                        _ClearButton(onTap: search.clear)
+                      else if (showKeyHint)
+                        Text(
+                          'Ctrl K',
+                          style: ts(
+                            const TypeSpec(12, 16, 400),
+                            theme.railMuted,
+                            mono: true,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ClearButton extends StatelessWidget {
+  const _ClearButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.bb;
+    return Semantics(
+      button: true,
+      label: 'Clear search',
+      excludeSemantics: true,
+      onTap: onTap,
+      child: Hover(
+        key: const ValueKey('chat-search-clear'),
+        onTap: onTap,
+        borderRadius: theme.radii.ctl,
+        hoverBackground: theme.railSelected,
+        pressedBackground: theme.railSelected,
+        lift: 0,
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: Center(
+            child: glyphIcon(glyphClose, size: 14, color: theme.railMuted),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// What the search list says instead of rows: that it is looking, that
+/// nothing matches, or why the search failed.
+class _SearchNote extends StatelessWidget {
+  const _SearchNote({
+    super.key,
+    required this.title,
+    this.body = '',
+    this.action,
+    this.onAction,
+  });
+
+  final String title;
+  final String body;
+
+  /// A button under the text, such as "Try again".
+  final String? action;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.bb;
+    final label = action;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: ts(theme.typeScale.ui, theme.railInk, weight: 700),
+            ),
+            if (body.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  body,
+                  style: ts(theme.typeScale.ui, theme.railMuted),
+                ),
+              ),
+            if (label != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Semantics(
+                  button: true,
+                  label: label,
+                  excludeSemantics: true,
+                  onTap: onAction,
+                  child: Hover(
+                    key: const ValueKey('search-retry'),
+                    onTap: onAction,
+                    borderRadius: theme.radii.ctl,
+                    hoverBackground: theme.railHover,
+                    pressedBackground: theme.railSelected,
+                    lift: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    child: Text(
+                      label,
+                      style: ts(theme.typeScale.ui, theme.railInk, weight: 600),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

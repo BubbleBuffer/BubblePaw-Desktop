@@ -23,6 +23,7 @@ The Share tab's status block always shows a danger-toned `Stopped` pill when the
 | Provider picker "Send model traffic through…" | `lib/src/settings/models_page.dart` (`_ViaPicker`) |
 | Rail host switcher | `lib/src/screens/workspace_menu.dart` (`HostMenu`), wired in `lib/src/app.dart` |
 | Chat list of a saved host (rows, backend wrapper, grouping, rail, workbench) | `lib/src/remote/remote_chats.dart`, `project_groups.dart`, `remote_rail.dart`, `remote_workbench.dart` |
+| Chat search (controller, debounce, stale answers, highlight) | `lib/src/remote/chat_search.dart` |
 
 `HostController.remote` is built when the embedded host starts. It is null for
 an attached host (another program runs it), for the scripted backend, and while
@@ -118,6 +119,35 @@ profile refusal (a read device may not open chats).
   the host itself, or choose another project." The chat is not started in any
   other project. A profile refusal says the device needs the edit profile.
 
+### Chat search
+
+Core 0.13 (`session.list` with `query`): a box above the rail's list, placeholder
+"Search all projects", asks the host for chats whose title contains the typed
+text, case-insensitively, in every project on the host. It is on a saved host's
+rail and on the phone's chat list, and only when `initialize.features` lists
+`session.list.title_search` (an older host ignores `query`, so it gets no box,
+and Ctrl+K has nothing to focus).
+
+- `RemoteBackend.searchChats` sends the request through `rawRequest` (the kit's
+  `listChats(query:)` only filters the page it already loaded) with
+  `limit` 100 and the page cursor, keeps the rows in `RemoteChatRows` and
+  returns a `ChatPage`. `StartedBackend.searchChats` carries it to
+  `HostController.remoteSearch`, `RemoteWorkbench` and the rail; it is null when
+  the host lacks the feature.
+- `ChatSearchController` (`chat_search.dart`) owns the box's text and focus. It
+  waits 250 ms after the last keystroke, then asks; every keystroke makes an
+  older answer stale, and a stale answer is dropped, so a slow reply for "qu"
+  never replaces the reply for "quota". Empty text returns to the normal list.
+- While a query is typed the list is the host's answer, grouped by project
+  (`groupByProject`, as the rail does), each title with the typed text marked;
+  a result opens the chat like any row. More than one page ends in "Show more
+  matches". No match reads `No chats match "<query>"` / `Search looks at chat
+  titles on <host>.`; before the first answer it reads "Searching…". A search
+  that fails reads "Search failed", the host's reason and Try again in the same
+  place, and never "no match".
+- Ctrl+K (Cmd+K) focuses the box on desktop, showing the rail first when it is
+  hidden; Escape or the clear button empties it. The phone has no shortcut hint.
+
 Context pane: on desktop, the chat header's context button opens the same
 Context pane as on this computer beside a saved host's chat (Now, History,
 Compactions). It reads the context view from the chat snapshot and the
@@ -129,7 +159,8 @@ Limits:
 
 - No workspace column next to a saved host's chat beyond the Context pane;
   the crew shows as the strip under the header.
-- Search is not built (the kit's rail has none wired in the app).
+- Chat search is built for a saved host and the phone only; this computer's
+  rail is the kit's and has no text box (see "Chat search").
 - The picker lists only projects that have chats in the loaded list, so a
   project whose chats are all older than the loaded pages is not offered.
 
@@ -279,6 +310,12 @@ and free file names); goldens `settings_remote_pair_confirm` and
 Chat list: `test/remote_chats_test.dart` runs scripted `session.list` rows through
 the kit's backend and the wrapper (statuses, folder names, snapshot path, grouping,
 `session.open` with a workspace, refusals, `waiting_for`);
+`test/chat_search_test.dart` covers chat search (the controller's debounce and
+stale answers, the box, grouped and marked results, no match, a failed search,
+no box without the feature, Ctrl+K, Escape and clear) and `test/remote_chats_test.dart`
+`searchChats`; the `rail_search_*` goldens and `phone-chats-search` show it, and the native test
+`a_saved_host_searches_chat_titles_across_its_projects` searches a real second
+host over the relay;
 `test/remote_rail_test.dart` covers group order, open and close, New chat in a
 project, the picker, the refusal notice and the approval and question row text on
 `test/remote_chats_fakes.dart`; `test/ffi_transport_test.dart` covers `rawRequest`;

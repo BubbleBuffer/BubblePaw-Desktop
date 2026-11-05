@@ -274,6 +274,109 @@ void main() {
     });
   });
 
+  group('title search', () {
+    test('asks the host for the query and keeps each row', () async {
+      final asked = <Map<String, Object?>>[];
+      final rows = RemoteChatRows();
+      final backend = RemoteBackend(
+        _Inner(),
+        rows,
+        titleSearch: true,
+        rawRequest: (method, params) async {
+          expect(method, 'session.list');
+          asked.add(params);
+          return {'sessions': _sessions.take(2).toList(), 'next_cursor': 'c2'};
+        },
+      );
+
+      final page = await backend.searchChats('quo');
+
+      expect(asked, [
+        {'query': 'quo', 'limit': searchPageSize},
+      ]);
+      expect(page.chats.map((c) => c.title), [
+        'Quota bar flickers',
+        'Review the pairing copy',
+      ]);
+      expect(page.chats.map((c) => c.status), [
+        ChatStatus.needsYou,
+        ChatStatus.running,
+      ]);
+      expect(page.chats.map((c) => c.workspace), ['garden-api', 'agent-kit']);
+      expect(page.nextCursor, 'c2');
+      // The rows reach the list's grouping as for any list.
+      expect(rows.workspaceOf('s1'), '/home/maya/garden-api');
+    });
+
+    test('the next page sends the cursor', () async {
+      final asked = <Map<String, Object?>>[];
+      final backend = RemoteBackend(
+        _Inner(),
+        RemoteChatRows(),
+        titleSearch: true,
+        rawRequest: (method, params) async {
+          asked.add(params);
+          return {'sessions': const <Object?>[], 'next_cursor': null};
+        },
+      );
+      final page = await backend.searchChats('quo', cursor: 'c2');
+      expect(asked.single['cursor'], 'c2');
+      expect(page.nextCursor, isNull);
+    });
+
+    test('a host without the feature is never asked', () async {
+      var asked = 0;
+      final backend = RemoteBackend(
+        _Inner(),
+        RemoteChatRows(),
+        rawRequest: (method, params) async {
+          asked++;
+          return const <Object?>[];
+        },
+      );
+      expect(backend.canSearchTitles, isFalse);
+      await expectLater(backend.searchChats('quo'), throwsA(isA<KitFailed>()));
+      expect(asked, 0);
+    });
+
+    test('a refusal or an odd reply is a failure that says why', () async {
+      final refused = RemoteBackend(
+        _Inner(),
+        RemoteChatRows(),
+        titleSearch: true,
+        rawRequest: (method, params) async =>
+            throw const RpcRefusal(-32000, 'broke'),
+      );
+      await expectLater(
+        refused.searchChats('quo'),
+        throwsA(
+          isA<KitFailed>().having(
+            (e) => e.message,
+            'message',
+            'The host refused the search.',
+          ),
+        ),
+      );
+      // The legacy array: a host that ignored `query`.
+      final legacy = RemoteBackend(
+        _Inner(),
+        RemoteChatRows(),
+        titleSearch: true,
+        rawRequest: (method, params) async => _sessions,
+      );
+      await expectLater(
+        legacy.searchChats('quo'),
+        throwsA(
+          isA<KitFailed>().having(
+            (e) => e.message,
+            'message',
+            'The host sent an unexpected reply.',
+          ),
+        ),
+      );
+    });
+  });
+
   test('the row says what the chat waits for, when the host does', () {
     final rows = RemoteChatRows()
       ..absorb([

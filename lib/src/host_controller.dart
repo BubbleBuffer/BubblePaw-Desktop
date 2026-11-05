@@ -20,6 +20,7 @@ import 'remote/host_links.dart';
 import 'remote/hosts_controller.dart';
 import 'remote/phone_remote_access.dart';
 import 'remote/remote_access.dart';
+import 'remote/chat_search.dart';
 import 'remote/project_groups.dart';
 import 'remote/remote_chats.dart';
 import 'remote/remote_controller.dart';
@@ -39,6 +40,7 @@ class StartedBackend {
     this.settings,
     this.remote,
     this.remoteRows,
+    this.searchChats,
   });
 
   final AgentBackend backend;
@@ -46,6 +48,10 @@ class StartedBackend {
   /// For a saved host: what its chat list rows say about each chat. Its
   /// presence makes the workbench draw the host's project groups.
   final RemoteChatRows? remoteRows;
+
+  /// For a saved host that can search chat titles (`session.list.title_search`):
+  /// how to ask it. Null leaves the rail without a search box.
+  final ChatSearcher? searchChats;
 
   /// The host's settings (config.get and config.set); null when the backend
   /// has none, as the scripted one.
@@ -98,10 +104,17 @@ Future<StartedBackend> startSavedHost(HostLinks links, String hostId) async {
     RowTapTransport(transport, rows),
     workspaceDirectory: '',
   );
+  final remote = RemoteBackend(
+    backend,
+    rows,
+    rawRequest: transport.rawRequest,
+    titleSearch: backend.features.contains('session.list.title_search'),
+  );
   return StartedBackend(
-    RemoteBackend(backend, rows, rawRequest: transport.rawRequest),
+    remote,
     backend.dispose,
     remoteRows: rows,
+    searchChats: remote.canSearchTitles ? remote.searchChats : null,
     createdChats: backend.createdChats,
     connectionLost: backend.connectionLost,
     attached: true,
@@ -217,6 +230,7 @@ class HostController extends ChangeNotifier {
   String? _openError;
   GuardedBackend? _remoteBackend;
   RemoteChatRows? _remoteRows;
+  ChatSearcher? _remoteSearch;
   DateTime? _remoteNow;
   ProjectRailState? _remoteRail;
   HostSettings? _remoteSettings;
@@ -397,6 +411,9 @@ class HostController extends ChangeNotifier {
   RemoteChatRows? get remoteRows => _remoteRows;
   ProjectRailState? get remoteRail => _remoteRail;
 
+  /// How the open saved host searches chat titles; null when it cannot.
+  ChatSearcher? get remoteSearch => _remoteSearch;
+
   /// The saved host that is open, or null for this computer.
   SavedHostEntry? get openHost {
     final id = _openHostId;
@@ -434,6 +451,7 @@ class HostController extends ChangeNotifier {
       _remoteSettings = started.settings;
       _remoteCreatedChats = started.createdChats;
       _remoteRows = started.remoteRows;
+      _remoteSearch = started.searchChats;
       _remoteNow = started.now;
       _remoteRail = started.remoteRows == null ? null : ProjectRailState();
       _remoteBackend = GuardedBackend(
@@ -508,6 +526,7 @@ class HostController extends ChangeNotifier {
     _remoteBackend?.closing();
     _remoteBackend = null;
     _remoteRows = null;
+    _remoteSearch = null;
     _remoteNow = null;
     _remoteRail = null;
     _remoteSettings = null;

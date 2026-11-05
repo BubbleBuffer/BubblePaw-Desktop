@@ -11,9 +11,12 @@ import 'dart:math' as math;
 import 'package:agent_kit/agent_kit.dart';
 import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:bb_ui/bb_ui.dart' show SecondaryButton, ts;
+import 'package:flutter/services.dart'
+    show HardwareKeyboard, KeyDownEvent, KeyEvent, LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 
 import '../screens/host_open_notice.dart';
+import 'chat_search.dart';
 import 'project_groups.dart';
 import 'remote_chats.dart';
 import 'remote_rail.dart';
@@ -25,6 +28,7 @@ class RemoteWorkbench extends StatefulWidget {
     required this.rows,
     required this.state,
     required this.hostName,
+    this.search,
     this.initialChatId,
     this.startOnList = false,
     this.now,
@@ -43,6 +47,10 @@ class RemoteWorkbench extends StatefulWidget {
   /// Which project groups are open.
   final ProjectRailState state;
   final String hostName;
+
+  /// Asks the host for chats by title; null when the host cannot, and the
+  /// rail has no search box.
+  final ChatSearcher? search;
 
   /// The chat to open; follows changes (a rewind makes a new chat).
   final String? initialChatId;
@@ -83,10 +91,16 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
   String? _selected;
   int _listing = 0;
   final Map<String, ChatStatus> _seen = {};
+  late final ChatSearchController? _search = widget.search == null
+      ? null
+      : ChatSearchController(searcher: widget.search!);
   final ContextPaneController _context = ContextPaneController();
   final GlobalKey _workspaceKey = GlobalKey(debugLabel: 'remote workspace');
   ContextView? _contextView;
   bool _workspaceShown = false;
+
+  // The size class of the whole layout, for showing the rail from the keys.
+  SizeClass _whole = SizeClass.expanded;
 
   bool get _hasWorkspace =>
       widget.workspaceController != null &&
@@ -97,7 +111,40 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
     super.initState();
     _selected = widget.initialChatId;
     if (widget.startOnList && widget.initialChatId == null) _rail.open = true;
+    // Not a focus shortcut: Ctrl+K works from the chat as well.
+    if (_search != null && !widget.startOnList) {
+      HardwareKeyboard.instance.addHandler(_onKey);
+    }
     unawaited(_refresh());
+  }
+
+  /// Ctrl+K (Cmd+K) puts the cursor in the search box, showing the rail
+  /// first when it is hidden.
+  bool _onKey(KeyEvent event) {
+    final search = _search;
+    if (search == null ||
+        event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.keyK ||
+        !(HardwareKeyboard.instance.isControlPressed ||
+            HardwareKeyboard.instance.isMetaPressed)) {
+      return false;
+    }
+    _rail.show(_whole);
+    _focusSearch();
+    return true;
+  }
+
+  // A rail that was hidden builds its box a few frames later; ask again until
+  // the box is there.
+  void _focusSearch([int tries = 30]) {
+    final search = _search;
+    if (search == null || !mounted) return;
+    search.focus.requestFocus();
+    if (search.focus.context == null && tries > 0) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _focusSearch(tries - 1),
+      );
+    }
   }
 
   @override
@@ -112,6 +159,8 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    _search?.dispose();
     _rail.dispose();
     super.dispose();
   }
@@ -316,6 +365,9 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
                     projectOf: _projectOf,
                     waitingOf: widget.rows.waitingOf,
                     state: widget.state,
+                    search: _search,
+                    pathOf: widget.rows.workspaceOf,
+                    showKeyHint: !widget.startOnList,
                     selectedId: _selected,
                     now: clock,
                     onSelect: (chat) => _select(chat.id),
@@ -344,6 +396,7 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
                   final whole =
                       RailScope.maybeOf(context)?.sizeClass ??
                       SizeClass.expanded;
+                  _whole = whole;
                   if (!_hasWorkspace) return _sheet(context, t, whole);
                   return SizeClassBuilder(
                     builder: (context, area) => LayoutBuilder(

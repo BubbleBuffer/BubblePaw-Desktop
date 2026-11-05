@@ -122,6 +122,9 @@ typedef RawRequest = Future<Object?> Function(
   Map<String, Object?> params,
 );
 
+/// How many matches one search page asks for.
+const searchPageSize = 100;
+
 /// The JSON-RPC code of a workspace the host refuses over the tunnel.
 const workspaceRefusedCode = -32003;
 
@@ -182,7 +185,12 @@ KitInvalid workspaceRefused(String requested, Object? data) {
 ///   the project; there is no fallback to another one. Without a project the
 ///   chat starts in the host's own workspace.
 class RemoteBackend implements AgentBackend, BackendConstraintsProvider {
-  RemoteBackend(this._inner, this.rows, {this.rawRequest});
+  RemoteBackend(
+    this._inner,
+    this.rows, {
+    this.rawRequest,
+    this.titleSearch = false,
+  });
 
   final AgentBackend _inner;
 
@@ -192,6 +200,13 @@ class RemoteBackend implements AgentBackend, BackendConstraintsProvider {
 
   /// The host's rows, filled by a [RowTapTransport] on the same connection.
   final RemoteChatRows rows;
+
+  /// The host lists `session.list.title_search` among its features. An older
+  /// host ignores `query`, so without it there is no search.
+  final bool titleSearch;
+
+  /// Whether [searchChats] can ask the host.
+  bool get canSearchTitles => titleSearch && rawRequest != null;
 
   ChatSummary _decorate(ChatSummary chat) {
     final row = rows.of(chat.id);
@@ -226,6 +241,55 @@ class RemoteBackend implements AgentBackend, BackendConstraintsProvider {
     return ChatPage(
       chats: [for (final chat in page.chats) _decorate(chat)],
       nextCursor: page.nextCursor,
+    );
+  }
+
+  /// The chats of every project whose title contains [query] (Core 0.13:
+  /// `session.list` with `query`), one page of up to [searchPageSize]. The
+  /// rows' projects and status are kept as for the list. Throws a
+  /// [KitError] that says why when the host cannot answer.
+  Future<ChatPage> searchChats(String query, {String? cursor}) async {
+    final raw = rawRequest;
+    if (!titleSearch || raw == null) {
+      throw const KitFailed('This host cannot search chat titles.');
+    }
+    final Object? result;
+    try {
+      result = await raw('session.list', {
+        'query': query,
+        'limit': searchPageSize,
+        'cursor': ?cursor,
+      });
+    } on RpcRefusal {
+      throw const KitFailed('The host refused the search.');
+    }
+    if (result is! Map || result['sessions'] is! List) {
+      throw const KitFailed('The host sent an unexpected reply.');
+    }
+    rows.absorb(result);
+    final chats = <ChatSummary>[];
+    for (final row in result['sessions']! as List<Object?>) {
+      if (row is! Map) continue;
+      final id = row['id'];
+      if (id is! String || id.isEmpty) continue;
+      final title = row['title'];
+      final updated = row['updated_at'];
+      final parent = row['parent_session_id'];
+      chats.add(
+        _decorate(
+          ChatSummary(
+            id: id,
+            title: title is String ? title : '',
+            updatedAt: updated is String ? DateTime.tryParse(updated) : null,
+            parentId: parent is String && parent.isNotEmpty ? parent : null,
+          ),
+        ),
+      );
+    }
+    final next = result['next_cursor'];
+    return ChatPage(
+      chats: chats,
+      nextCursor: next is String && next.isNotEmpty ? next : null,
     );
   }
 

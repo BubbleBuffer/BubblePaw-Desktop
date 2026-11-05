@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:io';
 
+import 'package:agent_kit_core/agent_kit_core.dart' show KitUnavailable;
 import 'package:agent_kit_core/fake.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
@@ -16,6 +17,8 @@ import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/platform/download.dart';
 import 'package:bubblepaw_desktop/src/platform/releases.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
+import 'package:bubblepaw_desktop/src/remote/chat_search.dart'
+    show searchDebounce;
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
 import 'package:bubblepaw_desktop/src/semver.dart';
@@ -130,14 +133,18 @@ RemoteFixture? _remote;
 HostController? _remoteController;
 
 /// A saved host with chats in four projects, open, with [open] projects
-/// expanded and, with [pick], the project picker open on that project.
+/// expanded and, with [pick], the project picker open on that project. With
+/// [search], that text is typed in the search box and the host answers with
+/// [answer] (its own title filter when null).
 Scene _remoteChats({
   List<String> open = const [],
   String? pick,
   bool context = false,
+  String? search,
+  Future<Object?> Function(Map<String, Object?> params)? answer,
 }) => (
   controller: () {
-    final fixture = RemoteFixture(context: context);
+    final fixture = RemoteFixture(context: context)..onSearch = answer;
     _remote = fixture;
     return _remoteController = fixture.controller();
   },
@@ -158,6 +165,17 @@ Scene _remoteChats({
       await tapVisible(tester, 'project-picker');
       await tapVisible(tester, 'project-pick-$pick');
       await tapVisible(tester, 'project-picker');
+    }
+    if (search != null) {
+      await tester.enterText(
+        find.byKey(const ValueKey('chat-search-field')),
+        search,
+      );
+      await tester.pump(searchDebounce);
+      await settle(tester);
+      // No blinking cursor in the picture.
+      FocusManager.instance.primaryFocus?.unfocus();
+      await settle(tester);
     }
     if (context) {
       // The label is hidden in the compact layout; the meter's semantics
@@ -1060,6 +1078,41 @@ void main() {
     'rail_remote_chats_open': _remoteChats(open: [gardenApi, agentKit]),
     // The project picker beside New chat, with a project picked.
     'rail_remote_chats_picker': _remoteChats(pick: agentKit),
+    // Chat search on a saved host: matches by project, the text marked.
+    'rail_search_results': _remoteChats(
+      search: 'quota',
+      answer: (_) async => {
+        'sessions': [
+          searchRow(
+            'c1',
+            'Quota bar flickers on reconnect',
+            gardenApi,
+            ago: const Duration(minutes: 1),
+          ),
+          searchRow(
+            'q2',
+            'Reset the quota window at midnight',
+            gardenApi,
+            ago: const Duration(days: 17),
+          ),
+          searchRow(
+            'q3',
+            'Per-user quota limits',
+            agentKit,
+            ago: const Duration(days: 58),
+          ),
+        ],
+        'next_cursor': null,
+      },
+    ),
+    // Nothing in the titles matches.
+    'rail_search_none': _remoteChats(search: 'kubernetes'),
+    // The host did not answer the search.
+    'rail_search_failed': _remoteChats(
+      search: 'quota',
+      answer: (_) async =>
+          throw const KitUnavailable('Maya desktop stopped answering.'),
+    ),
     // Context on a saved host: the pane beside the chat, as on this computer.
     'remote_context': _remoteChats(context: true),
     'settings_about': (

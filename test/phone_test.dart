@@ -7,7 +7,6 @@ import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/link_scanner.dart';
-import 'package:bubblepaw_desktop/src/remote/remote_chats.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -58,15 +57,7 @@ Future<(HostController, FakeHostLinks, _Started)> _open(
         ? started.start
         : (links, id) async {
             started.ids.add(id);
-            final f = started.fixture;
-            return StartedBackend(
-              RemoteBackend(f.backend, f.rows, rawRequest: f.raw),
-              () async {},
-              now: remoteClock,
-              attached: true,
-              remoteRows: f.rows,
-              settings: settings,
-            );
+            return started.fixture.start(links, id, settings: settings);
           },
   );
   addTearDown(controller.close);
@@ -131,6 +122,28 @@ void main() {
       expect(find.byKey(const ValueKey('needs-row-c1')), findsOneWidget);
       await _tap(tester, 'needs-row-c1');
       expect(find.byKey(const ValueKey('needs-row-c1')), findsNothing);
+    });
+
+    testWidgets('the chat list searches the host, with no shortcut hint', (
+      tester,
+    ) async {
+      final (_, _, started) = await _open(tester, hosts: [_maya]);
+      expect(find.text('Search all projects'), findsOneWidget);
+      expect(find.text('Ctrl K'), findsNothing);
+
+      await tester.enterText(
+        find.byKey(const ValueKey('chat-search-field')),
+        'quota',
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await settle(tester);
+
+      expect(started.fixture.searches.single['query'], 'quota');
+      expect(find.byKey(const ValueKey('search-row-c1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('needs-row-c1')), findsNothing);
+      // A found chat opens over the list.
+      await _tap(tester, 'search-row-c1');
+      expect(find.byKey(const ValueKey('search-row-c1')), findsNothing);
     });
 
     testWidgets('says why a host could not be opened', (tester) async {

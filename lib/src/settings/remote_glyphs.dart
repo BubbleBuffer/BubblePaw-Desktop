@@ -98,3 +98,8 @@ const LucideGlyph glyphSettings = (
   LucideIcons.settings,
   LucideIcons.settings500,
 );
+const LucideGlyph glyphSearch = (
+  LucideIcons.search300,
+  LucideIcons.search,
+  LucideIcons.search500,
+);

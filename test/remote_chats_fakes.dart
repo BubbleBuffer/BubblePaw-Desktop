@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:agent_kit_core/fake.dart'
     show quotaContextDetails, quotaContextView;
+import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_chats.dart';
@@ -123,15 +124,63 @@ List<Map<String, Object?>> sampleRemoteRows({bool waitingFor = true}) => [
   {'id': 'c7', 'workspace': notes, 'needs_you': false, 'running': false},
 ];
 
-/// One saved host that answers with [sampleRemoteChats].
+/// A `session.list` row as Core 0.13 answers a title search: the chat's
+/// title, its project and when it changed.
+Map<String, Object?> searchRow(
+  String id,
+  String title,
+  String workspace, {
+  Duration ago = const Duration(hours: 1),
+  bool needsYou = false,
+  bool running = false,
+}) => {
+  'id': id,
+  'title': title,
+  'workspace': workspace,
+  'updated_at': remoteClock.subtract(ago).toUtc().toIso8601String(),
+  'needs_you': needsYou,
+  'running': running,
+};
+
+/// The host's own answer to a title search: [sampleRemoteChats] whose title
+/// contains `query`, case-insensitively, as a page.
+Map<String, Object?> sampleSearchAnswer(Map<String, Object?> params) {
+  final needle = (params['query']! as String).toLowerCase();
+  final byId = {for (final row in sampleRemoteRows()) row['id']: row};
+  return {
+    'sessions': [
+      for (final chat in sampleRemoteChats)
+        if (chat.title.toLowerCase().contains(needle))
+          {
+            ...byId[chat.id]!,
+            'title': chat.title,
+            'updated_at': chat.updatedAt!.toUtc().toIso8601String(),
+          },
+    ],
+    'next_cursor': null,
+  };
+}
+
+/// One saved host that answers with [sampleRemoteChats]. [titleSearch] says
+/// whether it lists `session.list.title_search` among its features.
 class RemoteFixture {
-  RemoteFixture({bool waitingFor = true, bool context = false})
-    : backend = ListedBackend(sampleRemoteChats, context: context) {
+  RemoteFixture({
+    bool waitingFor = true,
+    bool context = false,
+    this.titleSearch = true,
+  }) : backend = ListedBackend(sampleRemoteChats, context: context) {
     rows.absorb(sampleRemoteRows(waitingFor: waitingFor));
   }
 
   final rows = RemoteChatRows();
   final ListedBackend backend;
+  final bool titleSearch;
+
+  /// The params of each title search (`session.list`) the app sent.
+  final searches = <Map<String, Object?>>[];
+
+  /// Answers a title search; null answers from [sampleRemoteChats].
+  Future<Object?> Function(Map<String, Object?> params)? onSearch;
 
   /// The params of each `session.open` the app sent with a workspace.
   final opened = <Map<String, Object?>>[];
@@ -142,6 +191,11 @@ class RemoteFixture {
   /// The host's answer to a raw request: opens a chat in the workspace, or
   /// refuses it.
   Future<Object?> raw(String method, Map<String, Object?> params) async {
+    if (method == 'session.list') {
+      searches.add(params);
+      final answer = onSearch;
+      return answer == null ? sampleSearchAnswer(params) : answer(params);
+    }
     opened.add(params);
     final path = params['workspace']! as String;
     if (refused.contains(path)) {
@@ -157,14 +211,29 @@ class RemoteFixture {
   final host = fakeSavedHost(lastConnected: 1700000100);
   late final links = FakeHostLinks(hosts: [host]);
 
-  Future<StartedBackend> start(HostLinks links, String id) async =>
-      StartedBackend(
-        RemoteBackend(backend, rows, rawRequest: raw),
-        () async {},
-        now: remoteClock,
-        attached: true,
-        remoteRows: rows,
-      );
+  /// The host as `startSavedHost` hands it over. [settings] is the host's
+  /// settings, when the scene needs them.
+  Future<StartedBackend> start(
+    HostLinks links,
+    String id, {
+    HostSettings? settings,
+  }) async {
+    final remote = RemoteBackend(
+      backend,
+      rows,
+      rawRequest: raw,
+      titleSearch: titleSearch,
+    );
+    return StartedBackend(
+      remote,
+      () async {},
+      now: remoteClock,
+      attached: true,
+      remoteRows: rows,
+      searchChats: remote.canSearchTitles ? remote.searchChats : null,
+      settings: settings,
+    );
+  }
 
   HostController controller() =>
       Played(hostLinks: links).controller(remoteStarter: start);

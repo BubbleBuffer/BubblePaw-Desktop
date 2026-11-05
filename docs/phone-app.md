@@ -13,7 +13,7 @@ Entry point: `lib/main_phone.dart`. It builds the same `BubblePawApp` as Desktop
 
 ## Navigation
 
-Push-based. The chat list is home, a tapped chat opens full screen, and there is no partial sidebar. `Workbench(phone: true)` starts `RemoteWorkbench` with `startOnList`, so the rail (a full-size sliding list at compact width) is open until a chat is picked. With no host open, `PhoneHome` shows the host button, Settings and why there are no chats.
+Push-based. The chat list is home, a tapped chat opens full screen, and there is no partial sidebar. `Workbench(phone: true)` starts `RemoteWorkbench` with `startOnList`, so the rail (a full-size sliding list at compact width) is open until a chat is picked. With no host open, `PhoneHome` shows the host button, Settings and why there are no chats. The list has the search box ("Search all projects") when the host lists `session.list.title_search`; found chats are grouped by project and open like any row (see [remote-access.md](remote-access.md), "Chat search"). There is no Ctrl+K hint.
 
 On start the phone opens the saved host it connected to last (`HostController._openLastHost`). The host button opens a bottom sheet (`HostSheet`, `workspace_menu.dart`) that lists the hosts and "Add a host".
 
