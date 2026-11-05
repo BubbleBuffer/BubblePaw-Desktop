@@ -14,6 +14,7 @@ import 'package:flutter/services.dart'
     show HardwareKeyboard, KeyDownEvent, KeyEvent, LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 
+import 'config.dart' show sameWorkspace;
 import 'feedback/feedback_controller.dart';
 import 'feedback/feedback_sheet.dart';
 import 'guarded_backend.dart';
@@ -636,7 +637,7 @@ class _WorkbenchState extends State<Workbench> {
                     : Padding(
                         padding: const EdgeInsets.only(bottom: 6),
                         child: ChatSearchBox(
-                          search: _search!,
+                          search: _search,
                           showKeyHint: true,
                         ),
                       ),
@@ -644,10 +645,10 @@ class _WorkbenchState extends State<Workbench> {
                     ? null
                     : (context, sessions, selectedId, select) =>
                           ListenableBuilder(
-                            listenable: _search!,
-                            builder: (context, _) => _search!.active
+                            listenable: _search,
+                            builder: (context, _) => _search.active
                                 ? ChatSearchResults(
-                                    search: _search!,
+                                    search: _search,
                                     hostName: 'This computer',
                                     pathOf: widget.localWorkspaceOf,
                                     selectedId: selectedId,

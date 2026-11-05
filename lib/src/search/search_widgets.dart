@@ -102,7 +102,7 @@ class ChatSearchResults extends StatelessWidget {
 }
 
 class RailLabel extends StatelessWidget {
-  const RailLabel(this.text, {this.count});
+  const RailLabel(this.text, {super.key, this.count});
 
   final String text;
   final int? count;

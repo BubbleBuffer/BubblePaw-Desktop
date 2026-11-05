@@ -5,7 +5,6 @@
 
 import 'dart:async';
 
-import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_chats.dart';
