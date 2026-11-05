@@ -1,10 +1,14 @@
 // Models: the host's default model and its providers, each with whether the
 // host found the key and its models. The default model is the host setting
-// `model.main`, read with config.get and changed with config.set. The host
-// reports only whether a key is present; nothing here reads, shows or stores
-// one. A provider's `via` (`providers.<name>.via`, Core v0.11.0) names a saved
-// host that carries the provider's model traffic; the picker offers Direct
-// and the saved hosts that granted this device that.
+// `model.main`, read with config.get and changed with config.set. A provider
+// key is added, replaced or removed with `providers.key.*` (Core v0.13.0): the
+// host reports only whether a key is set and where it comes from, and the
+// dialog hands a typed key to the host once; nothing here reads, shows,
+// stores or logs one. A provider's `via` (`providers.<name>.via`, Core
+// v0.11.0) names a saved host that carries the provider's model traffic; the
+// picker offers Direct and the saved hosts that granted this device that.
+
+import 'dart:async';
 
 import 'package:agent_kit/agent_kit.dart';
 import 'package:agent_kit_core/agent_kit_core.dart';
@@ -13,6 +17,8 @@ import 'package:flutter/widgets.dart';
 
 import '../core/host_settings.dart';
 import '../remote/hosts_controller.dart';
+import 'provider_key_dialog.dart';
+import 'remote_dialogs.dart' show profileName;
 import 'settings_widgets.dart';
 
 class ModelsPage extends StatefulWidget {
@@ -21,6 +27,7 @@ class ModelsPage extends StatefulWidget {
     required this.backend,
     required this.settings,
     this.hosts,
+    this.hostProfile,
     this.onBack,
   });
 
@@ -34,6 +41,12 @@ class ModelsPage extends StatefulWidget {
   /// when the settings are not this computer's host's (a saved host is open,
   /// whose own saved hosts are not listed here): the picker is not shown.
   final HostsController? hosts;
+
+  /// The pair profile (`read`, `edit` or `full`) this device holds on the saved
+  /// host being configured; null for this computer's own host, and empty for
+  /// a saved host that did not keep it. Keys are changed with the Full
+  /// profile only.
+  final String? hostProfile;
   final VoidCallback? onBack;
 
   @override
@@ -59,6 +72,14 @@ class _ModelsPageState extends State<ModelsPage> {
   String? _viaSaving;
   String? _viaErrorFor;
   String? _viaError;
+
+  /// `providers.key.get` for each provider that takes a key; empty when the
+  /// host has no such method.
+  Map<String, ProviderKeyStatus> _keyStatus = const {};
+  bool _keysUnsupported = false;
+
+  /// Providers whose saved key the host applies only after a restart.
+  final _keyRestart = <String>{};
 
   bool get _supported =>
       widget.backend?.capabilities.has(KitCapability.providers) ?? false;
@@ -98,6 +119,9 @@ class _ModelsPageState extends State<ModelsPage> {
       _viaSaving = null;
       _viaError = null;
       _viaErrorFor = null;
+      _keyStatus = const {};
+      _keysUnsupported = false;
+      _keyRestart.clear();
       if (_supported) _load();
     }
   }
@@ -123,6 +147,7 @@ class _ModelsPageState extends State<ModelsPage> {
     }
     final entries = {for (final s in await settings.get('model')) s.key: s};
     final via = _readVia(await settings.get('providers'));
+    final keys = await _readKeys(settings, setup);
     final main = entries['model.main'];
     final provider = entries['model.provider']?.value;
     final value = main?.value;
@@ -135,7 +160,30 @@ class _ModelsPageState extends State<ModelsPage> {
       _default = qualified;
       _restartModel = main?.pendingRestart == true ? setup.main : null;
       _via = via;
+      _keyStatus = keys.$1;
+      _keysUnsupported = keys.$2;
     });
+  }
+
+  /// Whether each provider that takes a key has one, and where it comes from;
+  /// true when the host lacks the method (a Core older than v0.13.0). A status
+  /// that cannot be read stays unknown and the provider list answers instead.
+  static Future<(Map<String, ProviderKeyStatus>, bool)> _readKeys(
+    HostSettings settings,
+    ProviderSetup setup,
+  ) async {
+    final statuses = <String, ProviderKeyStatus>{};
+    for (final provider in setup.providers) {
+      if (provider.keyEnv == null) continue;
+      try {
+        statuses[provider.name] = await settings.providerKey(provider.name);
+      } on HostSettingsException catch (error) {
+        if (error.code == methodNotFoundCode) return (const {}, true);
+      } on Object {
+        // Unknown for this provider; the pill falls back to the host's list.
+      }
+    }
+    return (statuses, false);
   }
 
   /// The `via` of each provider, from the `providers.<name>.via` settings.
@@ -200,6 +248,40 @@ class _ModelsPageState extends State<ModelsPage> {
       });
     }
   }
+
+  /// Opens the key dialog for [provider]; on a change, shows what the host
+  /// reported and reads the providers again.
+  Future<void> _editKey(ProviderInfo provider) async {
+    final settings = widget.settings;
+    if (settings == null) return;
+    final change = await showProviderKeyDialog(
+      context,
+      settings: settings,
+      provider: provider.name,
+      status: _keyStatus[provider.name],
+      keyPresent: provider.keyPresent,
+      keyEnv: provider.keyEnv,
+    );
+    if (change == null || !mounted) return;
+    setState(() {
+      _keyStatus = {..._keyStatus, provider.name: change.status};
+      if (change.restartNeeded && !change.applied) {
+        _keyRestart.add(provider.name);
+      } else {
+        _keyRestart.remove(provider.name);
+      }
+    });
+    unawaited(_load());
+  }
+
+  /// Why this device cannot change keys on the host; null when it can, or
+  /// when the profile is not known (the host refuses what it must).
+  String? get _keyBlocked => switch (widget.hostProfile) {
+    final String profile when profile == 'read' || profile == 'edit' =>
+      'Changing a key needs the Full profile. This device has the '
+          '${profileName(profile)} profile on this host.',
+    _ => null,
+  };
 
   /// Sends [provider]'s model traffic through the saved host [id], or
   /// directly when [id] is null.
@@ -280,6 +362,15 @@ class _ModelsPageState extends State<ModelsPage> {
         viaErrorFor: _viaErrorFor,
         viaError: _viaError,
         onVia: _setVia,
+        keys: widget.settings == null || _keysUnsupported
+            ? null
+            : _KeyState(
+                status: _keyStatus,
+                blocked: _keyBlocked,
+                restart: _keyRestart,
+                onEdit: _editKey,
+              ),
+        keysUnsupported: widget.settings != null && _keysUnsupported,
       );
     }
     return SettingsPage(
@@ -311,6 +402,26 @@ const _viaKinds = {
   'anthropic-messages',
 };
 
+/// What the provider cards need to add, replace and remove keys.
+class _KeyState {
+  const _KeyState({
+    required this.status,
+    required this.blocked,
+    required this.restart,
+    required this.onEdit,
+  });
+
+  /// `providers.key.get` by provider; a provider missing here is unknown.
+  final Map<String, ProviderKeyStatus> status;
+
+  /// Why this device cannot change keys; null when it can.
+  final String? blocked;
+
+  /// Providers whose saved key applies after a restart.
+  final Set<String> restart;
+  final void Function(ProviderInfo provider) onEdit;
+}
+
 class _Providers extends StatelessWidget {
   const _Providers({
     required this.current,
@@ -325,6 +436,8 @@ class _Providers extends StatelessWidget {
     required this.viaErrorFor,
     required this.viaError,
     required this.onVia,
+    required this.keys,
+    required this.keysUnsupported,
   });
 
   final ProviderSetup setup;
@@ -343,6 +456,12 @@ class _Providers extends StatelessWidget {
   final String? viaErrorFor;
   final String? viaError;
   final void Function(String provider, String? id) onVia;
+
+  /// Adding, replacing and removing keys; null when the host has no way to.
+  final _KeyState? keys;
+
+  /// The host answered that it has no provider-key methods.
+  final bool keysUnsupported;
 
   @override
   Widget build(BuildContext context) {
@@ -399,10 +518,21 @@ class _Providers extends StatelessWidget {
             key: const ValueKey('provider-empty'),
             style: ts(theme.typeScale.ui, theme.muted),
           ),
+        if (keysUnsupported && setup.providers.any((p) => p.keyEnv != null))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'This host does not manage provider keys. Update BubblePaw '
+              'Core to v0.13.0 or later to add them here.',
+              key: const ValueKey('provider-keys-unsupported'),
+              style: ts(theme.typeScale.uiSmall, theme.muted),
+            ),
+          ),
         for (final provider in setup.providers)
           _ProviderCard(
             key: ValueKey('provider-${provider.name}'),
             provider: provider,
+            keys: keys,
             current: current,
             making: making,
             onMakeDefault: onMakeDefault,
@@ -441,10 +571,14 @@ class _ProviderCard extends StatelessWidget {
     required this.current,
     required this.making,
     required this.onMakeDefault,
+    required this.keys,
     this.via,
   });
 
   final ProviderInfo provider;
+
+  /// Null leaves the key to the host's own setup.
+  final _KeyState? keys;
   final String? current;
   final String? making;
   final ValueChanged<String>? onMakeDefault;
@@ -455,8 +589,32 @@ class _ProviderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
+    final compact = SizeClass.of(context).isCompact;
     final needsKey = provider.keyEnv != null;
-    final usable = provider.keyPresent || !needsKey;
+    final controls = needsKey ? keys : null;
+    final status = controls?.status[provider.name];
+    final keySet = status?.isSet ?? provider.keyPresent;
+    final usable = keySet || !needsKey;
+    final fromEnvironment = status?.source == ProviderKeySource.environment;
+    final blocked = controls?.blocked;
+    final pill = StatePill(
+      keySet ? 'Key set' : 'No key',
+      tone: keySet ? PillTone.good : PillTone.attention,
+    );
+    final button = controls == null
+        ? null
+        : Semantics(
+            button: true,
+            enabled: blocked == null,
+            label: '${keySet ? 'Edit' : 'Add'} key for ${provider.name}',
+            excludeSemantics: true,
+            child: SecondaryButton(
+              key: ValueKey('key-button-${provider.name}'),
+              label: keySet ? 'Edit key' : 'Add key',
+              height: 28,
+              onTap: blocked == null ? () => controls.onEdit(provider) : null,
+            ),
+          );
     return GroupCard(
       header: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -491,14 +649,31 @@ class _ProviderCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 if (!usable)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'The host did not find ${provider.keyEnv}. Set it for '
-                      'the host and restart it to use this provider.',
-                      key: ValueKey('provider-key-${provider.name}'),
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
-                    ),
+                  _Hint(
+                    controls == null
+                        ? 'The host did not find ${provider.keyEnv}. Set it '
+                              'for the host and restart it to use this '
+                              'provider.'
+                        : 'Add a key to use these models.',
+                    key: ValueKey('provider-key-${provider.name}'),
+                  ),
+                if (fromEnvironment)
+                  _Hint(
+                    'The key comes from the environment variable '
+                    '${provider.keyEnv} on the host. A stored key replaces '
+                    'it.',
+                    key: ValueKey('provider-key-source-${provider.name}'),
+                  ),
+                if (controls != null &&
+                    controls.restart.contains(provider.name))
+                  _Hint(
+                    'Saved. The host applies the key after it restarts.',
+                    key: ValueKey('provider-key-restart-${provider.name}'),
+                  ),
+                if (blocked != null)
+                  _Hint(
+                    blocked,
+                    key: ValueKey('provider-key-blocked-${provider.name}'),
                   ),
                 if (provider.models.isEmpty)
                   Padding(
@@ -513,10 +688,18 @@ class _ProviderCard extends StatelessWidget {
           ),
           if (needsKey) ...[
             const SizedBox(width: 12),
-            StatePill(
-              provider.keyPresent ? 'Key set' : 'No key',
-              tone: provider.keyPresent ? PillTone.good : PillTone.attention,
-            ),
+            if (button == null)
+              pill
+            else if (compact)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [pill, const SizedBox(height: 8), button],
+              )
+            else
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [pill, const SizedBox(width: 8), button],
+              ),
           ],
         ],
       ),
@@ -534,6 +717,22 @@ class _ProviderCard extends StatelessWidget {
           ),
         ?via,
       ],
+    );
+  }
+}
+
+/// A line of small muted text under a provider's address.
+class _Hint extends StatelessWidget {
+  const _Hint(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.bb;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(text, style: ts(theme.typeScale.uiSmall, theme.muted)),
     );
   }
 }

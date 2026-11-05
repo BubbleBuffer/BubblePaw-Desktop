@@ -160,6 +160,61 @@ void main() {
       ),
   };
   const themes = {'light': Brightness.light, 'dark': Brightness.dark};
+  // Core v0.13.0: the Models page of a saved host, by the profile this device
+  // holds on it (buttons unavailable below Full) and the key dialog.
+  const keyScenes = <String, ({String profile, String? open})>{
+    'phone-models-keys': (profile: 'full', open: null),
+    'phone-models-key-add': (profile: 'full', open: 'openrouter'),
+    'phone-models-key-blocked': (profile: 'edit', open: null),
+  };
+  for (final scene in keyScenes.entries) {
+    for (final theme in themes.entries) {
+      testWidgets('${scene.key}_${theme.key}', (tester) async {
+        final host = fakeSavedHost(
+          profile: scene.value.profile,
+          lastConnected: 1700000100,
+        );
+        final played = Played(
+          capabilities: hostControlCapabilities,
+          providers: sampleKeyProviders,
+          models: sampleModels,
+          settings: keyedHostSettings(),
+        );
+        final controller = Played(
+          hostLinks: FakeHostLinks(hosts: [host]),
+        ).controller(
+          localHost: false,
+          phoneAccess: (_) => FakeRemoteAccess(),
+          remoteStarter: (links, id) => played.start(sampleConfig),
+        );
+        addTearDown(controller.close);
+        await pumpApp(
+          tester,
+          controller,
+          size: _phone,
+          brightness: theme.value,
+        );
+        for (var i = 0; i < 4; i++) {
+          await settle(tester);
+        }
+        await _tap(tester, 'rail-settings');
+        await _tap(tester, 'settings-nav-models');
+        final open = scene.value.open;
+        if (open != null) {
+          await _tap(tester, 'key-button-$open');
+          await tester.enterText(
+            find.byKey(const ValueKey('key-field')),
+            markerKey,
+          );
+          await settle(tester);
+        }
+        await expectLater(
+          find.byType(BubblePawApp),
+          matchesGoldenFile('goldens/${scene.key}_${theme.key}.png'),
+        );
+      });
+    }
+  }
   for (final scene in scenes.entries) {
     for (final theme in themes.entries) {
       final name = '${scene.key}_${theme.key}';

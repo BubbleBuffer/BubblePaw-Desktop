@@ -98,7 +98,85 @@ class FakeHostSettings implements HostSettings {
     this.toolList = const [],
     this.skillList = const [],
     this.mcpList = const [],
+    this.environmentKeys = const {},
+    this.keyApi = true,
   }) : values = {...?values};
+
+  /// The keys the host stores, by provider. A real host never reports these;
+  /// the fake keeps them so a test can see what reached the host.
+  final storedKeys = <String, String>{};
+
+  /// Providers whose key the host finds in the environment.
+  final Set<String> environmentKeys;
+
+  /// False answers every provider-key call as a host without the method
+  /// (a Core older than v0.13.0) does.
+  bool keyApi;
+
+  /// Makes `providers.key.set` and `providers.key.remove` fail when given.
+  HostSettingsException? keyFails;
+
+  /// Makes a key write answer that the host applies it after a restart.
+  bool keyRestartNeeded = false;
+
+  /// The provider-key calls received: `get:<name>`, `set:<name>` and
+  /// `remove:<name>`.
+  final keyCalls = <String>[];
+
+  ProviderKeyStatus _keyOf(String provider) => storedKeys.containsKey(provider)
+      ? const ProviderKeyStatus(isSet: true, source: ProviderKeySource.stored)
+      : environmentKeys.contains(provider)
+      ? const ProviderKeyStatus(
+          isSet: true,
+          source: ProviderKeySource.environment,
+        )
+      : const ProviderKeyStatus(isSet: false, source: ProviderKeySource.none);
+
+  void _needKeyApi() {
+    if (keyApi) return;
+    throw const HostSettingsException(
+      'This host does not manage provider keys.',
+      code: methodNotFoundCode,
+    );
+  }
+
+  @override
+  Future<ProviderKeyStatus> providerKey(String provider) async {
+    keyCalls.add('get:$provider');
+    _needKeyApi();
+    return _keyOf(provider);
+  }
+
+  @override
+  Future<ProviderKeyChange> setProviderKey(
+    String provider,
+    String value,
+  ) async {
+    keyCalls.add('set:$provider');
+    _needKeyApi();
+    final failure = keyFails;
+    if (failure != null) throw failure;
+    storedKeys[provider] = value;
+    return ProviderKeyChange(
+      status: _keyOf(provider),
+      applied: !keyRestartNeeded,
+      restartNeeded: keyRestartNeeded,
+    );
+  }
+
+  @override
+  Future<ProviderKeyChange> removeProviderKey(String provider) async {
+    keyCalls.add('remove:$provider');
+    _needKeyApi();
+    final failure = keyFails;
+    if (failure != null) throw failure;
+    storedKeys.remove(provider);
+    return ProviderKeyChange(
+      status: _keyOf(provider),
+      applied: !keyRestartNeeded,
+      restartNeeded: keyRestartNeeded,
+    );
+  }
 
   /// What `mcp.servers.list` reports. A server's `enabled` and its tools'
   /// states follow the `enabled` and `exclude_tools` values written since.

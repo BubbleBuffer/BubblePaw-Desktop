@@ -2,9 +2,13 @@
 // `config.get` and `config.set` (Core v0.6.0), and its tool and skill
 // catalogs through `tools.list` and `skills.list` (Core v0.7.0), and its MCP
 // servers through `mcp.servers.list`, `mcp.auth.*` and `mcp.headers.set` (Core
-// v0.7.3), over the same transport the agent kit's backend uses.
+// v0.7.3), and its provider keys through `providers.key.*` (Core v0.13.0),
+// over the same transport the agent kit's backend uses.
 
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
+import 'package:agent_kit_core/agent_kit_core.dart' show KitUnavailable;
+
+import '../remote/remote_chats.dart' show RawRequest, RpcRefusal;
 
 /// One setting as `config.get` reports it.
 class HostSetting {
@@ -198,6 +202,46 @@ class McpServerStatus {
   }
 }
 
+/// Where a provider's key comes from (`providers.key.get`).
+enum ProviderKeySource {
+  /// The key the host stores under its data directory.
+  stored,
+
+  /// The provider's environment variable (`key_env`).
+  environment,
+
+  /// No key is set.
+  none,
+}
+
+/// Whether a provider has a key and where it comes from. Never the key.
+class ProviderKeyStatus {
+  const ProviderKeyStatus({required this.isSet, required this.source});
+
+  final bool isSet;
+  final ProviderKeySource source;
+}
+
+/// How a key write took effect: the status after it, and whether new
+/// requests use the key now or only after the host restarts.
+class ProviderKeyChange {
+  const ProviderKeyChange({
+    required this.status,
+    required this.applied,
+    required this.restartNeeded,
+  });
+
+  final ProviderKeyStatus status;
+  final bool applied;
+  final bool restartNeeded;
+}
+
+/// The JSON-RPC code of a method the host does not have.
+const methodNotFoundCode = -32601;
+
+/// The JSON-RPC code of a call the pair profile does not allow.
+const profileRefusedCode = -32003;
+
 /// A refused or failed settings call. [message] is safe to show.
 class HostSettingsException implements Exception {
   const HostSettingsException(this.message, {this.code, this.key});
@@ -252,13 +296,33 @@ abstract interface class HostSettings {
 
   /// Each status change the host pushes (`mcp.server` notifications).
   Stream<McpServerStatus> mcpUpdates();
+
+  /// Whether [provider] has a key and where it comes from
+  /// (`providers.key.get`, the Read profile). A host older than Core v0.13.0
+  /// fails with [methodNotFoundCode].
+  Future<ProviderKeyStatus> providerKey(String provider);
+
+  /// Hands [value] to the host as [provider]'s key (`providers.key.set`, the
+  /// Full profile). The value goes into the call and nowhere else; nothing
+  /// here keeps, logs or reports it again, and a refusal never carries it.
+  Future<ProviderKeyChange> setProviderKey(String provider, String value);
+
+  /// Removes the stored key; the host falls back to the provider's
+  /// environment variable (`providers.key.remove`, the Full profile).
+  Future<ProviderKeyChange> removeProviderKey(String provider);
 }
 
 /// [HostSettings] over a [BubblePawTransport].
 class TransportHostSettings implements HostSettings {
-  const TransportHostSettings(this._transport);
+  const TransportHostSettings(this._transport, {RawRequest? rawRequest})
+    : _raw = rawRequest;
 
   final BubblePawTransport _transport;
+
+  /// Keeps a refusal's code, which the kit's transport drops for everything
+  /// but the config refusals. The provider-key calls need it to tell a
+  /// profile refusal from a host without the method.
+  final RawRequest? _raw;
 
   Future<Map<String, Object?>> _call(
     String method,
@@ -416,4 +480,94 @@ class TransportHostSettings implements HostSettings {
       .map((message) => McpServerStatus.fromJson(message['params']))
       .where((status) => status != null)
       .cast<McpServerStatus>();
+
+  /// One provider-key call. [secret] is the key being submitted, if any: it
+  /// is cut out of any message the host or the transport sends back, so a
+  /// refusal can never show it.
+  Future<Map<String, Object?>> _keyCall(
+    String method,
+    String provider, {
+    String? secret,
+  }) async {
+    final Object? result;
+    try {
+      final raw = _raw;
+      final params = <String, Object?>{'name': provider, 'value': ?secret};
+      result = raw != null
+          ? await raw(method, params)
+          : await _transport.request(method, params);
+    } on RpcRefusal catch (refusal) {
+      throw switch (refusal.code) {
+        profileRefusedCode => const HostSettingsException(
+          'This device's profile does not allow changing provider keys. '
+          'It needs the Full profile.',
+          code: profileRefusedCode,
+        ),
+        methodNotFoundCode => const HostSettingsException(
+          'This host does not manage provider keys. Update BubblePaw Core to '
+          'v0.13.0 or later.',
+          code: methodNotFoundCode,
+        ),
+        _ => HostSettingsException(
+          _without(refusal.message, secret),
+          code: refusal.code,
+        ),
+      };
+    } on KitUnavailable {
+      throw const HostSettingsException('The host could not be reached.');
+    } on BubblePawException catch (error) {
+      throw HostSettingsException(
+        _without(error.rpcMessage ?? error.message, secret),
+        code: error.rpcCode,
+      );
+    }
+    if (result is! Map<String, Object?>) {
+      throw const HostSettingsException('The host sent an unexpected reply.');
+    }
+    return result;
+  }
+
+  /// [text] with every copy of [secret] cut out.
+  static String _without(String text, String? secret) {
+    final value = secret?.trim() ?? '';
+    return value.isEmpty ? text : text.replaceAll(value, '[removed]');
+  }
+
+  static ProviderKeyStatus _status(Map<String, Object?> wire) {
+    final isSet = wire['is_set'];
+    if (isSet is! bool) {
+      throw const HostSettingsException('The host sent an unexpected reply.');
+    }
+    return ProviderKeyStatus(
+      isSet: isSet,
+      source: switch (wire['source']) {
+        'stored' => ProviderKeySource.stored,
+        'environment' => ProviderKeySource.environment,
+        _ => ProviderKeySource.none,
+      },
+    );
+  }
+
+  static ProviderKeyChange _change(Map<String, Object?> wire) =>
+      ProviderKeyChange(
+        status: _status(wire),
+        applied: wire['applied'] == true,
+        restartNeeded: wire['restart_needed'] == true,
+      );
+
+  @override
+  Future<ProviderKeyStatus> providerKey(String provider) async =>
+      _status(await _keyCall('providers.key.get', provider));
+
+  @override
+  Future<ProviderKeyChange> setProviderKey(
+    String provider,
+    String value,
+  ) async => _change(
+    await _keyCall('providers.key.set', provider, secret: value),
+  );
+
+  @override
+  Future<ProviderKeyChange> removeProviderKey(String provider) async =>
+      _change(await _keyCall('providers.key.remove', provider));
 }
