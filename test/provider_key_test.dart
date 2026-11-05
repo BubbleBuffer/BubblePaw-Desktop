@@ -57,9 +57,8 @@ Future<HostController> _models(
   } else {
     final saved = fakeSavedHost(profile: profile);
     final remote = _host(settings);
-    controller = Played(
-      hostLinks: FakeHostLinks(hosts: [saved]),
-    ).controller(remoteStarter: (links, id) => remote.start(sampleConfig));
+    controller = Played(hostLinks: FakeHostLinks(hosts: [saved]))
+        .controller(remoteStarter: (links, id) => remote.start(sampleConfig));
     addTearDown(controller.close);
     await pumpApp(tester, controller, size: size);
     await tester.runAsync(() => controller.openRemoteHost(saved.id));
@@ -160,7 +159,10 @@ void main() {
         find.descendant(of: card, matching: find.text('Edit key')),
         findsOneWidget,
       );
-      expect(find.byKey(const ValueKey('provider-key-openrouter')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('provider-key-openrouter')),
+        findsNothing,
+      );
     });
 
     testWidgets('Edit key replaces a stored key', (tester) async {
@@ -375,10 +377,7 @@ void main() {
         );
         // The buttons are there and unavailable, before any key is typed.
         for (final provider in ['openrouter', 'deepseek', 'anthropic']) {
-          expect(
-            find.byKey(ValueKey('key-button-$provider')),
-            findsOneWidget,
-          );
+          expect(find.byKey(ValueKey('key-button-$provider')), findsOneWidget);
           expect(_enabled(tester, 'key-button-$provider'), isFalse);
         }
         await tester.tap(find.byKey(const ValueKey('key-button-openrouter')));
@@ -405,10 +404,7 @@ void main() {
       await _tap(tester, 'key-save');
       // Core's refusal is shown in the dialog, which stays open.
       expect(find.text('Add key for openrouter'), findsOneWidget);
-      expect(
-        find.textContaining('It needs the Full profile.'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('It needs the Full profile.'), findsOneWidget);
       expect(_markerOutsideField(), isEmpty);
     });
   });
@@ -558,7 +554,10 @@ void main() {
     testWidgets('the cards and the dialog fit', (tester) async {
       final settings = keyedHostSettings();
       await _models(tester, settings, size: narrow);
-      expect(find.byKey(const ValueKey('key-button-openrouter')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('key-button-openrouter')),
+        findsOneWidget,
+      );
       await _tap(tester, 'key-button-openrouter');
       expect(find.text('Add key for openrouter'), findsOneWidget);
       await _enterKey(tester, markerKey);

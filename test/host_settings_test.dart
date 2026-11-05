@@ -6,8 +6,7 @@ import 'dart:async';
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 import 'package:agent_kit_core/agent_kit_core.dart' show KitUnavailable;
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
-import 'package:bubblepaw_desktop/src/remote/remote_chats.dart'
-    show RpcRefusal;
+import 'package:bubblepaw_desktop/src/remote/remote_chats.dart' show RpcRefusal;
 import 'package:flutter_test/flutter_test.dart';
 
 class _Transport implements BubblePawTransport {
@@ -368,11 +367,11 @@ void main() {
 
     test('set sends the name and the value and nothing else', () async {
       final host = _Raw().reply({
-          'is_set': true,
-          'source': 'stored',
-          'applied': true,
-          'restart_needed': false,
-        });
+        'is_set': true,
+        'source': 'stored',
+        'applied': true,
+        'restart_needed': false,
+      });
       final change = await TransportHostSettings(
         _Transport(),
         rawRequest: host.call,
@@ -386,11 +385,11 @@ void main() {
 
     test('remove sends the name and reads a restart need', () async {
       final host = _Raw().reply({
-          'is_set': false,
-          'source': 'none',
-          'applied': false,
-          'restart_needed': true,
-        });
+        'is_set': false,
+        'source': 'none',
+        'applied': false,
+        'restart_needed': true,
+      });
       final change = await TransportHostSettings(
         _Transport(),
         rawRequest: host.call,
@@ -435,7 +434,9 @@ void main() {
     });
 
     test('a refusal that echoes the key is cut before it is shown', () async {
-      final host = _Raw().fail(const RpcRefusal(-32012, 'invalid key $marker for openrouter'));
+      final host = _Raw().fail(
+        const RpcRefusal(-32012, 'invalid key $marker for openrouter'),
+      );
       await expectLater(
         TransportHostSettings(
           _Transport(),
@@ -471,9 +472,8 @@ void main() {
     test('without a raw request the kit transport carries the call', () async {
       final transport = _Transport()
         ..reply = {'is_set': true, 'source': 'stored'};
-      final status = await TransportHostSettings(
-        transport,
-      ).providerKey('openrouter');
+      final status = await TransportHostSettings(transport)
+          .providerKey('openrouter');
       expect(transport.calls.single.$1, 'providers.key.get');
       expect(status.source, ProviderKeySource.stored);
     });

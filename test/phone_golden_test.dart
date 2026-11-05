@@ -192,27 +192,26 @@ void main() {
           profile: scene.value.profile,
           lastConnected: 1700000100,
         );
-        final controller = Played(
-          hostLinks: FakeHostLinks(hosts: [host]),
-        ).controller(
-          localHost: false,
-          phoneAccess: (_) => FakeRemoteAccess(),
-          remoteStarter: (links, id) async {
-            final fixture = RemoteFixture();
-            return StartedBackend(
-              RemoteBackend(
-                _KeyedBackend(sampleRemoteChats),
-                fixture.rows,
-                rawRequest: fixture.raw,
-              ),
-              () async {},
-              now: remoteClock,
-              attached: true,
-              remoteRows: fixture.rows,
-              settings: keyedHostSettings(),
+        final controller = Played(hostLinks: FakeHostLinks(hosts: [host]))
+            .controller(
+              localHost: false,
+              phoneAccess: (_) => FakeRemoteAccess(),
+              remoteStarter: (links, id) async {
+                final fixture = RemoteFixture();
+                return StartedBackend(
+                  RemoteBackend(
+                    _KeyedBackend(sampleRemoteChats),
+                    fixture.rows,
+                    rawRequest: fixture.raw,
+                  ),
+                  () async {},
+                  now: remoteClock,
+                  attached: true,
+                  remoteRows: fixture.rows,
+                  settings: keyedHostSettings(),
+                );
+              },
             );
-          },
-        );
         addTearDown(controller.close);
         await pumpApp(
           tester,

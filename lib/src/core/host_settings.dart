@@ -563,9 +563,8 @@ class TransportHostSettings implements HostSettings {
   Future<ProviderKeyChange> setProviderKey(
     String provider,
     String value,
-  ) async => _change(
-    await _keyCall('providers.key.set', provider, secret: value),
-  );
+  ) async =>
+      _change(await _keyCall('providers.key.set', provider, secret: value));
 
   @override
   Future<ProviderKeyChange> removeProviderKey(String provider) async =>

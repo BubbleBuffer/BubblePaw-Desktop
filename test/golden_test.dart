@@ -205,9 +205,8 @@ Scene _keysScene({String? open, String? profile, bool typed = false}) {
       );
       if (profile == null) return host = played.controller();
       saved = fakeSavedHost(profile: profile, lastConnected: 1700000100);
-      return host = Played(
-        hostLinks: FakeHostLinks(hosts: [saved!]),
-      ).controller(remoteStarter: (links, id) => played.start(sampleConfig));
+      return host = Played(hostLinks: FakeHostLinks(hosts: [saved!]))
+          .controller(remoteStarter: (links, id) => played.start(sampleConfig));
     },
     after: (tester) async {
       if (profile != null) {
