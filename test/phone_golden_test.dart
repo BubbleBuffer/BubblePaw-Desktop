@@ -197,7 +197,7 @@ void main() {
         for (var i = 0; i < 4; i++) {
           await settle(tester);
         }
-        await _tap(tester, 'rail-settings');
+        await _tap(tester, 'phone-settings');
         await _tap(tester, 'settings-nav-models');
         final open = scene.value.open;
         if (open != null) {
