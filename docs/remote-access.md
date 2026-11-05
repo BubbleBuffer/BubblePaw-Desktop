@@ -118,10 +118,17 @@ profile refusal (a read device may not open chats).
   the host itself, or choose another project." The chat is not started in any
   other project. A profile refusal says the device needs the edit profile.
 
+Context pane: on desktop, the chat header's context button opens the same
+Context pane as on this computer beside a saved host's chat (Now, History,
+Compactions). It reads the context view from the chat snapshot and the
+structure through `loadContext`, `loadHistoryRange` and `loadSummary` on the
+open host; nothing is stored here. A host that does not report the `context`
+capability has no button and no pane, and the phone never has one.
+
 Limits:
 
-- No workspace column or context pane next to a saved host's chat; the crew
-  shows as the strip under the header.
+- No workspace column next to a saved host's chat beyond the Context pane;
+  the crew shows as the strip under the header.
 - Search is not built (the kit's rail has none wired in the app).
 - The picker lists only projects that have chats in the loaded list, so a
   project whose chats are all older than the loaded pages is not offered.

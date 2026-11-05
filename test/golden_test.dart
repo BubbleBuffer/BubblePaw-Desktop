@@ -118,9 +118,13 @@ HostController? _remoteController;
 
 /// A saved host with chats in four projects, open, with [open] projects
 /// expanded and, with [pick], the project picker open on that project.
-Scene _remoteChats({List<String> open = const [], String? pick}) => (
+Scene _remoteChats({
+  List<String> open = const [],
+  String? pick,
+  bool context = false,
+}) => (
   controller: () {
-    final fixture = RemoteFixture();
+    final fixture = RemoteFixture(context: context);
     _remote = fixture;
     return _remoteController = fixture.controller();
   },
@@ -129,7 +133,8 @@ Scene _remoteChats({List<String> open = const [], String? pick}) => (
     await tester.runAsync(() => controller.openRemoteHost(_remote!.host.id));
     await settle(tester);
     final show = find.byKey(const ValueKey('rail-show'));
-    if (show.evaluate().isNotEmpty) {
+    // The context scene looks at the chat, not the list.
+    if (!context && show.evaluate().isNotEmpty) {
       await tester.tap(show);
       await settle(tester);
     }
@@ -140,6 +145,14 @@ Scene _remoteChats({List<String> open = const [], String? pick}) => (
       await tapVisible(tester, 'project-picker');
       await tapVisible(tester, 'project-pick-$pick');
       await tapVisible(tester, 'project-picker');
+    }
+    if (context) {
+      // The label is hidden in the compact layout; the meter's semantics
+      // name it in every size.
+      final semantics = tester.ensureSemantics();
+      await tester.tap(find.bySemanticsLabel(RegExp('Open the context view')));
+      await settle(tester);
+      semantics.dispose();
     }
   },
 );
@@ -977,6 +990,8 @@ void main() {
     'rail_remote_chats_open': _remoteChats(open: [gardenApi, agentKit]),
     // The project picker beside New chat, with a project picked.
     'rail_remote_chats_picker': _remoteChats(pick: agentKit),
+    // Context on a saved host: the pane beside the chat, as on this computer.
+    'remote_context': _remoteChats(context: true),
     'settings_about': (
       controller: () => HostController(
         store: MemoryConfigStore(sampleConfig),
