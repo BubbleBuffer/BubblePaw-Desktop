@@ -31,6 +31,7 @@ export '../rust/api/remote.dart'
         OtherShare,
         ShareError,
         ShareErrorKind,
+        ShareFailure,
         ShareMode,
         ShareSettings,
         ShareState,
@@ -107,6 +108,23 @@ abstract interface class RemoteAccess {
   Future<CloudflaredStatus> cloudflaredInfo();
   Future<CloudflaredStatus> installCloudflared();
   Future<CloudflaredStatus> updateCloudflared();
+
+  /// Whether the `cloudflared` file can be chosen from here. Core allows it
+  /// only to the person at this computer, never to a device that reached the
+  /// host remotely, so a saved host or a phone does not offer it.
+  bool get canChooseCloudflared;
+
+  /// Chooses the `cloudflared` at [path], or with null goes back to the
+  /// managed copy. Throws [native.ShareError] with Core's reason when the file
+  /// is refused; the previous choice then stands.
+  Future<CloudflaredStatus> setCloudflared(String? path);
+
+  /// Whether a browser sign-in (`cert.pem`) can be forgotten from here.
+  bool get canSignOutCloudflare;
+
+  /// Forgets the browser sign-in and nothing else (an API token stays). True
+  /// when there was one.
+  Future<bool> cloudflareSignOut();
 
   /// Throws [native.ShareError] with `badHostname` for a hostname the host
   /// refuses.
@@ -219,6 +237,19 @@ class NativeRemoteAccess implements RemoteAccess {
 
   @override
   Future<CloudflaredStatus> updateCloudflared() => _share.updateCloudflared();
+
+  @override
+  bool get canChooseCloudflared => true;
+
+  @override
+  Future<CloudflaredStatus> setCloudflared(String? path) =>
+      _share.setCloudflared(path: path);
+
+  @override
+  bool get canSignOutCloudflare => true;
+
+  @override
+  Future<bool> cloudflareSignOut() => _share.cloudflareSignOut();
 
   @override
   Future<void> checkHostname(String hostname) =>

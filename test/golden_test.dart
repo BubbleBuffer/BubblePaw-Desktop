@@ -109,6 +109,19 @@ Scene _remoteScene({
 /// a device ask.
 FakeRemoteAccess? _pairAccess;
 
+/// The sharing side of a failure scene, so its steps can make sharing stop.
+FakeRemoteAccess? _failureAccess;
+
+/// The copy of cloudflared that BubblePaw installed, up to date.
+const _managedCloudflared = CloudflaredStatus(
+  installed: true,
+  version: '2025.9.0',
+  pinnedVersion: '2025.9.0',
+  updateAvailable: false,
+  managed: true,
+  chosen: false,
+);
+
 /// The hosts of the scene being built, for the steps that answer as a host.
 FakeHostLinks? _links;
 
@@ -796,10 +809,67 @@ void main() {
           pinnedVersion: '2025.9.0',
           updateAvailable: false,
           managed: true,
+          chosen: false,
         ),
         devices: _sampleDevices,
       ),
       after: (tester) => tapVisible(tester, 'toggle-share'),
+    ),
+    // Core v0.13.0: choose the cloudflared file, and the failure copy.
+    'settings_remote_cloudflared_chosen': _remoteScene(
+      values: {'remote.mode': 'quick'},
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) => tapVisible(tester, 'cloudflared-choose'),
+    ),
+    'settings_remote_cloudflared_refused': _remoteScene(
+      values: {'remote.mode': 'quick'},
+      access: (host) => FakeRemoteAccess(hostSettings: host)
+        ..rejectCloudflared = ShareError(
+          kind: ShareErrorKind.other,
+          message:
+              'The selected program did not identify itself as cloudflared.',
+        ),
+      after: (tester) => tapVisible(tester, 'cloudflared-choose'),
+    ),
+    'settings_remote_failure_cloudflared': _remoteScene(
+      values: {'remote.mode': 'quick'},
+      access: (host) => _failureAccess = FakeRemoteAccess(
+        hostSettings: host,
+        cloudflaredStatus: _managedCloudflared,
+      ),
+      after: (tester) async {
+        await tapVisible(tester, 'toggle-share');
+        _failureAccess!.emit(
+          const ShareState(
+            status: ShareStatus.offline,
+            mode: ShareMode.quick,
+            lastError: 'cloudflared exited; restarting in 4s',
+            failure: ShareFailure(
+              transport: 'cloudflared',
+              exitCode: 1,
+              retryAfterSecs: 4,
+            ),
+            devices: 0,
+          ),
+        );
+        await settle(tester);
+      },
+    ),
+    'settings_remote_failure_relay': _remoteScene(
+      access: (host) => _failureAccess = FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'toggle-share');
+        _failureAccess!.emit(
+          const ShareState(
+            status: ShareStatus.offline,
+            mode: ShareMode.relay,
+            lastError: 'could not register at the relay',
+            failure: ShareFailure(transport: 'relay', retryAfterSecs: 8),
+            devices: 0,
+          ),
+        );
+        await settle(tester);
+      },
     ),
     'settings_remote_other_host': _remoteScene(
       access: (host) => FakeRemoteAccess(
@@ -1044,6 +1114,7 @@ void main() {
               open: (_) async {},
               saveKeyFile: (name) async => '/home/maya/Downloads/$name',
               keyFileInDownloads: true,
+              pickCloudflared: () async => '/opt/cloudflared/cloudflared',
             ),
           );
           await scene.value.after?.call(tester);

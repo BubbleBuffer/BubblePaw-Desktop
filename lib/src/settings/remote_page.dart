@@ -452,7 +452,7 @@ class _RemotePageState extends State<RemotePage> {
                     style: ts(theme.typeScale.ui, theme.ink),
                   ),
                 ),
-                if (cf.via == CloudflareVia.tokenFile)
+                if (r.canSignOut)
                   ActionButton(
                     key: const ValueKey('cf-sign-out'),
                     label: 'Sign out',
@@ -714,52 +714,56 @@ class _RemotePageState extends State<RemotePage> {
   List<Widget> _cloudflaredRows(RemoteController r) {
     final theme = context.bb;
     final info = r.cloudflared;
+    final chosen = info?.chosen ?? false;
     if (info == null || !info.installed) {
       return [
         SettingsKeyValueRow(
           'cloudflared',
-          r.installing ? 'Downloading…' : 'Not installed.',
+          r.installing
+              ? 'Downloading…'
+              : chosen
+              ? 'The chosen file is missing: ${info?.path ?? ''}'
+              : 'Not installed.',
           valueKey: const ValueKey('cloudflared-state'),
           mono: false,
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(124, 0, 12, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Download comes from Cloudflare's GitHub releases and is "
-                'checked against its published checksum.',
-                style: ts(theme.typeScale.uiSmall, theme.muted),
-              ),
-              const SizedBox(height: 8),
-              Opacity(
-                opacity: r.installing ? .5 : 1,
-                child: ActionButton(
-                  key: const ValueKey('cloudflared-download'),
-                  label: 'Download cloudflared',
-                  kind: ActionKind.primary,
-                  glyph: glyphDownload,
-                  onTap: r.installing
-                      ? () {}
-                      : () => unawaited(r.installCloudflared()),
-                ),
-              ),
-            ],
+        _cloudflaredNotes(
+          r,
+          chosen: chosen,
+          intro: Text(
+            "Download comes from Cloudflare's GitHub releases and is "
+            'checked against its published checksum.',
+            style: ts(theme.typeScale.uiSmall, theme.muted),
+          ),
+          download: Opacity(
+            opacity: r.installing ? .5 : 1,
+            child: ActionButton(
+              key: const ValueKey('cloudflared-download'),
+              label: 'Download cloudflared',
+              kind: ActionKind.primary,
+              glyph: glyphDownload,
+              onTap: r.installing
+                  ? () {}
+                  : () => unawaited(r.installCloudflared()),
+            ),
           ),
         ),
       ];
     }
     final version = info.version == null ? '' : ' ${info.version}';
+    // A chosen file reads as chosen even when it is the managed copy's path.
+    final managed = info.managed && !chosen;
     return [
       SettingsKeyValueRow(
         'cloudflared',
-        info.managed
+        chosen
+            ? 'cloudflared$version, chosen file at ${info.path ?? ''}'
+            : info.managed
             ? 'cloudflared$version, managed by BubblePaw'
             : 'cloudflared$version at ${info.path ?? ''}',
         valueKey: const ValueKey('cloudflared-state'),
         mono: false,
-        trailing: info.managed
+        trailing: managed
             ? Opacity(
                 opacity: r.updating || !info.updateAvailable ? .5 : 1,
                 child: ActionButton(
@@ -776,7 +780,94 @@ class _RemotePageState extends State<RemotePage> {
               )
             : null,
       ),
+      if (chosen ||
+          r.cloudflaredError != null ||
+          (r.restartForCloudflared && r.canChooseCloudflared))
+        _cloudflaredNotes(r, chosen: chosen),
     ];
+  }
+
+  /// Under the cloudflared row: what to do about it ([intro] and [download]
+  /// when it is missing), choosing a file or going back to the managed copy
+  /// (this computer only), why Core refused a file, and that sharing must
+  /// restart to run a new one.
+  Widget _cloudflaredNotes(
+    RemoteController r, {
+    required bool chosen,
+    Widget? intro,
+    Widget? download,
+  }) {
+    final theme = context.bb;
+    final canChoose = r.canChooseCloudflared;
+    final error = r.cloudflaredError;
+    final buttons = <Widget>[
+      ?download,
+      // Choosing is offered where there is no cloudflared yet, and to change
+      // a choice already made.
+      if (canChoose && (chosen || download != null))
+        Opacity(
+          opacity: r.choosing ? .5 : 1,
+          child: ActionButton(
+            key: const ValueKey('cloudflared-choose'),
+            label: chosen ? 'Choose another file…' : 'Choose file…',
+            glyph: glyphFolderOpen,
+            onTap: r.choosing ? () {} : () => unawaited(_choose(r)),
+          ),
+        ),
+      if (canChoose && chosen)
+        Opacity(
+          opacity: r.choosing ? .5 : 1,
+          child: ActionButton(
+            key: const ValueKey('cloudflared-use-managed'),
+            label: 'Use managed copy',
+            onTap: r.choosing
+                ? () {}
+                : () => unawaited(r.chooseCloudflared(null)),
+          ),
+        ),
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(124, 0, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ?intro,
+          if (error != null)
+            Padding(
+              padding: EdgeInsets.only(
+                top: intro == null ? 0 : 4,
+                bottom: buttons.isEmpty ? 0 : 8,
+              ),
+              child: Text(
+                error,
+                key: const ValueKey('cloudflared-error'),
+                style: ts(theme.typeScale.uiSmall, theme.dangerInk),
+              ),
+            ),
+          if (r.restartForCloudflared && canChoose)
+            Padding(
+              padding: EdgeInsets.only(
+                top: intro == null ? 0 : 4,
+                bottom: buttons.isEmpty ? 0 : 8,
+              ),
+              child: Text(
+                'Restart sharing to run the new cloudflared.',
+                key: const ValueKey('cloudflared-restart'),
+                style: ts(theme.typeScale.uiSmall, theme.muted),
+              ),
+            ),
+          if (intro != null && buttons.isNotEmpty) const SizedBox(height: 8),
+          if (buttons.isNotEmpty)
+            Wrap(spacing: 8, runSpacing: 8, children: buttons),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _choose(RemoteController r) async {
+    final path = await widget.services.pickCloudflared();
+    if (path == null) return;
+    await r.chooseCloudflared(path);
   }
 
   // Paired devices.

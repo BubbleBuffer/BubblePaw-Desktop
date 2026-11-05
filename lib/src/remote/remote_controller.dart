@@ -59,9 +59,12 @@ class RemoteController extends ChangeNotifier {
   ShareBlock _block = ShareBlock.none;
   String? _failure;
   String? _error;
+  String? _cloudflaredError;
+  bool _restartForCloudflared = false;
   bool _busy = false;
   bool _installing = false;
   bool _updating = false;
+  bool _choosing = false;
   bool _signingIn = false;
   bool _tokenOpen = false;
   bool _tokenBusy = false;
@@ -89,14 +92,38 @@ class RemoteController extends ChangeNotifier {
   bool get wantOn => _wantOn;
   ShareBlock get block => _block;
 
-  /// A sentence for a share that stopped by itself, or null.
-  String? get failure => _failure;
+  /// A sentence for a share that stopped by itself, or null. Core's structured
+  /// failure supplies the real exit code and retry delay.
+  String? get failure =>
+      _failure ??
+      (_share.status == ShareStatus.offline ? shareFailureWords(_share) : null);
 
   /// The last action's error, shown near the control it belongs to.
   String? get error => _error;
   bool get busy => _busy;
   bool get installing => _installing;
   bool get updating => _updating;
+
+  /// A file is being checked as the `cloudflared` to use.
+  bool get choosing => _choosing;
+
+  /// Why Core refused the `cloudflared` file chosen last, in its words.
+  String? get cloudflaredError => _cloudflaredError;
+
+  /// A `cloudflared` was chosen or cleared while sharing ran: sharing runs
+  /// the old one until it restarts.
+  bool get restartForCloudflared => _restartForCloudflared;
+
+  /// The `cloudflared` file can be chosen here (this computer only).
+  bool get canChooseCloudflared => access.canChooseCloudflared;
+
+  /// Signing out is offered: a stored token always, a browser sign-in where
+  /// the host can forget it.
+  bool get canSignOut => switch (_cloudflare?.via) {
+    CloudflareVia.tokenFile => true,
+    CloudflareVia.certPem => access.canSignOutCloudflare,
+    _ => false,
+  };
   bool get signingIn => _signingIn;
   bool get tokenOpen => _tokenOpen;
   bool get tokenBusy => _tokenBusy;
@@ -178,8 +205,9 @@ class RemoteController extends ChangeNotifier {
     _share = next;
     if (next.status == ShareStatus.online ||
         next.status == ShareStatus.offline) {
-      _failure = next.status == ShareStatus.offline ? next.lastError : null;
+      _failure = null;
     }
+    if (next.status == ShareStatus.off) _restartForCloudflared = false;
     _notify();
     if (devicesChanged) unawaited(refreshDevices());
   }
@@ -206,6 +234,7 @@ class RemoteController extends ChangeNotifier {
     } else {
       _block = ShareBlock.none;
       _failure = null;
+      _restartForCloudflared = false;
       try {
         await access.stop();
         _share = await access.state();
@@ -222,6 +251,7 @@ class RemoteController extends ChangeNotifier {
     _busy = true;
     _block = ShareBlock.none;
     _failure = null;
+    _restartForCloudflared = false;
     _notify();
     try {
       _config = await access.settings();
@@ -394,6 +424,32 @@ class RemoteController extends ChangeNotifier {
     _notify();
   }
 
+  /// Chooses the `cloudflared` file at [path], or with null goes back to the
+  /// managed copy. Core checks the file first; its reason for refusing it is
+  /// kept in [cloudflaredError] and the earlier choice stands.
+  Future<void> chooseCloudflared(String? path) async {
+    if (_choosing || !access.canChooseCloudflared) return;
+    _choosing = true;
+    _cloudflaredError = null;
+    _notify();
+    var changed = false;
+    try {
+      _cloudflared = await access.setCloudflared(path);
+      changed = true;
+    } on ShareError catch (error) {
+      _cloudflaredError = error.message;
+    } on Object {
+      _cloudflaredError = 'Could not use that file. Try again.';
+    }
+    _choosing = false;
+    if (changed) {
+      // Sharing runs the executable it started with.
+      _restartForCloudflared = _share.status != ShareStatus.off;
+    }
+    _notify();
+    if (changed && (_cloudflared?.installed ?? false)) await _retryBlocked();
+  }
+
   /// Starts again when sharing waited for something that is now there.
   Future<void> _retryBlocked() async {
     if (_wantOn && _block != ShareBlock.none && !_busy) await _begin();
@@ -454,11 +510,17 @@ class RemoteController extends ChangeNotifier {
     await _retryBlocked();
   }
 
-  /// Forgets the stored token. A browser sign-in is not stored by BubblePaw,
-  /// so only a token has a sign out.
+  /// Signs out of Cloudflare as it was signed in: a stored token is
+  /// forgotten, a browser sign-in (`cert.pem`) is removed by the host. The
+  /// other credential, if there is one, stays.
   Future<void> signOut() async {
+    _error = null;
     try {
-      await access.forgetCloudflareToken();
+      if (_cloudflare?.via == CloudflareVia.certPem) {
+        await access.cloudflareSignOut();
+      } else {
+        await access.forgetCloudflareToken();
+      }
     } on Object {
       _error = 'Could not sign out. Try again.';
     }
@@ -552,6 +614,28 @@ class RemoteController extends ChangeNotifier {
     unawaited(_watching?.cancel());
     super.dispose();
   }
+}
+
+/// The sentence for a share that went offline. Core's structured failure
+/// gives the real exit code and the delay it scheduled before trying again;
+/// without one, the error text the host gave.
+String? shareFailureWords(ShareState state) {
+  final failure = state.failure;
+  if (failure != null) {
+    switch (failure.transport) {
+      case 'cloudflared':
+        final code = failure.exitCode;
+        return code == null
+            ? 'cloudflared stopped. Paired devices stay paired.'
+            : 'cloudflared exited with code $code. '
+                  'Paired devices stay paired.';
+      case 'relay':
+        final secs = failure.retryAfterSecs;
+        return 'The relay did not answer. The host retries in '
+            '$secs ${secs == 1 ? 'second' : 'seconds'}.';
+    }
+  }
+  return state.lastError;
 }
 
 /// "Last seen" text for a device: relative for today, dated beyond.

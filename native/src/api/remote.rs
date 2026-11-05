@@ -103,6 +103,18 @@ pub struct ShareSettings {
     pub autostart: bool,
 }
 
+/// Why sharing is offline, as Core reports it for the current transport.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ShareFailure {
+    /// `relay` or `cloudflared`.
+    pub transport: String,
+    /// The exit code, when `cloudflared` exited with one.
+    pub exit_code: Option<i32>,
+    /// Seconds until Core tries again: the delay it actually scheduled
+    /// (relay backoff included), never a fixed promise.
+    pub retry_after_secs: u32,
+}
+
 /// Where sharing stands.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ShareState {
@@ -113,6 +125,8 @@ pub struct ShareState {
     /// The device ID devices pair with; known once sharing started.
     pub host_id: Option<String>,
     pub last_error: Option<String>,
+    /// The structured side of `last_error`; `None` when nothing failed.
+    pub failure: Option<ShareFailure>,
     /// Open device tunnels.
     pub devices: u32,
 }
@@ -187,6 +201,9 @@ pub struct CloudflaredStatus {
     pub update_available: bool,
     /// The copy is the one BubblePaw installed in its data directory.
     pub managed: bool,
+    /// The person chose this executable (`remote.cloudflared`), rather than
+    /// it being the managed copy or the one found on `PATH`.
+    pub chosen: bool,
 }
 
 /// Whether this data directory is being shared, and by whom.
@@ -351,6 +368,23 @@ impl RemoteShare {
     /// The `cloudflared` the host would run, and whether the pinned release is newer.
     pub async fn cloudflared_info(&self) -> Result<CloudflaredStatus, ShareError> {
         self.inner.cloudflared_info().await
+    }
+
+    /// Chooses the `cloudflared` at `path`, or with `None` goes back to the
+    /// managed copy (or the one on `PATH`). The host runs it with `--version`
+    /// first; a refusal comes back as a [`ShareError`] carrying its reason and
+    /// leaves the choice as it was. Sharing must restart to run the new one.
+    pub async fn set_cloudflared(
+        &self,
+        path: Option<String>,
+    ) -> Result<CloudflaredStatus, ShareError> {
+        self.inner.set_cloudflared(path).await
+    }
+
+    /// Forgets the browser sign-in (`cert.pem`) and nothing else: an API token
+    /// and tunnel state stay. True when there was a sign-in to forget.
+    pub async fn cloudflare_sign_out(&self) -> Result<bool, ShareError> {
+        self.inner.cloudflare_sign_out().await
     }
 
     /// Downloads the pinned `cloudflared` into the data directory and checks

@@ -48,6 +48,7 @@ impl Share {
             address: None,
             host_id: None,
             last_error: None,
+            failure: None,
             devices: 0,
         }
     }
@@ -115,6 +116,17 @@ impl Share {
     pub(crate) async fn login_cancel(&self) {}
 
     pub(crate) async fn cloudflared_info(&self) -> Result<CloudflaredStatus, ShareError> {
+        Err(unsupported())
+    }
+
+    pub(crate) async fn set_cloudflared(
+        &self,
+        _path: Option<String>,
+    ) -> Result<CloudflaredStatus, ShareError> {
+        Err(unsupported())
+    }
+
+    pub(crate) async fn cloudflare_sign_out(&self) -> Result<bool, ShareError> {
         Err(unsupported())
     }
 

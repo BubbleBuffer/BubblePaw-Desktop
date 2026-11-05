@@ -33,6 +33,7 @@ Future<void> _openRemote(
   List<Uri>? opened,
   Future<String?> Function(String name)? saveKeyFile,
   bool? keyFileInDownloads,
+  Future<String?> Function()? pickCloudflared,
 }) async {
   final host = settings ?? FakeHostSettings();
   await pumpApp(
@@ -48,6 +49,7 @@ Future<void> _openRemote(
       saveKeyFile: saveKeyFile ?? (name) async => '/tmp/$name',
       keyFileInDownloads: keyFileInDownloads,
       pickKeyFile: () async => '/tmp/key.bpkey',
+      pickCloudflared: pickCloudflared ?? () async => null,
     ),
   );
   final show = find.byKey(const ValueKey('rail-show'));
@@ -388,6 +390,285 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+  });
+
+  group('Sharing settings', () {
+    const refusal =
+        'the selected program did not identify itself as cloudflared';
+
+    // The page on a temporary address, where the file picker returns a file.
+    Future<FakeRemoteAccess> quickMode(
+      WidgetTester tester, {
+      bool canChoose = true,
+      ShareError? refuse,
+    }) async {
+      final host = FakeHostSettings();
+      final access = FakeRemoteAccess(
+        hostSettings: host,
+        canChooseCloudflared: canChoose,
+      )..rejectCloudflared = refuse;
+      await _openRemote(
+        tester,
+        access,
+        settings: host,
+        pickCloudflared: () async => '/opt/cf/cloudflared',
+      );
+      await _tap(tester, 'reach-quick');
+      return access;
+    }
+
+    testWidgets('a chosen cloudflared reads as chosen, not managed', (
+      tester,
+    ) async {
+      final access = await quickMode(tester);
+      expect(find.byKey(const ValueKey('cloudflared-choose')), findsOneWidget);
+      await _tap(tester, 'cloudflared-choose');
+      expect(access.calls, contains('set-cloudflared:/opt/cf/cloudflared'));
+      expect(
+        find.text('cloudflared 2026.9.0, chosen file at /opt/cf/cloudflared'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('managed by BubblePaw'), findsNothing);
+      expect(find.byKey(const ValueKey('cloudflared-update')), findsNothing);
+      expect(find.byKey(const ValueKey('cloudflared-error')), findsNothing);
+      // Not sharing, so nothing runs the old one.
+      expect(find.byKey(const ValueKey('cloudflared-restart')), findsNothing);
+    });
+
+    testWidgets('a cancelled picker changes nothing', (tester) async {
+      final host = FakeHostSettings();
+      final access = FakeRemoteAccess(hostSettings: host);
+      await _openRemote(tester, access, settings: host);
+      await _tap(tester, 'reach-quick');
+      await _tap(tester, 'cloudflared-choose');
+      expect(
+        access.calls.where((c) => c.startsWith('set-cloudflared')),
+        isEmpty,
+      );
+      expect(find.text('Not installed.'), findsOneWidget);
+    });
+
+    testWidgets('a refused file shows the host reason and keeps the state', (
+      tester,
+    ) async {
+      final access = await quickMode(
+        tester,
+        refuse: ShareError(kind: ShareErrorKind.other, message: refusal),
+      );
+      await _tap(tester, 'cloudflared-choose');
+      expect(access.calls, contains('set-cloudflared:/opt/cf/cloudflared'));
+      expect(find.text(refusal), findsOneWidget);
+      expect(find.text('Not installed.'), findsOneWidget);
+      expect(find.textContaining('chosen file'), findsNothing);
+
+      // A file that passes clears the reason.
+      access.rejectCloudflared = null;
+      await _tap(tester, 'cloudflared-choose');
+      expect(find.text(refusal), findsNothing);
+      expect(find.textContaining('chosen file at'), findsOneWidget);
+    });
+
+    testWidgets('clearing the choice goes back to the managed copy', (
+      tester,
+    ) async {
+      final access = await quickMode(tester);
+      await _tap(tester, 'cloudflared-choose');
+      await _tap(tester, 'cloudflared-use-managed');
+      expect(access.calls.last, 'set-cloudflared:managed');
+      expect(
+        find.text('cloudflared 2025.9.0, managed by BubblePaw'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('cloudflared-use-managed')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('cloudflared-update')), findsOneWidget);
+    });
+
+    testWidgets('a running share must restart to use the new cloudflared', (
+      tester,
+    ) async {
+      final access = await quickMode(tester);
+      await _tap(tester, 'toggle-share');
+      expect(find.text('Connected'), findsOneWidget);
+      await _tap(tester, 'cloudflared-choose');
+      expect(
+        find.text('Restart sharing to run the new cloudflared.'),
+        findsOneWidget,
+      );
+      expect(access.calls.last, 'set-cloudflared:/opt/cf/cloudflared');
+
+      // Restarting runs the new one, so the note goes.
+      await _tap(tester, 'toggle-share');
+      await _tap(tester, 'toggle-share');
+      expect(find.byKey(const ValueKey('cloudflared-restart')), findsNothing);
+    });
+
+    testWidgets('choosing is not offered where the host refuses it', (
+      tester,
+    ) async {
+      final access = await quickMode(tester, canChoose: false);
+      expect(
+        find.byKey(const ValueKey('cloudflared-download')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('cloudflared-choose')), findsNothing);
+      // Even a file chosen earlier cannot be changed from here.
+      access.cloudflaredStatus = const CloudflaredStatus(
+        installed: true,
+        path: '/opt/cf/cloudflared',
+        version: '2026.9.0',
+        pinnedVersion: '2025.9.0',
+        updateAvailable: false,
+        managed: false,
+        chosen: true,
+      );
+      await _tap(tester, 'reach-domain');
+      await _tap(tester, 'reach-quick');
+      expect(find.byKey(const ValueKey('cloudflared-choose')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('cloudflared-use-managed')),
+        findsNothing,
+      );
+    });
+
+    Future<FakeRemoteAccess> domainSignedIn(
+      WidgetTester tester,
+      CloudflareVia via, {
+      bool canSignOut = true,
+    }) async {
+      final host = FakeHostSettings();
+      final access = FakeRemoteAccess(
+        hostSettings: host,
+        canSignOutCloudflare: canSignOut,
+        cloudflare: CloudflareStatus(
+          signedIn: true,
+          via: via,
+          account: 'maya@example.com',
+          zones: const ['example.com'],
+        ),
+      );
+      await _openRemote(tester, access, settings: host);
+      await _tap(tester, 'reach-domain');
+      return access;
+    }
+
+    testWidgets('a browser sign-in is signed out through the host', (
+      tester,
+    ) async {
+      final access = await domainSignedIn(tester, CloudflareVia.certPem);
+      expect(find.byKey(const ValueKey('cf-signed-in')), findsOneWidget);
+      await _tap(tester, 'cf-sign-out');
+      expect(access.calls, contains('cloudflare-sign-out'));
+      expect(access.calls, isNot(contains('forget-token')));
+      expect(find.byKey(const ValueKey('cf-signed-out')), findsOneWidget);
+    });
+
+    testWidgets('a stored token is signed out by forgetting it', (
+      tester,
+    ) async {
+      final access = await domainSignedIn(tester, CloudflareVia.tokenFile);
+      await _tap(tester, 'cf-sign-out');
+      expect(access.calls, contains('forget-token'));
+      expect(access.calls, isNot(contains('cloudflare-sign-out')));
+      expect(find.byKey(const ValueKey('cf-signed-out')), findsOneWidget);
+    });
+
+    testWidgets('sign out is not offered when the host cannot do it', (
+      tester,
+    ) async {
+      await domainSignedIn(tester, CloudflareVia.certPem, canSignOut: false);
+      expect(find.byKey(const ValueKey('cf-signed-in')), findsOneWidget);
+      expect(find.byKey(const ValueKey('cf-sign-out')), findsNothing);
+    });
+
+    testWidgets('a token from the environment is not the app to forget', (
+      tester,
+    ) async {
+      await domainSignedIn(tester, CloudflareVia.tokenEnv);
+      expect(find.byKey(const ValueKey('cf-signed-in')), findsOneWidget);
+      expect(find.byKey(const ValueKey('cf-sign-out')), findsNothing);
+    });
+
+    ShareState offline({ShareFailure? failure, String? error}) => ShareState(
+      status: ShareStatus.offline,
+      mode: ShareMode.relay,
+      lastError: error,
+      failure: failure,
+      devices: 0,
+    );
+
+    testWidgets('a cloudflared that exited names the real exit code', (
+      tester,
+    ) async {
+      final access = await quickMode(tester);
+      await _tap(tester, 'toggle-share');
+      for (final code in [1, 137]) {
+        access.emit(
+          offline(
+            error: 'cloudflared exited; restarting in 5s',
+            failure: ShareFailure(
+              transport: 'cloudflared',
+              exitCode: code,
+              retryAfterSecs: 5,
+            ),
+          ),
+        );
+        await settle(tester);
+        expect(
+          find.text(
+            'cloudflared exited with code $code. Paired devices stay paired.',
+          ),
+          findsOneWidget,
+        );
+      }
+    });
+
+    testWidgets('a relay that did not answer names the real retry delay', (
+      tester,
+    ) async {
+      final access = FakeRemoteAccess();
+      await _openRemote(tester, access);
+      await _tap(tester, 'toggle-share');
+      for (final (secs, words) in [(1, '1 second'), (8, '8 seconds')]) {
+        access.emit(
+          offline(
+            error: 'could not register at the relay',
+            failure: ShareFailure(transport: 'relay', retryAfterSecs: secs),
+          ),
+        );
+        await settle(tester);
+        expect(
+          find.text('The relay did not answer. The host retries in $words.'),
+          findsOneWidget,
+        );
+      }
+    });
+
+    testWidgets('an offline share without a failure keeps the host text', (
+      tester,
+    ) async {
+      final access = FakeRemoteAccess();
+      await _openRemote(tester, access);
+      await _tap(tester, 'toggle-share');
+      access.emit(offline(error: 'the relay refused the key'));
+      await settle(tester);
+      expect(find.text('the relay refused the key'), findsOneWidget);
+      expect(find.textContaining('retries in'), findsNothing);
+
+      // Back online: no failure is left on the page.
+      access.emit(
+        const ShareState(
+          status: ShareStatus.online,
+          mode: ShareMode.relay,
+          address: 'wss://relay.example.com',
+          devices: 0,
+        ),
+      );
+      await settle(tester);
+      expect(find.byKey(const ValueKey('remote-why')), findsNothing);
     });
   });
 }

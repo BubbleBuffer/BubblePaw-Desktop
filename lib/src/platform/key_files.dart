@@ -135,6 +135,19 @@ Future<String?> pickKeyFilePath() async {
   return file?.path;
 }
 
+/// Asks for the `cloudflared` program to use; null when the person cancels.
+/// Other systems name it without an extension, so only Windows filters.
+Future<String?> pickCloudflaredPath() async {
+  final file = await openFile(
+    acceptedTypeGroups: [
+      if (Platform.isWindows)
+        const XTypeGroup(label: 'cloudflared', extensions: ['exe']),
+    ],
+    confirmButtonText: 'Choose',
+  );
+  return file?.path;
+}
+
 /// Puts [text] on the clipboard.
 Future<void> copyToClipboard(String text) =>
     Clipboard.setData(ClipboardData(text: text));

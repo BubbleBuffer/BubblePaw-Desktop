@@ -5,7 +5,7 @@ lists the hosts this device can open, and holds the device key. The rail menu
 switches between this computer and those hosts. Core `v0.13.0` does the work; the app is a thin page
 over it.
 
-The Share tab's status block always shows a danger-toned `Stopped` pill when the tunnel or relay is not up. Under it, one line says why: `Sharing is off.` when the switch is off, the missing cloudflared, Cloudflare sign-in or hostname, or the failure text. A failure after the share started is Core's own `ShareState.lastError`, or the controller's fixed words when a start call failed; Core gives no exit code or retry period, so the page does not state them.
+The Share tab's status block always shows a danger-toned `Stopped` pill when the tunnel or relay is not up. Under it, one line says why: `Sharing is off.` when the switch is off, the missing cloudflared, Cloudflare sign-in or hostname, or the failure text. A failure after the share started is built from Core's structured `ShareState.failure` (`transport`, `exit_code`, `retry_after_secs`, carried through the native `ShareState.failure`): "cloudflared exited with code 1. Paired devices stay paired." with the real exit code, and "The relay did not answer. The host retries in 8 seconds." with the delay Core scheduled (relay backoff starts at 1 second and doubles to 60, so the mockup's "every 30 seconds" is not stated). A cloudflared that left no exit code reads "cloudflared stopped. Paired devices stay paired.". Without a structured failure the page shows Core's `ShareState.lastError`, or the controller's fixed words when a start call failed. The tray reads the same `RemoteController.failure`, so it agrees.
 
 ## Where the code is
 
@@ -142,7 +142,35 @@ Limits:
   starts with the host only in relay and domain modes, never in quick mode.
 - The Cloudflare API token goes to Core as a secret (owner-only file). It is
   never in the config or the preferences.
-- cloudflared: downloaded by Core with a checksum check, or found on the path.
+- cloudflared: downloaded by Core with a checksum check, or found on the path,
+  or a file the person chose (`remote.cloudflared`, below).
+
+## cloudflared and Cloudflare sign-out
+
+- **Choose file.** Where cloudflared is missing the row offers "Download
+  cloudflared" and "Choose file…" (a file picker, `PlatformServices.pickCloudflared`).
+  The path goes to Core's `remote.cloudflared.set` (`RemoteShare.set_cloudflared`).
+  Core runs `--version` first and refuses a missing, non-executable or wrong
+  program; the page shows that reason under the row (`cloudflared-error`) and the
+  earlier choice stands. Core refuses the call from a device that reached the host
+  remotely, so only this computer's page offers it (`RemoteAccess.canChooseCloudflared`;
+  the phone's access answers false).
+- **Chosen reads as chosen.** `CloudflaredStatus.chosen` comes from Core's info. A
+  chosen file reads "cloudflared 2026.9.0, chosen file at <path>", never "managed by
+  BubblePaw" (even when it is the managed copy's path), and has no Update button.
+  "Choose another file…" changes it and "Use managed copy" clears it
+  (`set_cloudflared(None)`: the managed copy, else the one on the path). A chosen
+  file that no longer exists reads "The chosen file is missing".
+- **Restart.** The running sharing keeps the executable it started with: while
+  sharing is on, a change shows "Restart sharing to run the new cloudflared." until
+  sharing stops or starts again.
+- **Sign out.** The Cloudflare panel's Sign out forgets the credential in use: a
+  stored API token (`forget_cloudflare_token`) or a browser sign-in
+  (`RemoteShare.cloudflare_sign_out`, Core's `remote.cloudflare.sign_out`, which
+  removes only `cert.pem`). An API token from the environment is not the app's to
+  forget, and a host that cannot sign out (`canSignOutCloudflare` false) shows no
+  button. The native crate shows a Windows chosen path without the `\?\` prefix Core
+  adds when it resolves it.
 
 ## Pairing
 
@@ -233,6 +261,17 @@ Model traffic: `test/model_egress_test.dart` (picker, writes, unavailable
 `model_traffic_is_granted_only_when_the_host_owner_allows_it` (a real grant shows
 on the host's device list and on the saved host); goldens `settings_models_via*`,
 `settings_remote_pair_egress` and `settings_remote_devices_egress`.
+Sharing settings: `test/remote_page_test.dart` (Choose file accepted and refused
+with the host's reason, chosen against managed wording, clearing back, the restart
+note, nothing offered where the host refuses it, sign-out for a browser sign-in and
+a stored token and none where unavailable or for an environment token, failure copy
+with different codes and delays, an offline share without a failure),
+`test/share_failure_test.dart` (the sentence for each transport) and the native tests
+in `native/src/sharing_tests.rs` (a relay that does not answer reports delays 1 then
+2, an online share has no failure, a refused file leaves the choice, a chosen
+cloudflared reads as chosen and clears; the last needs a shell script, so unix only);
+goldens `settings_remote_cloudflared_chosen`, `settings_remote_cloudflared_refused`,
+`settings_remote_failure_cloudflared` and `settings_remote_failure_relay`.
 Pairing name and key export: `test/remote_page_test.dart` (the device name field,
 the save to Downloads and its error), `test/key_files_test.dart` (folder lookup
 and free file names); goldens `settings_remote_pair_confirm` and

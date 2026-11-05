@@ -108,5 +108,14 @@ class PhoneRemoteAccess implements RemoteAccess {
   @override
   Future<CloudflaredStatus> updateCloudflared() async => _unsupported();
   @override
+  bool get canChooseCloudflared => false;
+  @override
+  Future<CloudflaredStatus> setCloudflared(String? path) async =>
+      _unsupported();
+  @override
+  bool get canSignOutCloudflare => false;
+  @override
+  Future<bool> cloudflareSignOut() async => _unsupported();
+  @override
   Future<void> checkHostname(String hostname) async => _unsupported();
 }
