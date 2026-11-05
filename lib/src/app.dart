@@ -459,9 +459,10 @@ class _WorkbenchState extends State<Workbench> {
   FileDiff? _review;
 
   // The workspace holds the Context pane. Without the capability the pane
-  // has nothing to show, so the workbench gets no workspace at all.
+  // has nothing to show, so the workbench gets no workspace at all. The
+  // phone has no room beside the chat.
   late final WorkspaceController? _workspace =
-      widget.backend.capabilities.has(KitCapability.context)
+      !widget.phone && widget.backend.capabilities.has(KitCapability.context)
       ? (WorkspaceController()..addPane(WorkspaceKind.context.id))
       : null;
 
@@ -521,6 +522,7 @@ class _WorkbenchState extends State<Workbench> {
                 now: widget.now,
                 onSettings: widget.onSettings,
                 onSwitchHost: _openWorkspaceMenu,
+                workspaceController: _workspace,
                 transcriptActions: TranscriptActions(
                   now: widget.now,
                   onReviewDiff: (edit) => _showDiff(edit.diff),

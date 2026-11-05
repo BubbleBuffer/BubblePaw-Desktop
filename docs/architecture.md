@@ -172,7 +172,11 @@ cause (a locked store, a bad config).
   the capability. The host reports plan, questions and usage (not the branch);
   they appear as it sends them. The **Context pane** needs the `context`
   capability, which the stdio host has since BubblePaw-Core v0.3.0, so `Workbench` creates the workspace
-  (and the header's context button) only for a backend that has it. The scripted
+  (and the header's context button) only for a backend that has it and only
+  on desktop. A saved host's chat (`RemoteWorkbench`) gets the same pane from
+  the same button: it reads `loadContext` and the snapshot's context view from
+  the open host, nothing is stored here, and a host without the capability
+  has no button. The phone has no pane. The scripted
   backend has it.
 - **Rewind from here**: the kit puts this on user messages when the backend has
   the rewind capability, and calls the port's `rewind`. `BubblePawBackend`
@@ -198,6 +202,7 @@ Settings > Remote access is described in [remote-access.md](remote-access.md). `
 |---|---|
 | `test/app_test.dart` | Widget tests on the scripted backend: open a chat, send, approve, deny, diff, failure notices, Restart |
 | `test/v01_test.dart` | Idle exit, avatar initials, plan, question, context pane present and absent, branch |
+| `test/remote_context_test.dart` | The Context pane on a saved host (opens, shows the host's data), absent without the capability, absent on the phone |
 | `test/rewind_test.dart` | The kit's rewind action reaches the backend and the announced chat opens; no action without the capability |
 | `test/scenes.dart` | Scripted hosts the tests and goldens share |
 | `test/guarded_backend_test.dart` | The host-exit detector |
@@ -218,7 +223,7 @@ Settings > Remote access is described in [remote-access.md](remote-access.md). `
 | `test/settings_test.dart` | General switches and theme, Models, About (versions, Core row, Updates, Licences search and expand), the tray notice, version constants |
 | `test/semver_test.dart`, `test/download_test.dart`, `test/updates_test.dart`, `test/update_dialog_test.dart` | Versions, the verified download, app updates and the dialog; see [core-and-updates.md](core-and-updates.md) |
 | `test/tray_test.dart` | The tray menu model (status line, Share row), icon file choice and that every icon file exists, and the integration against fake tray, window and login adapters (close-to-tray, quit, waiting count, login entry, share toggle and its blocked case, icon dot follows host and share state) |
-| `test/golden_test.dart` | Main screen, General, Models (and the model traffic picker, with an unavailable host), Tools (list, editor, a partial category, a built-in toolset), Skills (list, empty), Feedback (page, sheet, chat attached, saved), About (with updates), the update dialog states, Licences, a failure notice, plan, question, crew (with Cancel) and the context pane, light and dark, 1440 and 480 px wide (`test/goldens`) |
+| `test/golden_test.dart` | Main screen, General, Models (and the model traffic picker, with an unavailable host), Tools (list, editor, a partial category, a built-in toolset), Skills (list, empty), Feedback (page, sheet, chat attached, saved), About (with updates), the update dialog states, Licences, a failure notice, plan, question, crew (with Cancel) and the context pane (also on a saved host), light and dark, 1440 and 480 px wide (`test/goldens`) |
 | `test/feedback_test.dart`, `test/feedback_ui_test.dart` | Local feedback: redaction, report and chat files, storage, the sheet and the Feedback page (see [feedback.md](feedback.md)) |
 
 Goldens are rendered on Linux with the bundled fonts and the Flutter version CI

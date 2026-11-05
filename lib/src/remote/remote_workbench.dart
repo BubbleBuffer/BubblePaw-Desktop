@@ -1,10 +1,12 @@
 // The workbench of a saved host: the kit's chat pane beside the app's own
 // rail (project groups). AgentWorkbench builds its rail inside and takes no
 // replacement, so this composes the same public pieces: RailLayout, the chat
-// pane and the backend's list. It has no workspace column; the crew shows as
+// pane and the backend's list. The workspace column holds the Context pane
+// only, as on this computer, and is left out on the phone. The crew shows as
 // the strip under the header.
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:agent_kit/agent_kit.dart';
 import 'package:agent_kit_core/agent_kit_core.dart';
@@ -30,6 +32,7 @@ class RemoteWorkbench extends StatefulWidget {
     this.onSwitchHost,
     this.transcriptActions = const TranscriptActions(),
     this.onReviewApproval,
+    this.workspaceController,
   });
 
   final AgentBackend backend;
@@ -52,6 +55,10 @@ class RemoteWorkbench extends StatefulWidget {
   final VoidCallback? onSwitchHost;
   final TranscriptActions transcriptActions;
   final ValueChanged<Approval>? onReviewApproval;
+
+  /// The layout of the workspace that holds the Context pane; null for none
+  /// (the phone, or a host without the context capability).
+  final WorkspaceController? workspaceController;
 
   @override
   State<RemoteWorkbench> createState() => _RemoteWorkbenchState();
@@ -76,6 +83,14 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
   String? _selected;
   int _listing = 0;
   final Map<String, ChatStatus> _seen = {};
+  final ContextPaneController _context = ContextPaneController();
+  final GlobalKey _workspaceKey = GlobalKey(debugLabel: 'remote workspace');
+  ContextView? _contextView;
+  bool _workspaceShown = false;
+
+  bool get _hasWorkspace =>
+      widget.workspaceController != null &&
+      widget.backend.capabilities.has(KitCapability.context);
 
   @override
   void initState() {
@@ -167,10 +182,20 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
     // On the phone a tapped chat opens full screen, over the list.
     if (widget.startOnList) _rail.open = false;
     if (id == _selected) return;
-    setState(() => _selected = id);
+    setState(() {
+      _selected = id;
+      _contextView = null;
+    });
   }
 
   void _onSnapshot(ChatSnapshot snap) {
+    if (snap.chatId == _selected && snap.context != _contextView) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && snap.chatId == _selected) {
+          setState(() => _contextView = snap.context);
+        }
+      });
+    }
     final before = _seen[snap.chatId];
     final now = ChatSummary.of(snap);
     _seen[snap.chatId] = now.status;
@@ -180,6 +205,40 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
         if (mounted) unawaited(_refresh());
       });
     }
+  }
+
+  /// The header's context meter: add the Context pane when the chat has none,
+  /// show the workspace and bring the pane to the Now tab.
+  void _openContext() {
+    final controller = widget.workspaceController;
+    if (!_hasWorkspace || controller == null) return;
+    final existing = controller.layout.tabs
+        .where((t) => t.kind == WorkspaceKind.context.id)
+        .firstOrNull;
+    if (existing == null) {
+      controller.addPane(WorkspaceKind.context.id);
+    } else {
+      controller.activate(existing.id);
+    }
+    setState(() => _workspaceShown = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _context.showNow());
+  }
+
+  void _toggleWorkspace() =>
+      setState(() => _workspaceShown = !_workspaceShown);
+
+  Widget _paneBuilder(BuildContext context, WorkspaceTab tab) {
+    final chat = _selected;
+    if (tab.kind != WorkspaceKind.context.id || chat == null) {
+      return const SizedBox.shrink();
+    }
+    return AgentContextPane(
+      backend: widget.backend,
+      chatId: chat,
+      view: _contextView,
+      controller: _context,
+      now: widget.now,
+    );
   }
 
   /// Starts a chat in [path] on the host, or in the host's own workspace
@@ -286,7 +345,13 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
                   final whole =
                       RailScope.maybeOf(context)?.sizeClass ??
                       SizeClass.expanded;
-                  return _sheet(context, t, whole);
+                  if (!_hasWorkspace) return _sheet(context, t, whole);
+                  return SizeClassBuilder(
+                    builder: (context, area) => LayoutBuilder(
+                      builder: (context, box) =>
+                          _area(context, t, whole, area, box.maxWidth),
+                    ),
+                  );
                 },
               ),
             ),
@@ -308,6 +373,62 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
     );
   }
 
+  /// The chat with the workspace beside it, laid out as the kit's workbench
+  /// does on this computer.
+  Widget _area(
+    BuildContext context,
+    BbTheme t,
+    SizeClass whole,
+    SizeClass area,
+    double width,
+  ) {
+    final sheet = _sheet(context, t, whole);
+    final shown = _workspaceShown;
+    final workspace = KeyedSubtree(
+      key: _workspaceKey,
+      child: AgentWorkspace(
+        controller: widget.workspaceController!,
+        kinds: const [WorkspaceKind.context],
+        paneBuilder: _paneBuilder,
+        open: shown,
+        onClose: _toggleWorkspace,
+        sizeClass: area,
+      ),
+    );
+    if (area.isCompact) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          sheet,
+          Positioned.fill(child: workspace),
+        ],
+      );
+    }
+    if (!shown) return sheet;
+    final padded = Padding(
+      padding: const EdgeInsets.fromLTRB(0, 12, 12, 12),
+      child: workspace,
+    );
+    if (area.isMedium) {
+      final w = math.min(420.0, math.max(240.0, width * .4));
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: sheet),
+          SizedBox(width: w, child: padded),
+        ],
+      );
+    }
+    final w = math.min(584.0, math.max(444.0, width * .44));
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(width: w, child: sheet),
+        Expanded(child: padded),
+      ],
+    );
+  }
+
   Widget _sheet(BuildContext context, BbTheme t, SizeClass whole) {
     final selected = _selected;
     final Widget content = selected == null
@@ -324,6 +445,9 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
             onChatsChanged: () => unawaited(_refresh()),
             transcriptActions: widget.transcriptActions,
             onReviewApproval: widget.onReviewApproval,
+            workspaceShown: _hasWorkspace && _workspaceShown,
+            onToggleWorkspace: _hasWorkspace ? _toggleWorkspace : null,
+            onOpenContext: _hasWorkspace ? _openContext : null,
           );
     if (whole.isCompact) {
       return KeyedSubtree(

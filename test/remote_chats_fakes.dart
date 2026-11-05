@@ -5,6 +5,8 @@
 import 'dart:async';
 
 import 'package:agent_kit_core/agent_kit_core.dart';
+import 'package:agent_kit_core/fake.dart'
+    show quotaContextDetails, quotaContextView;
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_chats.dart';
@@ -15,9 +17,13 @@ import 'scenes.dart';
 /// Lists [chats], opens them empty and records the chats it was asked to
 /// create. Its events never end, as a connected host's do not.
 class ListedBackend implements AgentBackend {
-  ListedBackend(this.chats);
+  ListedBackend(this.chats, {this.context = false});
 
   final List<ChatSummary> chats;
+
+  /// Whether the host reports the context view and answers `loadContext`,
+  /// with the quota scenario's data (48.6k of 128k tokens).
+  final bool context;
 
   /// The `workspace` each createChat call carried.
   final created = <String?>[];
@@ -28,6 +34,7 @@ class ListedBackend implements AgentBackend {
     KitCapability.cancel,
     KitCapability.createChat,
     KitCapability.approve,
+    if (context) KitCapability.context,
   ]);
 
   @override
@@ -39,7 +46,15 @@ class ListedBackend implements AgentBackend {
     chatId: chatId,
     title: chats.where((c) => c.id == chatId).firstOrNull?.title ?? 'New chat',
     workspace: const WorkspaceInfo(name: '', path: ''),
+    usage: context
+        ? const Usage(contextTokens: 48640, contextLimit: 128000)
+        : null,
+    context: context ? quotaContextView() : null,
   );
+
+  @override
+  Future<ContextDetails> loadContext(String chatId) async =>
+      quotaContextDetails();
 
   final _events = StreamController<KitEvent>.broadcast();
 
@@ -110,12 +125,13 @@ List<Map<String, Object?>> sampleRemoteRows({bool waitingFor = true}) => [
 
 /// One saved host that answers with [sampleRemoteChats].
 class RemoteFixture {
-  RemoteFixture({bool waitingFor = true}) {
+  RemoteFixture({bool waitingFor = true, bool context = false})
+    : backend = ListedBackend(sampleRemoteChats, context: context) {
     rows.absorb(sampleRemoteRows(waitingFor: waitingFor));
   }
 
   final rows = RemoteChatRows();
-  final backend = ListedBackend(sampleRemoteChats);
+  final ListedBackend backend;
 
   /// The params of each `session.open` the app sent with a workspace.
   final opened = <Map<String, Object?>>[];
