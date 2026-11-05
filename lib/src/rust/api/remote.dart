@@ -9,7 +9,7 @@ import 'host.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `closed`, `new`, `other`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `with_options`
 
 /// The host's `[remote]` settings, read fresh from its config files.
@@ -63,6 +63,10 @@ abstract class PairRequest implements RustOpaqueInterface {
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RemoteShare>>
 abstract class RemoteShare implements RustOpaqueInterface {
   Future<void> checkHostname({required String hostname});
+
+  /// Forgets the browser sign-in (`cert.pem`) and nothing else: an API token
+  /// and tunnel state stay. True when there was a sign-in to forget.
+  Future<bool> cloudflareSignOut();
 
   /// Whether a Cloudflare credential is there, and the account it opens.
   Future<CloudflareStatus> cloudflareStatus();
@@ -134,6 +138,12 @@ abstract class RemoteShare implements RustOpaqueInterface {
 
   /// Whether this data directory is being shared, and by whom.
   Future<OtherShare> serveStatus();
+
+  /// Chooses the `cloudflared` at `path`, or with `None` goes back to the
+  /// managed copy (or the one on `PATH`). The host runs it with `--version`
+  /// first; a refusal comes back as a [`ShareError`] carrying its reason and
+  /// leaves the choice as it was. Sharing must restart to run the new one.
+  Future<CloudflaredStatus> setCloudflared({String? path});
 
   /// Starts sharing as `[remote]` says and returns at once, without waiting
   /// for the host to come online (watch [`Self::state`]). Already sharing is
@@ -210,6 +220,10 @@ class CloudflaredStatus {
   /// The copy is the one BubblePaw installed in its data directory.
   final bool managed;
 
+  /// The person chose this executable (`remote.cloudflared`), rather than
+  /// it being the managed copy or the one found on `PATH`.
+  final bool chosen;
+
   const CloudflaredStatus({
     required this.installed,
     this.path,
@@ -217,6 +231,7 @@ class CloudflaredStatus {
     required this.pinnedVersion,
     required this.updateAvailable,
     required this.managed,
+    required this.chosen,
   });
 
   @override
@@ -226,7 +241,8 @@ class CloudflaredStatus {
       version.hashCode ^
       pinnedVersion.hashCode ^
       updateAvailable.hashCode ^
-      managed.hashCode;
+      managed.hashCode ^
+      chosen.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -238,7 +254,8 @@ class CloudflaredStatus {
           version == other.version &&
           pinnedVersion == other.pinnedVersion &&
           updateAvailable == other.updateAvailable &&
-          managed == other.managed;
+          managed == other.managed &&
+          chosen == other.chosen;
 }
 
 /// One paired device.
@@ -452,6 +469,38 @@ enum ShareErrorKind {
   other,
 }
 
+/// Why sharing is offline, as Core reports it for the current transport.
+class ShareFailure {
+  /// `relay` or `cloudflared`.
+  final String transport;
+
+  /// The exit code, when `cloudflared` exited with one.
+  final int? exitCode;
+
+  /// Seconds until Core tries again: the delay it actually scheduled
+  /// (relay backoff included), never a fixed promise.
+  final int retryAfterSecs;
+
+  const ShareFailure({
+    required this.transport,
+    this.exitCode,
+    required this.retryAfterSecs,
+  });
+
+  @override
+  int get hashCode =>
+      transport.hashCode ^ exitCode.hashCode ^ retryAfterSecs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ShareFailure &&
+          runtimeType == other.runtimeType &&
+          transport == other.transport &&
+          exitCode == other.exitCode &&
+          retryAfterSecs == other.retryAfterSecs;
+}
+
 /// How devices reach the host (`[remote] mode`).
 enum ShareMode { relay, quick, domain }
 
@@ -514,6 +563,9 @@ class ShareState {
   final String? hostId;
   final String? lastError;
 
+  /// The structured side of `last_error`; `None` when nothing failed.
+  final ShareFailure? failure;
+
   /// Open device tunnels.
   final int devices;
 
@@ -523,6 +575,7 @@ class ShareState {
     this.address,
     this.hostId,
     this.lastError,
+    this.failure,
     required this.devices,
   });
 
@@ -533,6 +586,7 @@ class ShareState {
       address.hashCode ^
       hostId.hashCode ^
       lastError.hashCode ^
+      failure.hashCode ^
       devices.hashCode;
 
   @override
@@ -545,6 +599,7 @@ class ShareState {
           address == other.address &&
           hostId == other.hostId &&
           lastError == other.lastError &&
+          failure == other.failure &&
           devices == other.devices;
 }
 

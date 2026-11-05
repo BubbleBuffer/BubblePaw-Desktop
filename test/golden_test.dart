@@ -829,13 +829,12 @@ void main() {
     ),
     'settings_remote_cloudflared_refused': _remoteScene(
       values: {'remote.mode': 'quick'},
-      access: (host) =>
-          FakeRemoteAccess(hostSettings: host)
-            ..rejectCloudflared = ShareError(
-              kind: ShareErrorKind.other,
-              message:
-                  'The selected program did not identify itself as cloudflared.',
-            ),
+      access: (host) => FakeRemoteAccess(hostSettings: host)
+        ..rejectCloudflared = ShareError(
+          kind: ShareErrorKind.other,
+          message:
+              'The selected program did not identify itself as cloudflared.',
+        ),
       after: (tester) => tapVisible(tester, 'cloudflared-choose'),
     ),
     'settings_remote_failure_cloudflared': _remoteScene(

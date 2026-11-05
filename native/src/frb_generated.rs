@@ -42,7 +42,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -369592459;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1996710592;
 
 // Section: executor
 
@@ -1212,6 +1212,63 @@ fn wire__crate__api__remote__RemoteShare_check_hostname_impl(
         },
     )
 }
+fn wire__crate__api__remote__RemoteShare_cloudflare_sign_out_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "RemoteShare_cloudflare_sign_out",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RemoteShare>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::api::remote::ShareError>(
+                    (move || async move {
+                        let mut api_that_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_that, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => {
+                                    api_that_guard =
+                                        Some(api_that.lockable_decode_async_ref().await)
+                                }
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_that_guard = api_that_guard.unwrap();
+                        let output_ok =
+                            crate::api::remote::RemoteShare::cloudflare_sign_out(&*api_that_guard)
+                                .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__remote__RemoteShare_cloudflare_status_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -2120,6 +2177,66 @@ fn wire__crate__api__remote__RemoteShare_serve_status_impl(
                         crate::api::remote::RemoteShare::serve_status(&*api_that_guard)?;
                     std::result::Result::Ok(output_ok)
                 })())
+            }
+        },
+    )
+}
+fn wire__crate__api__remote__RemoteShare_set_cloudflared_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "RemoteShare_set_cloudflared",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RemoteShare>,
+            >>::sse_decode(&mut deserializer);
+            let api_path = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::api::remote::ShareError>(
+                    (move || async move {
+                        let mut api_that_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_that, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => {
+                                    api_that_guard =
+                                        Some(api_that.lockable_decode_async_ref().await)
+                                }
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_that_guard = api_that_guard.unwrap();
+                        let output_ok = crate::api::remote::RemoteShare::set_cloudflared(
+                            &*api_that_guard,
+                            api_path,
+                        )
+                        .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
             }
         },
     )
@@ -3121,6 +3238,7 @@ impl SseDecode for crate::api::remote::CloudflaredStatus {
         let mut var_pinnedVersion = <String>::sse_decode(deserializer);
         let mut var_updateAvailable = <bool>::sse_decode(deserializer);
         let mut var_managed = <bool>::sse_decode(deserializer);
+        let mut var_chosen = <bool>::sse_decode(deserializer);
         return crate::api::remote::CloudflaredStatus {
             installed: var_installed,
             path: var_path,
@@ -3128,6 +3246,7 @@ impl SseDecode for crate::api::remote::CloudflaredStatus {
             pinned_version: var_pinnedVersion,
             update_available: var_updateAvailable,
             managed: var_managed,
+            chosen: var_chosen,
         };
     }
 }
@@ -3380,6 +3499,28 @@ impl SseDecode for Option<PairRequest> {
     }
 }
 
+impl SseDecode for Option<i32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<i32>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::remote::ShareFailure> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::remote::ShareFailure>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<u32> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3476,6 +3617,20 @@ impl SseDecode for crate::api::remote::ShareErrorKind {
     }
 }
 
+impl SseDecode for crate::api::remote::ShareFailure {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_transport = <String>::sse_decode(deserializer);
+        let mut var_exitCode = <Option<i32>>::sse_decode(deserializer);
+        let mut var_retryAfterSecs = <u32>::sse_decode(deserializer);
+        return crate::api::remote::ShareFailure {
+            transport: var_transport,
+            exit_code: var_exitCode,
+            retry_after_secs: var_retryAfterSecs,
+        };
+    }
+}
+
 impl SseDecode for crate::api::remote::ShareMode {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3517,6 +3672,7 @@ impl SseDecode for crate::api::remote::ShareState {
         let mut var_address = <Option<String>>::sse_decode(deserializer);
         let mut var_hostId = <Option<String>>::sse_decode(deserializer);
         let mut var_lastError = <Option<String>>::sse_decode(deserializer);
+        let mut var_failure = <Option<crate::api::remote::ShareFailure>>::sse_decode(deserializer);
         let mut var_devices = <u32>::sse_decode(deserializer);
         return crate::api::remote::ShareState {
             status: var_status,
@@ -3524,6 +3680,7 @@ impl SseDecode for crate::api::remote::ShareState {
             address: var_address,
             host_id: var_hostId,
             last_error: var_lastError,
+            failure: var_failure,
             devices: var_devices,
         };
     }
@@ -3614,97 +3771,109 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        24 => wire__crate__api__remote__RemoteShare_cloudflare_status_impl(
+        24 => wire__crate__api__remote__RemoteShare_cloudflare_sign_out_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        25 => wire__crate__api__remote__RemoteShare_cloudflared_info_impl(
+        25 => wire__crate__api__remote__RemoteShare_cloudflare_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        26 => wire__crate__api__remote__RemoteShare_devices_impl(port, ptr, rust_vec_len, data_len),
-        27 => {
+        26 => wire__crate__api__remote__RemoteShare_cloudflared_info_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        27 => wire__crate__api__remote__RemoteShare_devices_impl(port, ptr, rust_vec_len, data_len),
+        28 => {
             wire__crate__api__remote__RemoteShare_export_key_impl(port, ptr, rust_vec_len, data_len)
         }
-        28 => wire__crate__api__remote__RemoteShare_forget_cloudflare_token_impl(
+        29 => wire__crate__api__remote__RemoteShare_forget_cloudflare_token_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => {
+        30 => {
             wire__crate__api__remote__RemoteShare_import_key_impl(port, ptr, rust_vec_len, data_len)
         }
-        30 => wire__crate__api__remote__RemoteShare_install_cloudflared_impl(
+        31 => wire__crate__api__remote__RemoteShare_install_cloudflared_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        31 => {
+        32 => {
             wire__crate__api__remote__RemoteShare_key_info_impl(port, ptr, rust_vec_len, data_len)
         }
-        32 => wire__crate__api__remote__RemoteShare_login_cancel_impl(
+        33 => wire__crate__api__remote__RemoteShare_login_cancel_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__remote__RemoteShare_login_start_impl(
+        34 => wire__crate__api__remote__RemoteShare_login_start_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => {
+        35 => {
             wire__crate__api__remote__RemoteShare_login_wait_impl(port, ptr, rust_vec_len, data_len)
         }
-        36 => wire__crate__api__remote__RemoteShare_pair_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__remote__RemoteShare_regenerate_key_impl(
+        37 => wire__crate__api__remote__RemoteShare_pair_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__remote__RemoteShare_regenerate_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        38 => wire__crate__api__remote__RemoteShare_revoke_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__remote__RemoteShare_serve_status_impl(
+        39 => wire__crate__api__remote__RemoteShare_revoke_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__remote__RemoteShare_serve_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        40 => wire__crate__api__remote__RemoteShare_start_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__remote__RemoteShare_state_impl(port, ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__remote__RemoteShare_stop_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__remote__RemoteShare_store_cloudflare_token_impl(
+        41 => wire__crate__api__remote__RemoteShare_set_cloudflared_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        44 => wire__crate__api__remote__RemoteShare_update_cloudflared_impl(
+        42 => wire__crate__api__remote__RemoteShare_start_impl(port, ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__remote__RemoteShare_state_impl(port, ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__remote__RemoteShare_stop_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__remote__RemoteShare_store_cloudflare_token_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        45 => wire__crate__api__remote__RemoteShare_watch_impl(port, ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__hosts__device_key_info_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__hosts__export_device_key_impl(port, ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__hosts__forget_saved_host_impl(port, ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__hosts__import_device_key_impl(port, ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__host__init_app_impl(port, ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__hosts__list_saved_hosts_impl(port, ptr, rust_vec_len, data_len),
-        53 => wire__crate__api__hosts__pair_with_host_impl(port, ptr, rust_vec_len, data_len),
-        55 => wire__crate__api__hosts__probe_saved_host_impl(port, ptr, rust_vec_len, data_len),
-        56 => {
+        46 => wire__crate__api__remote__RemoteShare_update_cloudflared_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        47 => wire__crate__api__remote__RemoteShare_watch_impl(port, ptr, rust_vec_len, data_len),
+        49 => wire__crate__api__hosts__device_key_info_impl(port, ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__hosts__export_device_key_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__hosts__forget_saved_host_impl(port, ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__hosts__import_device_key_impl(port, ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__host__init_app_impl(port, ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__hosts__list_saved_hosts_impl(port, ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__hosts__pair_with_host_impl(port, ptr, rust_vec_len, data_len),
+        57 => wire__crate__api__hosts__probe_saved_host_impl(port, ptr, rust_vec_len, data_len),
+        58 => {
             wire__crate__api__hosts__regenerate_device_key_impl(port, ptr, rust_vec_len, data_len)
         }
-        57 => wire__crate__api__remote__share_settings_impl(port, ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__remote__share_settings_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3728,9 +3897,9 @@ fn pde_ffi_dispatcher_sync_impl(
         19 => wire__crate__api__remote__PairRequest_comparison_impl(ptr, rust_vec_len, data_len),
         21 => wire__crate__api__remote__PairRequest_device_id_impl(ptr, rust_vec_len, data_len),
         22 => wire__crate__api__remote__PairRequest_device_name_impl(ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__remote__RemoteShare_new_impl(ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__host__core_version_impl(ptr, rust_vec_len, data_len),
-        54 => wire__crate__api__hosts__parse_pairing_link_impl(ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__remote__RemoteShare_new_impl(ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__host__core_version_impl(ptr, rust_vec_len, data_len),
+        56 => wire__crate__api__hosts__parse_pairing_link_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3869,6 +4038,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::remote::CloudflaredStatus {
             self.pinned_version.into_into_dart().into_dart(),
             self.update_available.into_into_dart().into_dart(),
             self.managed.into_into_dart().into_dart(),
+            self.chosen.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -4221,6 +4391,28 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::remote::ShareErrorKind>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::remote::ShareFailure {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.transport.into_into_dart().into_dart(),
+            self.exit_code.into_into_dart().into_dart(),
+            self.retry_after_secs.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::remote::ShareFailure
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::remote::ShareFailure>
+    for crate::api::remote::ShareFailure
+{
+    fn into_into_dart(self) -> crate::api::remote::ShareFailure {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::remote::ShareMode {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -4273,6 +4465,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::remote::ShareState {
             self.address.into_into_dart().into_dart(),
             self.host_id.into_into_dart().into_dart(),
             self.last_error.into_into_dart().into_dart(),
+            self.failure.into_into_dart().into_dart(),
             self.devices.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -4478,6 +4671,7 @@ impl SseEncode for crate::api::remote::CloudflaredStatus {
         <String>::sse_encode(self.pinned_version, serializer);
         <bool>::sse_encode(self.update_available, serializer);
         <bool>::sse_encode(self.managed, serializer);
+        <bool>::sse_encode(self.chosen, serializer);
     }
 }
 
@@ -4697,6 +4891,26 @@ impl SseEncode for Option<PairRequest> {
     }
 }
 
+impl SseEncode for Option<i32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <i32>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::remote::ShareFailure> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::remote::ShareFailure>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<u32> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -4773,6 +4987,15 @@ impl SseEncode for crate::api::remote::ShareErrorKind {
     }
 }
 
+impl SseEncode for crate::api::remote::ShareFailure {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.transport, serializer);
+        <Option<i32>>::sse_encode(self.exit_code, serializer);
+        <u32>::sse_encode(self.retry_after_secs, serializer);
+    }
+}
+
 impl SseEncode for crate::api::remote::ShareMode {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -4810,6 +5033,7 @@ impl SseEncode for crate::api::remote::ShareState {
         <Option<String>>::sse_encode(self.address, serializer);
         <Option<String>>::sse_encode(self.host_id, serializer);
         <Option<String>>::sse_encode(self.last_error, serializer);
+        <Option<crate::api::remote::ShareFailure>>::sse_encode(self.failure, serializer);
         <u32>::sse_encode(self.devices, serializer);
     }
 }
