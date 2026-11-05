@@ -5,7 +5,7 @@ import 'dart:async';
 
 import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
-import 'package:bubblepaw_desktop/src/remote/chat_search.dart';
+import 'package:bubblepaw_desktop/src/search/chat_search.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_chats.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';

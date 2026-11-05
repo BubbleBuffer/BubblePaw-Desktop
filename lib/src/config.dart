@@ -178,6 +178,19 @@ class ConfigStore {
   }
 }
 
+/// Whether two workspace paths name the same folder: separators, a trailing
+/// one, a Windows verbatim prefix and, on Windows, letter case do not count.
+bool sameWorkspace(String a, String b) => _plainPath(a) == _plainPath(b);
+
+String _plainPath(String path) {
+  var plain = path.replaceAll('\\', '/');
+  if (plain.startsWith('//?/')) plain = plain.substring(4);
+  while (plain.length > 1 && plain.endsWith('/')) {
+    plain = plain.substring(0, plain.length - 1);
+  }
+  return Platform.isWindows ? plain.toLowerCase() : plain;
+}
+
 /// The folder name a workspace path ends in; the whole path when it has none.
 String workspaceFolderName(String path) {
   final parts = path.split(RegExp(r'[\\/]')).where((p) => p.isNotEmpty);

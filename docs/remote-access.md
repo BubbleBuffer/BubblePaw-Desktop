@@ -23,7 +23,8 @@ The Share tab's status block always shows a danger-toned `Stopped` pill when the
 | Provider picker "Send model traffic through…" | `lib/src/settings/models_page.dart` (`_ViaPicker`) |
 | Rail host switcher | `lib/src/screens/workspace_menu.dart` (`HostMenu`), wired in `lib/src/app.dart` |
 | Chat list of a saved host (rows, backend wrapper, grouping, rail, workbench) | `lib/src/remote/remote_chats.dart`, `project_groups.dart`, `remote_rail.dart`, `remote_workbench.dart` |
-| Chat search (controller, debounce, stale answers, highlight) | `lib/src/remote/chat_search.dart` |
+| Chat search (controller, debounce, stale answers, highlight) | `lib/src/search/chat_search.dart` |
+| Chat search widgets (box, results, rows), shared by a saved host's rail and this computer's | `lib/src/search/search_widgets.dart` |
 
 `HostController.remote` is built when the embedded host starts. It is null for
 an attached host (another program runs it), for the scripted backend, and while
@@ -124,7 +125,8 @@ profile refusal (a read device may not open chats).
 Core 0.13 (`session.list` with `query`): a box above the rail's list, placeholder
 "Search all projects", asks the host for chats whose title contains the typed
 text, case-insensitively, in every project on the host. It is on a saved host's
-rail and on the phone's chat list, and only when `initialize.features` lists
+rail, on the phone's chat list and on this computer's rail (see "On this
+computer" below), and only when `initialize.features` lists
 `session.list.title_search` (an older host ignores `query`, so it gets no box,
 and Ctrl+K has nothing to focus).
 
@@ -148,6 +150,24 @@ and Ctrl+K has nothing to focus).
 - Ctrl+K (Cmd+K) focuses the box on desktop, showing the rail first when it is
   hidden; Escape or the clear button empties it. The phone has no shortcut hint.
 
+On this computer: the rail is the kit's `SessionRail` (agent_kit 0.19.0), which
+takes the host's own field (`search`) in place of its Search row and a
+`searchResults` builder that may swap the session list for the results.
+`AgentWorkbench` passes them as `railSearch` and `railSearchResults`; with
+neither set the rail is as before. The embedded host is asked through the same
+`RemoteBackend.searchChats` (built in `startBubblePaw` only for its search and its
+rows, not as the workbench's backend) and the same `ChatSearchController`,
+`ChatSearchBox` and `ChatSearchResults`. `Workbench` holds the controller, so it
+survives the kit's rebuilds. The box reads "Search all projects", no match reads
+`Search looks at chat titles on This computer.`, and Ctrl+K works as on a saved
+host. The host is bound to one project, so a result of the open project opens in
+place (the kit's `select`), while a result of another project calls
+`HostController.switchWorkspace(path, openChat: id)`, the same restart the project
+menu does, and the new workbench opens that chat (`HostController.openChat` ->
+`Workbench.initialChatId`). A chat without a known project path, or paths that
+`sameWorkspace` calls equal, open in place. A host without the feature keeps the
+kit's Search row.
+
 Context pane: on desktop, the chat header's context button opens the same
 Context pane as on this computer beside a saved host's chat (Now, History,
 Compactions). It reads the context view from the chat snapshot and the
@@ -159,8 +179,6 @@ Limits:
 
 - No workspace column next to a saved host's chat beyond the Context pane;
   the crew shows as the strip under the header.
-- Chat search is built for a saved host and the phone only; this computer's
-  rail is the kit's and has no text box (see "Chat search").
 - The picker lists only projects that have chats in the loaded list, so a
   project whose chats are all older than the loaded pages is not offered.
 
@@ -310,6 +328,9 @@ and free file names); goldens `settings_remote_pair_confirm` and
 Chat list: `test/remote_chats_test.dart` runs scripted `session.list` rows through
 the kit's backend and the wrapper (statuses, folder names, snapshot path, grouping,
 `session.open` with a workspace, refusals, `waiting_for`);
+`test/local_search_test.dart` runs the same search on this computer's rail (the
+box, grouped and marked results, no match, a stale answer, no box without the
+feature, Ctrl+K, a result of the same project and one of another, `sameWorkspace`);
 `test/chat_search_test.dart` covers chat search (the controller's debounce and
 stale answers, the box, grouped and marked results, no match, a failed search,
 no box without the feature, Ctrl+K, Escape and clear) and `test/remote_chats_test.dart`

@@ -18,7 +18,8 @@ import 'feedback/feedback_controller.dart';
 import 'feedback/feedback_sheet.dart';
 import 'guarded_backend.dart';
 import 'host_controller.dart';
-import 'remote/chat_search.dart' show ChatSearcher;
+import 'search/chat_search.dart' show ChatSearchController, ChatSearcher;
+import 'search/search_widgets.dart';
 import 'remote/host_links.dart';
 import 'remote/hosts_controller.dart';
 import 'remote/project_groups.dart';
@@ -383,6 +384,11 @@ class _AppShellState extends State<AppShell> {
         workspaces: controller.recentWorkspaces,
         onSwitchWorkspace: (path) =>
             unawaited(controller.switchWorkspace(path)),
+        onOpenChatIn: (path, chatId) =>
+            unawaited(controller.switchWorkspace(path, openChat: chatId)),
+        initialChatId: controller.openChat,
+        localSearch: controller.localSearch,
+        localWorkspaceOf: controller.localWorkspaceOf,
         pickFolder: pickFolder,
         hostMenu: _hostMenu(),
         remoteRows: controller.remoteRows,
@@ -415,9 +421,28 @@ class Workbench extends StatefulWidget {
     this.remoteRail,
     this.remoteSearch,
     this.remoteName = 'Host',
+    this.localSearch,
+    this.localWorkspaceOf,
+    this.onOpenChatIn,
+    this.initialChatId,
     this.phone = false,
     this.finishedTurnsOpen = false,
   });
+
+  /// How this computer's host searches chat titles; null when it cannot, and
+  /// the rail then keeps its plain Search row.
+  final ChatSearcher? localSearch;
+
+  /// A chat's project path on this computer's host, to group search results
+  /// and to tell a chat of another project.
+  final String? Function(String chatId)? localWorkspaceOf;
+
+  /// Picks a search result of another project: switches to the project at
+  /// the path and opens the chat there.
+  final void Function(String path, String chatId)? onOpenChatIn;
+
+  /// The chat to open first.
+  final String? initialChatId;
 
   /// Whether the steps of a finished turn start open (Settings, General, Turn
   /// layout).
@@ -465,6 +490,14 @@ class _WorkbenchState extends State<Workbench> {
   StreamSubscription<ChatSummary>? _created;
   String? _openChatId;
   FileDiff? _review;
+  final RailController _rail = RailController();
+
+  // Chat search in the rail of this computer's host; a saved host's
+  // RemoteWorkbench has its own.
+  late final ChatSearchController? _search =
+      widget.remoteRows == null && !widget.phone && widget.localSearch != null
+      ? ChatSearchController(searcher: widget.localSearch!)
+      : null;
 
   // The workspace holds the Context pane. Without the capability the pane
   // has nothing to show, so the workbench gets no workspace at all. The
@@ -477,6 +510,9 @@ class _WorkbenchState extends State<Workbench> {
   @override
   void initState() {
     super.initState();
+    _openChatId = widget.initialChatId;
+    // Not a focus shortcut: Ctrl+K works from the chat as well.
+    if (_search != null) HardwareKeyboard.instance.addHandler(_onSearchKey);
     // A rewind makes a new chat; open it. The key also refreshes the rail.
     _created = widget.createdChats?.listen((chat) {
       if (mounted) setState(() => _openChatId = chat.id);
@@ -486,8 +522,56 @@ class _WorkbenchState extends State<Workbench> {
   @override
   void dispose() {
     unawaited(_created?.cancel());
+    HardwareKeyboard.instance.removeHandler(_onSearchKey);
+    _search?.dispose();
+    _rail.dispose();
     _workspace?.dispose();
     super.dispose();
+  }
+
+  /// Ctrl+K (Cmd+K) puts the cursor in the search box, showing the rail
+  /// first when it is hidden.
+  bool _onSearchKey(KeyEvent event) {
+    if (_search == null ||
+        event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.keyK ||
+        !(HardwareKeyboard.instance.isControlPressed ||
+            HardwareKeyboard.instance.isMetaPressed)) {
+      return false;
+    }
+    _rail.show(SizeClass.forWidth(MediaQuery.sizeOf(context).width));
+    _focusSearch();
+    return true;
+  }
+
+  // A rail that was hidden builds its box a few frames later; ask again until
+  // the box is there.
+  void _focusSearch([int tries = 30]) {
+    final search = _search;
+    if (search == null || !mounted) return;
+    search.focus.requestFocus();
+    if (search.focus.context == null && tries > 0) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _focusSearch(tries - 1),
+      );
+    }
+  }
+
+  // A result of this project opens in place; one of another project switches
+  // to that project first, as the project menu does, and opens there.
+  void _openResult(ChatSummary chat, ValueChanged<ChatSummary> select) {
+    final path = widget.localWorkspaceOf?.call(chat.id);
+    final here = widget.workspace;
+    final switchTo = widget.onOpenChatIn;
+    if (switchTo != null &&
+        path != null &&
+        path.isNotEmpty &&
+        here.isNotEmpty &&
+        !sameWorkspace(path, here)) {
+      switchTo(path, chat.id);
+      return;
+    }
+    select(chat);
   }
 
   void _openWorkspaceMenu() {
@@ -546,6 +630,33 @@ class _WorkbenchState extends State<Workbench> {
                 key: ValueKey(_openChatId),
                 backend: widget.backend,
                 initialChatId: _openChatId,
+                railController: _rail,
+                railSearch: _search == null
+                    ? null
+                    : Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: ChatSearchBox(
+                          search: _search!,
+                          showKeyHint: true,
+                        ),
+                      ),
+                railSearchResults: _search == null
+                    ? null
+                    : (context, sessions, selectedId, select) =>
+                          ListenableBuilder(
+                            listenable: _search!,
+                            builder: (context, _) => _search!.active
+                                ? ChatSearchResults(
+                                    search: _search!,
+                                    hostName: 'This computer',
+                                    pathOf: widget.localWorkspaceOf,
+                                    selectedId: selectedId,
+                                    now: widget.now,
+                                    onSelect: (chat) =>
+                                        _openResult(chat, select),
+                                  )
+                                : sessions,
+                          ),
                 workspaceName: widget.workspaceName,
                 initials: widget.initials,
                 workspaceController: _workspace,
