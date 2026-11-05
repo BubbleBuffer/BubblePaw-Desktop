@@ -21,7 +21,7 @@ DesktopIntegration   tray menu, close-to-tray, login entry (lib/src/platform/)
 ## Dependencies
 
 `agent_kit`, `agent_kit_core` and `agent_kit_bubblepaw` come from
-`BubbleBuffer/agent-kit` at a commit hash (currently v0.18.0, `ff7fa54`). The ref is the commit hash
+`BubbleBuffer/agent-kit` at a commit hash (currently v0.19.0, `28939d5`). The ref is the commit hash
 because the kit's packages depend on each other by path inside that repository,
 and pub resolves those to the hash; a tag in the app would conflict with it.
 v0.15.2 added `BubblePawBackend.connectionLost` (idle exit detection); v0.15.3
@@ -231,6 +231,7 @@ Settings > Remote access is described in [remote-access.md](remote-access.md). `
 |---|---|
 | `test/app_test.dart` | Widget tests on the scripted backend: open a chat, send, approve, deny, diff, failure notices, Restart |
 | `test/v01_test.dart` | Idle exit, avatar initials, plan, question, context pane present and absent, branch |
+| `test/local_search_test.dart` | Chat search on this computer's rail: the box, grouped and marked results, no match, a stale answer, no box without the feature, Ctrl+K, a result in the same project and in another (switch and open), `sameWorkspace` |
 | `test/chat_search_test.dart` | Chat search on a saved host: debounce, a stale answer dropped, grouped and marked results, no match, a failed search that says why, no box without `session.list.title_search`, Ctrl+K, Escape and clear |
 | `test/remote_context_test.dart` | The Context pane on a saved host (opens, shows the host's data), absent without the capability, absent on the phone |
 | `test/rewind_test.dart` | The kit's rewind action reaches the backend and the announced chat opens; no action without the capability |
@@ -256,7 +257,7 @@ Settings > Remote access is described in [remote-access.md](remote-access.md). `
 | `test/remote_page_test.dart` | Settings > Remote access on a fake sharing side: relay, domain and token, a missing cloudflared, pairing, the key pages, and the sharing settings (Choose file accepted and refused, chosen or managed wording, clearing, the restart note, sign-out for a browser sign-in and a token, failure copy from Core's exit code and retry delay; see [remote-access.md](remote-access.md)) |
 | `test/share_failure_test.dart` | The sentence for a share that went offline, per transport, with the real exit code and retry delay |
 | `test/tray_test.dart` | The tray menu model (status line, Share row), icon file choice and that every icon file exists, and the integration against fake tray, window and login adapters (close-to-tray, quit, waiting count, login entry, share toggle and its blocked case, icon dot follows host and share state) |
-| `test/golden_test.dart` | Main screen, General, Models (and the model traffic picker, with an unavailable host; Key set, No key and the key dialogs; a saved host without the Full profile), Tools (list, editor, a partial category, a built-in toolset), Skills (list, empty), Feedback (page, sheet, chat attached, saved), About (with updates), the update dialog states, Licences, a failure notice, plan, question, crew (with Cancel) and the context pane (also on a saved host), chat search results, no match and a failed search on a saved host, light and dark, 1440 and 480 px wide (`test/goldens`) |
+| `test/golden_test.dart` | Main screen, General, Models (and the model traffic picker, with an unavailable host; Key set, No key and the key dialogs; a saved host without the Full profile), Tools (list, editor, a partial category, a built-in toolset), Skills (list, empty), Feedback (page, sheet, chat attached, saved), About (with updates), the update dialog states, Licences, a failure notice, plan, question, crew (with Cancel) and the context pane (also on a saved host), chat search results, no match and a failed search on a saved host, and results and no match on this computer, light and dark, 1440 and 480 px wide (`test/goldens`) |
 | `test/feedback_test.dart`, `test/feedback_ui_test.dart` | Local feedback: redaction, report and chat files, storage, the sheet and the Feedback page (see [feedback.md](feedback.md)) |
 
 Goldens are rendered on Linux with the bundled fonts and the Flutter version CI
@@ -268,7 +269,7 @@ pins; renders from another platform will not match.
 - **The model pick is host-wide.** Make default saves `model.main` through `config.set` (the composer pick still uses `roles.set_main`) and saves one default model for every chat; there is no per-chat model. The pick is titled "Default model", and a run in progress keeps its own. There is no new-chat sheet: `session.open` takes only a title, and agent profiles exist only in JS.
 - **Providers are set up in the host config; keys can be set from the app.** Settings > Models lists providers, whether each has a key and where it comes from (never the key), Add key, Edit key, Remove key and Make default. Adding a provider is done in the host configuration: the host reads `$BUBBLEPAW_CONFIG`, else `~/.bubblepaw/config.toml` and `<workspace>/.bubblepaw/config.toml`. The app passes a key to the host once (Core v0.13.0) and never keeps it. The host stores it as a permission-protected plain text file under its data directory (`0600` on Unix, inherited directory ACLs on Windows; not encrypted, not an OS keyring); a stored key overrides the provider's environment variable, and removing it restores the fallback. Changing a key on a saved host needs the Full profile, and a provider without a `key_env` shows no key controls.
 - **No host log.** The diagnostics' host block is what Desktop observed (start, attach, stop, exit codes, stderr tails). A real host log tail needs an agent-kit API.
-- Chat search is on a saved host's rail and the phone's list only (Core 0.13 title search, see [remote-access.md](remote-access.md)). This computer's rail is the kit's `SessionRail`, whose Search row is a button with no text box, so it has no search yet.
+- Chat search (Core 0.13 title search, see [remote-access.md](remote-access.md)) is on this computer's rail, a saved host's and the phone's list. A search result of another project restarts the host in that project, as the project menu does.
 - Jobs: the host reports none. Cancel is offered in the crew ledger (expanded width), not in the crew strip.
 - Worktrees, crew and the Context pane show only what the stdio backend reports. With BubblePaw-Core v0.3.0 that includes the context (pane, summaries, history ranges) and child questions; it still reports no jobs. Compaction needs a real model, so the demo provider shows an empty structure.
 - The header shows a branch only when the backend reports one; the

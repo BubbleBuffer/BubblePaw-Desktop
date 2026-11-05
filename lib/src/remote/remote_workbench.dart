@@ -16,7 +16,7 @@ import 'package:flutter/services.dart'
 import 'package:flutter/widgets.dart';
 
 import '../screens/host_open_notice.dart';
-import 'chat_search.dart';
+import '../search/chat_search.dart';
 import 'project_groups.dart';
 import 'remote_chats.dart';
 import 'remote_rail.dart';

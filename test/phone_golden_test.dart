@@ -8,7 +8,7 @@ import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
-import 'package:bubblepaw_desktop/src/remote/chat_search.dart'
+import 'package:bubblepaw_desktop/src/search/chat_search.dart'
     show searchDebounce;
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_chats.dart'

@@ -17,7 +17,7 @@ import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/platform/download.dart';
 import 'package:bubblepaw_desktop/src/platform/releases.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
-import 'package:bubblepaw_desktop/src/remote/chat_search.dart'
+import 'package:bubblepaw_desktop/src/search/chat_search.dart'
     show searchDebounce;
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
@@ -33,6 +33,7 @@ import 'fakes.dart';
 import 'remote_chats_fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
+import 'local_search_fakes.dart';
 import 'tools_samples.dart';
 
 /// A scene: the controller to start and what to do once the app is up.
@@ -185,6 +186,56 @@ Scene _remoteChats({
       await settle(tester);
       semantics.dispose();
     }
+  },
+);
+
+/// The host's answer to a search for "quota": three chats in two projects.
+Future<Object?> _quotaAnswer(Map<String, Object?> params) async => {
+  'sessions': [
+    searchRow(
+      'c1',
+      'Quota bar flickers on reconnect',
+      gardenApi,
+      ago: const Duration(minutes: 1),
+    ),
+    searchRow(
+      'q2',
+      'Reset the quota window at midnight',
+      gardenApi,
+      ago: const Duration(days: 17),
+    ),
+    searchRow(
+      'q3',
+      'Per-user quota limits',
+      agentKit,
+      ago: const Duration(days: 58),
+    ),
+  ],
+  'next_cursor': null,
+};
+
+/// This computer's host with a search typed into the rail's box and, with
+/// [answer], that answer to it (its own title filter when null).
+Scene _localSearch(
+  String text, {
+  Future<Object?> Function(Map<String, Object?> params)? answer,
+}) => (
+  controller: () => (LocalFixture()..onSearch = answer).controller(),
+  after: (tester) async {
+    final show = find.byKey(const ValueKey('rail-show'));
+    if (show.evaluate().isNotEmpty) {
+      await tester.tap(show);
+      await settle(tester);
+    }
+    await tester.enterText(
+      find.byKey(const ValueKey('chat-search-field')),
+      text,
+    );
+    await tester.pump(searchDebounce);
+    await settle(tester);
+    // No blinking cursor in the picture.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(tester);
   },
 );
 
@@ -1125,32 +1176,7 @@ void main() {
     // The project picker beside New chat, with a project picked.
     'rail_remote_chats_picker': _remoteChats(pick: agentKit),
     // Chat search on a saved host: matches by project, the text marked.
-    'rail_search_results': _remoteChats(
-      search: 'quota',
-      answer: (_) async => {
-        'sessions': [
-          searchRow(
-            'c1',
-            'Quota bar flickers on reconnect',
-            gardenApi,
-            ago: const Duration(minutes: 1),
-          ),
-          searchRow(
-            'q2',
-            'Reset the quota window at midnight',
-            gardenApi,
-            ago: const Duration(days: 17),
-          ),
-          searchRow(
-            'q3',
-            'Per-user quota limits',
-            agentKit,
-            ago: const Duration(days: 58),
-          ),
-        ],
-        'next_cursor': null,
-      },
-    ),
+    'rail_search_results': _remoteChats(search: 'quota', answer: _quotaAnswer),
     // Nothing in the titles matches.
     'rail_search_none': _remoteChats(search: 'kubernetes'),
     // The host did not answer the search.
@@ -1159,6 +1185,9 @@ void main() {
       answer: (_) async =>
           throw const KitUnavailable('Maya desktop stopped answering.'),
     ),
+    // The same search on this computer's rail.
+    'rail_local_search_results': _localSearch('quota', answer: _quotaAnswer),
+    'rail_local_search_none': _localSearch('kubernetes'),
     // Context on a saved host: the pane beside the chat, as on this computer.
     'remote_context': _remoteChats(context: true),
     'settings_about': (

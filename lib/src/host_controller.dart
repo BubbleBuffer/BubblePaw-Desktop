@@ -20,7 +20,7 @@ import 'remote/host_links.dart';
 import 'remote/hosts_controller.dart';
 import 'remote/phone_remote_access.dart';
 import 'remote/remote_access.dart';
-import 'remote/chat_search.dart';
+import 'search/chat_search.dart';
 import 'remote/project_groups.dart';
 import 'remote/remote_chats.dart';
 import 'remote/remote_controller.dart';
@@ -41,6 +41,7 @@ class StartedBackend {
     this.remote,
     this.remoteRows,
     this.searchChats,
+    this.chatWorkspace,
   });
 
   final AgentBackend backend;
@@ -52,6 +53,10 @@ class StartedBackend {
   /// For a saved host that can search chat titles (`session.list.title_search`):
   /// how to ask it. Null leaves the rail without a search box.
   final ChatSearcher? searchChats;
+
+  /// For this computer's host: a chat's project path as the host last
+  /// reported it, to group search results and to tell another project's chat.
+  final String? Function(String chatId)? chatWorkspace;
 
   /// The host's settings (config.get and config.set); null when the backend
   /// has none, as the scripted one.
@@ -148,6 +153,15 @@ Future<StartedBackend> startBubblePaw(
     // connect disposes the transport on a failed handshake.
     rethrow;
   }
+  // The same search as a saved host's: `session.list` with `query`, across
+  // every project of the host. The wrapper only asks and keeps the rows.
+  final rows = RemoteChatRows();
+  final searcher = RemoteBackend(
+    backend,
+    rows,
+    rawRequest: transport.rawRequest,
+    titleSearch: backend.features.contains('session.list.title_search'),
+  );
   return StartedBackend(
     backend,
     backend.dispose,
@@ -160,6 +174,8 @@ Future<StartedBackend> startBubblePaw(
       rawRequest: transport.rawRequest,
     ),
     remote: _remoteFactory(transport, config),
+    searchChats: searcher.canSearchTitles ? searcher.searchChats : null,
+    chatWorkspace: rows.workspaceOf,
   );
 }
 
@@ -237,6 +253,10 @@ class HostController extends ChangeNotifier {
   GuardedBackend? _remoteBackend;
   RemoteChatRows? _remoteRows;
   ChatSearcher? _remoteSearch;
+  ChatSearcher? _localSearch;
+  String? Function(String chatId)? _localWorkspaceOf;
+  String? _openChat;
+  String? _openAfterStart;
   DateTime? _remoteNow;
   ProjectRailState? _remoteRail;
   HostSettings? _remoteSettings;
@@ -419,6 +439,17 @@ class HostController extends ChangeNotifier {
 
   /// How the open saved host searches chat titles; null when it cannot.
   ChatSearcher? get remoteSearch => _remoteSearch;
+
+  /// How this computer's host searches chat titles; null when it cannot, and
+  /// the rail then has no search box.
+  ChatSearcher? get localSearch => _localSearch;
+
+  /// A chat's project path as this computer's host last reported it.
+  String? Function(String chatId)? get localWorkspaceOf => _localWorkspaceOf;
+
+  /// The chat to open first in the workbench of this start: the one picked
+  /// from another project's search result, after the switch to that project.
+  String? get openChat => _openChat;
 
   /// The saved host that is open, or null for this computer.
   SavedHostEntry? get openHost {
@@ -635,7 +666,7 @@ class HostController extends ChangeNotifier {
   /// Switches to [path]: the host is bound to one workspace, so the running
   /// backend is disposed and a new one started with that workspace. The data
   /// directory stays. Does nothing for the workspace already open.
-  Future<void> switchWorkspace(String path) async {
+  Future<void> switchWorkspace(String path, {String? openChat}) async {
     final config = _config;
     final target = path.trim();
     if (config == null || target.isEmpty) return;
@@ -649,6 +680,7 @@ class HostController extends ChangeNotifier {
       // A config that cannot be written still switches this session.
     }
     _config = next;
+    _openAfterStart = openChat;
     await _start();
   }
 
@@ -722,6 +754,10 @@ class HostController extends ChangeNotifier {
   void _adopt(StartedBackend started, int ticket) {
     _dispose = started.dispose;
     _createdChats = started.createdChats;
+    _localSearch = started.searchChats;
+    _localWorkspaceOf = started.chatWorkspace;
+    _openChat = _openAfterStart;
+    _openAfterStart = null;
     _now = started.now;
     _attached = started.attached;
     _settings = started.settings;
@@ -795,6 +831,9 @@ class HostController extends ChangeNotifier {
     final dispose = _dispose;
     _backend = null;
     _settings = null;
+    _localSearch = null;
+    _localWorkspaceOf = null;
+    _openChat = null;
     _dropRemote();
     unawaited(openLocalHost());
     _dispose = null;
@@ -804,6 +843,7 @@ class HostController extends ChangeNotifier {
 
   void _fail(int ticket, HostFailure failure) {
     if (ticket != _generation || _disposed) return;
+    _openAfterStart = null;
     _logFailure(failure);
     _failure = failure;
     _phase = HostPhase.failed;
@@ -823,6 +863,9 @@ class HostController extends ChangeNotifier {
     _backend?.closing();
     _backend = null;
     _settings = null;
+    _localSearch = null;
+    _localWorkspaceOf = null;
+    _openChat = null;
     _dropRemote();
     await _closeRemote();
     _createdChats = null;
