@@ -4,6 +4,7 @@ library;
 // The phone states at 375x812, light and dark. New goldens come from the
 // workflow_dispatch run of the CI workflow (fix.patch), like the others.
 
+import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
@@ -54,6 +55,23 @@ HostController _controller(
     return RemoteFixture().start(links, id, settings: settings);
   },
 );
+
+/// A saved host that lists the providers of [sampleKeyProviders].
+class _KeyedBackend extends ListedBackend {
+  _KeyedBackend(super.chats);
+
+  @override
+  KitCapabilities get capabilities => KitCapabilities([
+    KitCapability.send,
+    KitCapability.cancel,
+    KitCapability.createChat,
+    KitCapability.approve,
+    KitCapability.providers,
+  ]);
+
+  @override
+  Future<ProviderSetup> listProviders() async => sampleKeyProviders;
+}
 
 void main() {
   final maya = fakeSavedHost(lastConnected: 1700000100);
@@ -174,18 +192,26 @@ void main() {
           profile: scene.value.profile,
           lastConnected: 1700000100,
         );
-        final played = Played(
-          capabilities: hostControlCapabilities,
-          providers: sampleKeyProviders,
-          models: sampleModels,
-          settings: keyedHostSettings(),
-        );
         final controller = Played(
           hostLinks: FakeHostLinks(hosts: [host]),
         ).controller(
           localHost: false,
           phoneAccess: (_) => FakeRemoteAccess(),
-          remoteStarter: (links, id) => played.start(sampleConfig),
+          remoteStarter: (links, id) async {
+            final fixture = RemoteFixture();
+            return StartedBackend(
+              RemoteBackend(
+                _KeyedBackend(sampleRemoteChats),
+                fixture.rows,
+                rawRequest: fixture.raw,
+              ),
+              () async {},
+              now: remoteClock,
+              attached: true,
+              remoteRows: fixture.rows,
+              settings: keyedHostSettings(),
+            );
+          },
         );
         addTearDown(controller.close);
         await pumpApp(
@@ -194,7 +220,6 @@ void main() {
           size: _phone,
           brightness: theme.value,
         );
-        await tester.runAsync(() => controller.openRemoteHost(host.id));
         for (var i = 0; i < 4; i++) {
           await settle(tester);
         }
