@@ -21,6 +21,7 @@ The Share tab's status block always shows a danger-toned `Stopped` pill when the
 | Saved hosts and presence, the add flow | `lib/src/remote/hosts_controller.dart` |
 | "Hosts you can open" list and Add / Remove dialogs | `lib/src/settings/hosts_section.dart` |
 | Provider picker "Send model traffic through…" | `lib/src/settings/models_page.dart` (`_ViaPicker`) |
+| Provider keys: Add key, Edit key, Remove key | `lib/src/settings/models_page.dart`, `provider_key_dialog.dart` |
 | Rail host switcher | `lib/src/screens/workspace_menu.dart` (`HostMenu`), wired in `lib/src/app.dart` |
 | Chat list of a saved host (rows, backend wrapper, grouping, rail, workbench) | `lib/src/remote/remote_chats.dart`, `project_groups.dart`, `remote_rail.dart`, `remote_workbench.dart` |
 | Chat search (controller, debounce, stale answers, highlight) | `lib/src/search/chat_search.dart` |
@@ -283,6 +284,30 @@ sets and shows the grant and the choice.
   names the device and the reason in the provider's error text, so the app adds
   nothing for it.
 
+## Provider keys on a saved host
+
+Settings > Models works against the open host, so Add key, Edit key and Remove
+key change the key on the host that runs the provider, not on this device
+(`providers.key.get` needs Read; `providers.key.set` and `providers.key.remove`
+need the Full profile). The pair profile is `HostController.openHost?.profile`;
+this computer's own host has none and always may.
+
+- **Below Full.** With a Read or Edit profile the page still shows Key set or No
+  key, the buttons are present but unavailable, and "Changing a key needs the
+  Full profile. This device has the Edit profile on this host." sits under the
+  card, so nothing fails after a key was typed. A host saved before profiles
+  were kept (empty profile) is left to refuse.
+- **Refusals.** If Core refuses anyway (`-32003`) the dialog shows "This device's
+  profile does not allow changing provider keys. It needs the Full profile." A
+  host older than Core v0.13.0 answers `-32601`: the buttons go away and the page
+  says to update Core. Other refusals show the host's message with the submitted
+  key cut out. The calls use `RawRequest` because the kit's transport drops
+  these codes.
+- **The key.** It goes from the field to the host once and is never stored,
+  logged, reported or shown by the app; the field is emptied after a save, on
+  Cancel and when the dialog closes. See [architecture.md](architecture.md) for
+  the dialog and the host's storage.
+
 ## From the tray
 
 The tray menu has a "Share this host" check item, shown while the host runs and
@@ -321,6 +346,10 @@ in `native/src/sharing_tests.rs` (a relay that does not answer reports delays 1 
 cloudflared reads as chosen and clears; the last needs a shell script, so unix only);
 goldens `settings_remote_cloudflared_chosen`, `settings_remote_cloudflared_refused`,
 `settings_remote_failure_cloudflared` and `settings_remote_failure_relay`.
+Provider keys: `test/provider_key_test.dart` (a saved host at Full, Edit and Read,
+refusals, a host without the methods, the marker key that must never surface) and
+`test/host_settings_test.dart`; goldens `settings_models_keys*`, including
+`settings_models_key_blocked` (a saved host with the Edit profile).
 Pairing name and key export: `test/remote_page_test.dart` (the device name field,
 the save to Downloads and its error), `test/key_files_test.dart` (folder lookup
 and free file names); goldens `settings_remote_pair_confirm` and

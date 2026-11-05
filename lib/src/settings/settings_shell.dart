@@ -222,6 +222,11 @@ class _SettingsShellState extends State<SettingsShell> {
         // The saved hosts here are this computer's, so they are offered only
         // while this computer's host is the one being configured.
         hosts: host.openHostId == null ? host.hosts : null,
+        // Keys are changed with the Full profile only; this computer's own
+        // host has no pair profile.
+        hostProfile: host.openHostId == null
+            ? null
+            : host.openHost?.profile ?? '',
         onBack: onBack,
       ),
       SettingsSection.tools => ToolsPage(

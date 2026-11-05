@@ -13,6 +13,7 @@ import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
 import 'package:bubblepaw_desktop/src/scripted.dart';
 
+import 'fakes.dart';
 import 'support.dart';
 
 /// What the BubblePaw stdio host offered before v0.3.0 (the context scenes add
@@ -252,6 +253,55 @@ final sampleProviders = ProviderSetup(
     ),
   ],
 );
+
+/// Providers that take a key: one with a stored key, one whose key comes from
+/// the environment, one with none, and a scripted one that needs none. The
+/// matching host settings are [keyedHostSettings].
+final sampleKeyProviders = ProviderSetup(
+  main: 'demo/scripted',
+  activeMain: 'demo/scripted',
+  providers: [
+    ProviderInfo(
+      name: 'demo',
+      kind: 'scripted',
+      models: const [ProviderModel(id: 'scripted')],
+    ),
+    ProviderInfo(
+      name: 'deepseek',
+      kind: 'chat-completions',
+      baseUrl: 'https://api.deepseek.com/v1',
+      keyEnv: 'DEEPSEEK_API_KEY',
+      keyPresent: true,
+      models: const [ProviderModel(id: 'deepseek-v4.1-flash')],
+    ),
+    ProviderInfo(
+      name: 'anthropic',
+      kind: 'anthropic-messages',
+      baseUrl: 'https://api.anthropic.com',
+      keyEnv: 'ANTHROPIC_API_KEY',
+      keyPresent: true,
+      models: const [ProviderModel(id: 'claude-sonnet-5.5')],
+    ),
+    ProviderInfo(
+      name: 'openrouter',
+      kind: 'chat-completions',
+      baseUrl: 'https://openrouter.ai/api/v1',
+      keyEnv: 'OPENROUTER_API_KEY',
+      models: const [ProviderModel(id: 'qwen3-coder')],
+    ),
+  ],
+);
+
+/// A fake key value that cannot be mistaken for a real one, and that no
+/// screen, report or error may ever show.
+const markerKey = 'MARKER-NOT-A-KEY';
+
+/// Host settings for [sampleKeyProviders]: `deepseek` has a stored key,
+/// `anthropic` finds its key in the host's environment, `openrouter` has none.
+FakeHostSettings keyedHostSettings() => FakeHostSettings(
+  values: {'model.main': 'demo/scripted'},
+  environmentKeys: {'anthropic'},
+)..storedKeys['deepseek'] = '$markerKey-STORED';
 
 /// Providers of kinds that accept `via` (a chat-completions gateway and an
 /// anthropic-messages one) and one that does not (scripted).

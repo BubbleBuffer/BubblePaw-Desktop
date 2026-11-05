@@ -4,7 +4,9 @@
 import 'dart:async';
 
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
+import 'package:agent_kit_core/agent_kit_core.dart' show KitUnavailable;
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
+import 'package:bubblepaw_desktop/src/remote/remote_chats.dart' show RpcRefusal;
 import 'package:flutter_test/flutter_test.dart';
 
 class _Transport implements BubblePawTransport {
@@ -30,6 +32,31 @@ class _Transport implements BubblePawTransport {
 
   @override
   Future<void> dispose() async {}
+}
+
+/// A raw request that records its calls and answers [reply] or throws
+/// [failure].
+class _Raw {
+  final calls = <(String, Map<String, Object?>)>[];
+  Object? answer;
+  Object? failure;
+
+  _Raw reply(Object? value) {
+    answer = value;
+    return this;
+  }
+
+  _Raw fail(Object error) {
+    failure = error;
+    return this;
+  }
+
+  Future<Object?> call(String method, Map<String, Object?> params) async {
+    calls.add((method, params));
+    final error = failure;
+    if (error != null) throw error;
+    return answer;
+  }
 }
 
 void main() {
@@ -316,5 +343,150 @@ void main() {
             .having((e) => e.code, 'code', -32012),
       ),
     );
+  });
+
+  group('provider keys (Core v0.13.0)', () {
+    const marker = 'MARKER-NOT-A-KEY';
+
+    test('get reads whether a key is set and where it comes from', () async {
+      final host = _Raw().reply({'is_set': true, 'source': 'environment'});
+      final settings = TransportHostSettings(
+        _Transport(),
+        rawRequest: host.call,
+      );
+      final status = await settings.providerKey('openrouter');
+      expect(host.calls.single.$1, 'providers.key.get');
+      expect(host.calls.single.$2, {'name': 'openrouter'});
+      expect(status.isSet, isTrue);
+      expect(status.source, ProviderKeySource.environment);
+      host.reply({'is_set': false, 'source': 'none'});
+      final none = await settings.providerKey('openrouter');
+      expect(none.isSet, isFalse);
+      expect(none.source, ProviderKeySource.none);
+    });
+
+    test('set sends the name and the value and nothing else', () async {
+      final host = _Raw().reply({
+        'is_set': true,
+        'source': 'stored',
+        'applied': true,
+        'restart_needed': false,
+      });
+      final change = await TransportHostSettings(
+        _Transport(),
+        rawRequest: host.call,
+      ).setProviderKey('openrouter', marker);
+      expect(host.calls.single.$1, 'providers.key.set');
+      expect(host.calls.single.$2, {'name': 'openrouter', 'value': marker});
+      expect(change.status.source, ProviderKeySource.stored);
+      expect(change.applied, isTrue);
+      expect(change.restartNeeded, isFalse);
+    });
+
+    test('remove sends the name and reads a restart need', () async {
+      final host = _Raw().reply({
+        'is_set': false,
+        'source': 'none',
+        'applied': false,
+        'restart_needed': true,
+      });
+      final change = await TransportHostSettings(
+        _Transport(),
+        rawRequest: host.call,
+      ).removeProviderKey('openrouter');
+      expect(host.calls.single.$1, 'providers.key.remove');
+      expect(host.calls.single.$2, {'name': 'openrouter'});
+      expect(change.status.isSet, isFalse);
+      expect(change.applied, isFalse);
+      expect(change.restartNeeded, isTrue);
+    });
+
+    test('a profile refusal says which profile is needed', () async {
+      final host = _Raw().fail(const RpcRefusal(-32003, 'profile too small'));
+      await expectLater(
+        TransportHostSettings(
+          _Transport(),
+          rawRequest: host.call,
+        ).setProviderKey('openrouter', marker),
+        throwsA(
+          isA<HostSettingsException>()
+              .having((e) => e.code, 'code', profileRefusedCode)
+              .having((e) => e.message, 'message', contains('Full profile')),
+        ),
+      );
+    });
+
+    test('a host without the method is told apart', () async {
+      final host = _Raw().fail(const RpcRefusal(-32601, 'method not found'));
+      await expectLater(
+        TransportHostSettings(
+          _Transport(),
+          rawRequest: host.call,
+        ).providerKey('openrouter'),
+        throwsA(
+          isA<HostSettingsException>().having(
+            (e) => e.code,
+            'code',
+            methodNotFoundCode,
+          ),
+        ),
+      );
+    });
+
+    test('a refusal that echoes the key is cut before it is shown', () async {
+      final host = _Raw().fail(
+        const RpcRefusal(-32012, 'invalid key $marker for openrouter'),
+      );
+      await expectLater(
+        TransportHostSettings(
+          _Transport(),
+          rawRequest: host.call,
+        ).setProviderKey('openrouter', '  $marker  '),
+        throwsA(
+          isA<HostSettingsException>().having(
+            (e) => e.message,
+            'message',
+            allOf(isNot(contains(marker)), contains('openrouter')),
+          ),
+        ),
+      );
+    });
+
+    test('an unreachable host is not blamed on the key', () async {
+      final host = _Raw().fail(const KitUnavailable());
+      await expectLater(
+        TransportHostSettings(
+          _Transport(),
+          rawRequest: host.call,
+        ).setProviderKey('openrouter', marker),
+        throwsA(
+          isA<HostSettingsException>().having(
+            (e) => e.message,
+            'message',
+            'The host could not be reached.',
+          ),
+        ),
+      );
+    });
+
+    test('without a raw request the kit transport carries the call', () async {
+      final transport = _Transport()
+        ..reply = {'is_set': true, 'source': 'stored'};
+      final status = await TransportHostSettings(transport)
+          .providerKey('openrouter');
+      expect(transport.calls.single.$1, 'providers.key.get');
+      expect(status.source, ProviderKeySource.stored);
+    });
+
+    test('a reply without is_set is an unexpected reply', () async {
+      final host = _Raw().reply({'source': 'stored'});
+      await expectLater(
+        TransportHostSettings(
+          _Transport(),
+          rawRequest: host.call,
+        ).providerKey('openrouter'),
+        throwsA(isA<HostSettingsException>()),
+      );
+    });
   });
 }

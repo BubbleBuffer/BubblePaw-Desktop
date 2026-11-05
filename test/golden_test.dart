@@ -239,6 +239,45 @@ Scene _localSearch(
   },
 );
 
+/// Settings > Models on providers that take keys (Core v0.13.0): a stored
+/// key, one from the environment and none. [open] opens the key dialog of
+/// that provider, with [typed] in its field; [profile] shows the page of a
+/// saved host this device holds that profile on.
+Scene _keysScene({String? open, String? profile, bool typed = false}) {
+  HostController? host;
+  SavedHostEntry? saved;
+  return (
+    controller: () {
+      final played = Played(
+        capabilities: hostControlCapabilities,
+        providers: sampleKeyProviders,
+        models: sampleModels,
+        settings: keyedHostSettings(),
+      );
+      if (profile == null) return host = played.controller();
+      saved = fakeSavedHost(profile: profile, lastConnected: 1700000100);
+      return host = Played(hostLinks: FakeHostLinks(hosts: [saved!]))
+          .controller(remoteStarter: (links, id) => played.start(sampleConfig));
+    },
+    after: (tester) async {
+      if (profile != null) {
+        await tester.runAsync(() => host!.openRemoteHost(saved!.id));
+        await settle(tester);
+      }
+      await openSettings(tester, 'models');
+      if (open == null) return;
+      await tapVisible(tester, 'key-button-$open');
+      if (typed) {
+        await tester.enterText(
+          find.byKey(const ValueKey('key-field')),
+          markerKey,
+        );
+        await settle(tester);
+      }
+    },
+  );
+}
+
 /// Two saved hosts: one answers, one does not.
 FakeHostLinks _sampleHosts() => FakeHostLinks(
   hosts: [
@@ -652,6 +691,13 @@ void main() {
       ).controller(),
       after: (tester) => openSettings(tester, 'models'),
     ),
+    // Core v0.13.0: Key set and No key beside Add key and Edit key; the key
+    // dialog for a new key and for a stored one; a saved host without the
+    // Full profile, where the buttons are unavailable.
+    'settings_models_keys': _keysScene(),
+    'settings_models_key_add': _keysScene(open: 'openrouter', typed: true),
+    'settings_models_key_edit': _keysScene(open: 'deepseek'),
+    'settings_models_key_blocked': _keysScene(profile: 'edit'),
     // Core v0.11.0: a provider's model traffic can go through a saved host
     // that granted this device that.
     'settings_models_via': (
