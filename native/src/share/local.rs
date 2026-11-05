@@ -18,7 +18,8 @@ use bubblepaw_sdk::{
         RemoteMode, RemotePaths, RemoteReach, RemoteServeOptions, RemoteServer, RemoteSettings,
         RemoteStatus, TokenSource, TunnelLogin, TunnelMode,
     },
-    Client, ConfigOptions, Profile,
+    tunnel_settings::CloudflaredInfo as ChosenInfo,
+    Client, ClientError, ConfigOptions, Profile,
 };
 use tokio::sync::watch;
 
@@ -241,16 +242,26 @@ impl Shared {
                 address: None,
                 host_id: None,
                 last_error: None,
+                failure: None,
                 devices: 0,
             },
-            Some(server) => ShareState {
-                status: server.status().into(),
-                mode,
-                address: server.address().map(|address| address.url().to_owned()),
-                host_id: Some(server.host_id()),
-                last_error: server.last_error(),
-                devices: server.tunnel_count() as u32,
-            },
+            Some(server) => {
+                let core = server.share_state();
+                ShareState {
+                    status: server.status().into(),
+                    mode,
+                    address: server.address().map(|address| address.url().to_owned()),
+                    host_id: Some(server.host_id()),
+                    last_error: core.last_error,
+                    failure: core.failure.map(|failure| ShareFailure {
+                        transport: failure.transport,
+                        exit_code: failure.exit_code,
+                        retry_after_secs: u32::try_from(failure.retry_after_secs)
+                            .unwrap_or(u32::MAX),
+                    }),
+                    devices: server.tunnel_count() as u32,
+                }
+            }
         }
     }
 
@@ -616,30 +627,70 @@ impl Share {
     pub(crate) async fn cloudflared_info(&self) -> Result<CloudflaredStatus, ShareError> {
         let (remote_settings, _) = load_remote(&self.shared.options)?;
         let paths = &self.shared.paths;
+        // Core reports `chosen` when `remote.cloudflared` is set.
+        let chosen = remote_settings.cloudflared.is_some();
         let Ok(program) =
             remote::find_cloudflared(remote_settings.cloudflared.as_deref().map(Path::new), paths)
         else {
             return Ok(CloudflaredStatus {
                 installed: false,
-                path: None,
+                path: remote_settings.cloudflared.as_deref().map(display_path),
                 version: None,
                 pinned_version: remote::CLOUDFLARED_VERSION.to_owned(),
                 update_available: false,
                 managed: false,
+                chosen,
             });
         };
         match remote::cloudflared_info(&program, paths).await {
-            Ok(info) => Ok(cloudflared_status(info)),
+            Ok(info) => Ok(CloudflaredStatus {
+                chosen,
+                ..cloudflared_status(info)
+            }),
             // Found but it would not run or say its version.
             Err(_) => Ok(CloudflaredStatus {
                 installed: true,
-                path: Some(program.display().to_string()),
+                path: Some(display_path(&program.display().to_string())),
                 version: None,
                 pinned_version: remote::CLOUDFLARED_VERSION.to_owned(),
                 update_available: false,
                 managed: program.starts_with(paths.cloudflare_bin()),
+                chosen,
             }),
         }
+    }
+
+    /// Chooses the `cloudflared` at `path`, or with `None` goes back to the
+    /// managed copy (or the one on `PATH`). Core runs it with `--version`
+    /// first and refuses a missing, non-executable or wrong program; its
+    /// reason is the error's message and the choice stays as it was.
+    pub(crate) async fn set_cloudflared(
+        &self,
+        path: Option<String>,
+    ) -> Result<CloudflaredStatus, ShareError> {
+        let client = self.shared.client()?;
+        let path = path
+            .filter(|path| !path.trim().is_empty())
+            .map(PathBuf::from);
+        let result = client
+            .set_cloudflared(path.as_deref())
+            .await
+            .map_err(client_error)?;
+        match result.info {
+            Some(info) => Ok(chosen_status(info)),
+            // Cleared: report what the default discovery finds now.
+            None => self.cloudflared_info().await,
+        }
+    }
+
+    /// Forgets the browser sign-in certificate and nothing else.
+    pub(crate) async fn cloudflare_sign_out(&self) -> Result<bool, ShareError> {
+        let client = self.shared.client()?;
+        client
+            .cloudflare_sign_out()
+            .await
+            .map(|result| result.changed)
+            .map_err(client_error)
     }
 
     /// Downloads the pinned `cloudflared` into the data directory and checks
@@ -697,11 +748,42 @@ fn key_change(change: remote::DeviceKeyChange) -> KeyChange {
 fn cloudflared_status(info: remote::CloudflaredInfo) -> CloudflaredStatus {
     CloudflaredStatus {
         installed: true,
-        path: Some(info.path.display().to_string()),
+        path: Some(display_path(&info.path.display().to_string())),
         version: info.version,
         pinned_version: info.pinned,
         update_available: info.update_available,
         managed: info.managed,
+        chosen: info.chosen,
+    }
+}
+
+/// What the host answered to `remote.cloudflared.set`.
+fn chosen_status(info: ChosenInfo) -> CloudflaredStatus {
+    CloudflaredStatus {
+        installed: true,
+        path: Some(display_path(&info.path.display().to_string())),
+        version: info.version,
+        pinned_version: info.pinned,
+        update_available: info.update_available,
+        managed: info.managed,
+        chosen: info.chosen,
+    }
+}
+
+/// A path as the person reads it: the `\\?\` prefix Windows paths get when
+/// Core resolves a chosen file is left off.
+fn display_path(path: &str) -> String {
+    path.strip_prefix(r"\\?\")
+        .filter(|rest| rest.as_bytes().get(1) == Some(&b':'))
+        .unwrap_or(path)
+        .to_owned()
+}
+
+/// A host refusal in the host's own words; other failures as they read.
+fn client_error(error: ClientError) -> ShareError {
+    match error {
+        ClientError::Rpc { message, .. } => ShareError::new(ShareErrorKind::Other, message),
+        other => ShareError::other(other),
     }
 }
 

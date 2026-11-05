@@ -91,7 +91,10 @@ class FakeRemoteAccess implements RemoteAccess {
       pinnedVersion: '2025.9.0',
       updateAvailable: false,
       managed: false,
+      chosen: false,
     ),
+    this.canChooseCloudflared = true,
+    this.canSignOutCloudflare = true,
     this.other = const OtherShare(shared: false, ours: false, cli: false),
     this.hostSettings,
   }) : deviceList = [...?devices];
@@ -113,6 +116,15 @@ class FakeRemoteAccess implements RemoteAccess {
     id: 'D3SK-7XQ2-9MRE-4HWB',
     fingerprint: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
   );
+
+  /// Made to throw by the next `setCloudflared` with a file, when set: the
+  /// reason Core gives for refusing it.
+  ShareError? rejectCloudflared;
+
+  @override
+  final bool canChooseCloudflared;
+  @override
+  final bool canSignOutCloudflare;
 
   /// Made to throw by the next start, when set.
   ShareError? startFails;
@@ -292,6 +304,7 @@ class FakeRemoteAccess implements RemoteAccess {
       pinnedVersion: '2025.9.0',
       updateAvailable: false,
       managed: true,
+      chosen: false,
     );
   }
 
@@ -299,6 +312,42 @@ class FakeRemoteAccess implements RemoteAccess {
   Future<CloudflaredStatus> updateCloudflared() async {
     calls.add('update-cloudflared');
     return cloudflaredStatus;
+  }
+
+  @override
+  Future<CloudflaredStatus> setCloudflared(String? path) async {
+    calls.add('set-cloudflared:${path ?? 'managed'}');
+    final rejected = rejectCloudflared;
+    if (path != null && rejected != null) throw rejected;
+    return cloudflaredStatus = path == null
+        ? const CloudflaredStatus(
+            installed: true,
+            version: '2025.9.0',
+            pinnedVersion: '2025.9.0',
+            updateAvailable: false,
+            managed: true,
+            chosen: false,
+          )
+        : CloudflaredStatus(
+            installed: true,
+            path: path,
+            version: '2026.9.0',
+            pinnedVersion: '2025.9.0',
+            updateAvailable: false,
+            managed: false,
+            chosen: true,
+          );
+  }
+
+  @override
+  Future<bool> cloudflareSignOut() async {
+    calls.add('cloudflare-sign-out');
+    cloudflare = const CloudflareStatus(
+      signedIn: false,
+      via: CloudflareVia.none,
+      zones: [],
+    );
+    return true;
   }
 
   @override

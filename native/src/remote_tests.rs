@@ -18,17 +18,17 @@ use crate::api::remote::*;
 use crate::host_setup;
 use crate::share::{load_remote, WatchCursor};
 
-struct Fixture {
-    root: tempfile::TempDir,
-    relay: Relay,
-    host: BubblePawHost,
-    share: RemoteShare,
-    options: ConfigOptions,
+pub(crate) struct Fixture {
+    pub(crate) root: tempfile::TempDir,
+    pub(crate) relay: Relay,
+    pub(crate) host: BubblePawHost,
+    pub(crate) share: RemoteShare,
+    pub(crate) options: ConfigOptions,
 }
 
 /// Options on `root/<name>` that read nothing from the machine, with the
 /// given `[remote]` overrides on top.
-fn options(root: &Path, name: &str, sets: &[String]) -> ConfigOptions {
+pub(crate) fn options(root: &Path, name: &str, sets: &[String]) -> ConfigOptions {
     let dir = root.join(name);
     std::fs::create_dir_all(dir.join("work")).unwrap();
     std::fs::create_dir_all(dir.join("home")).unwrap();
@@ -47,7 +47,7 @@ fn relay_sets(url: &str) -> Vec<String> {
     ]
 }
 
-async fn fixture() -> Fixture {
+pub(crate) async fn fixture() -> Fixture {
     let relay = Relay::bind("127.0.0.1:0".parse().unwrap(), RelayConfig::default())
         .await
         .unwrap();

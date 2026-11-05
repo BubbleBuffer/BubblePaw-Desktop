@@ -33,6 +33,7 @@ class PlatformServices {
     this.saveKeyFile = saveKeyFileDefault,
     this.keyFileInDownloads,
     this.pickKeyFile = pickKeyFilePath,
+    this.pickCloudflared = pickCloudflaredPath,
     this.copy = copyToClipboard,
   });
 
@@ -51,6 +52,9 @@ class PlatformServices {
 
   /// A key file to import; null when cancelled.
   final Future<String?> Function() pickKeyFile;
+
+  /// The `cloudflared` program to use; null when cancelled.
+  final Future<String?> Function() pickCloudflared;
 
   /// Puts text on the clipboard.
   final Future<void> Function(String text) copy;
