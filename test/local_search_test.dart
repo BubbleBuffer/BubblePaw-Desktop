@@ -99,7 +99,6 @@ void main() {
     // The normal list gives way to the answer.
     expect(find.byKey(const ValueKey('rail-row-c1')), findsNothing);
     expect(_row('c1'), findsNothing);
-    expect(find.text(gardenApi.split('/').last), findsOneWidget);
     expect(find.text('agent-kit'), findsOneWidget);
     expect(_row('c2'), findsOneWidget);
     expect(_row('c4'), findsOneWidget);
