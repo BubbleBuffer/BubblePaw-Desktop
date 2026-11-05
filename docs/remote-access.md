@@ -160,7 +160,7 @@ neither set the rail is as before. The embedded host is asked through the same
 rows, not as the workbench's backend) and the same `ChatSearchController`,
 `ChatSearchBox` and `ChatSearchResults`. `Workbench` holds the controller, so it
 survives the kit's rebuilds. The box reads "Search all projects", no match reads
-`Search looks at chat titles on This computer.`, and Ctrl+K works as on a saved
+`Search looks at chat titles on this computer.`, and Ctrl+K works as on a saved
 host. The host is bound to one project, so a result of the open project opens in
 place (the kit's `select`), while a result of another project calls
 `HostController.switchWorkspace(path, openChat: id)`, the same restart the project

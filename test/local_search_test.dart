@@ -118,7 +118,7 @@ void main() {
 
     expect(find.text('No chats match "kubernetes"'), findsOneWidget);
     expect(
-      find.text('Search looks at chat titles on This computer.'),
+      find.text('Search looks at chat titles on this computer.'),
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('search-failed')), findsNothing);
