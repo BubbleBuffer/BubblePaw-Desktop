@@ -118,7 +118,10 @@ Future<StartedBackend> startSavedHost(HostLinks links, String hostId) async {
     createdChats: backend.createdChats,
     connectionLost: backend.connectionLost,
     attached: true,
-    settings: TransportHostSettings(transport),
+    settings: TransportHostSettings(
+      transport,
+      rawRequest: transport.rawRequest,
+    ),
   );
 }
 
@@ -152,7 +155,10 @@ Future<StartedBackend> startBubblePaw(
     connectionLost: backend.connectionLost,
     attached: transport.attached,
     version: embeddedCoreVersion(),
-    settings: TransportHostSettings(transport),
+    settings: TransportHostSettings(
+      transport,
+      rawRequest: transport.rawRequest,
+    ),
     remote: _remoteFactory(transport, config),
   );
 }
