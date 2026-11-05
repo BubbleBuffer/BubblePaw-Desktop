@@ -11,6 +11,7 @@ import 'package:bubblepaw_desktop/src/app.dart';
 import 'package:bubblepaw_desktop/src/remote/chat_search.dart'
     show searchDebounce;
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
+import 'package:bubblepaw_desktop/src/remote/remote_chats.dart' show RemoteBackend;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
