@@ -74,8 +74,11 @@ Future<void> _ctrlK(WidgetTester tester) async {
   await tester.pump();
 }
 
-bool _focused(WidgetTester tester) =>
-    tester.state<EditableTextState>(find.byKey(_field)).widget.focusNode.hasFocus;
+bool _focused(WidgetTester tester) => tester
+    .state<EditableTextState>(find.byKey(_field))
+    .widget
+    .focusNode
+    .hasFocus;
 
 void main() {
   group('highlightTitle', () {
@@ -99,8 +102,9 @@ void main() {
   });
 
   group('ChatSearchController', () {
-    ChatPage page(String title) =>
-        ChatPage(chats: [ChatSummary(id: title, title: title)]);
+    ChatPage page(String title) => ChatPage(
+      chats: [ChatSummary(id: title, title: title)],
+    );
 
     testWidgets('waits for typing to pause, then asks once', (tester) async {
       final asked = <String>[];
@@ -234,7 +238,10 @@ void main() {
 
       await _type(tester, 'the');
 
-      expect(fixture.searches.single, {'query': 'the', 'limit': searchPageSize});
+      expect(fixture.searches.single, {
+        'query': 'the',
+        'limit': searchPageSize,
+      });
       // The normal list gives way to the answer.
       expect(find.text('Needs you'), findsNothing);
       expect(find.byKey(const ValueKey('needs-row-c1')), findsNothing);

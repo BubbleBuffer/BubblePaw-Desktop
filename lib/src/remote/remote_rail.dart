@@ -17,8 +17,7 @@ import 'package:bb_ui/bb_ui.dart'
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 
-import '../feedback/glyphs.dart'
-    show glyphCheck, glyphChevronDown, glyphClose;
+import '../feedback/glyphs.dart' show glyphCheck, glyphChevronDown, glyphClose;
 import '../settings/remote_glyphs.dart';
 import '../settings/settings_widgets.dart' show glyphIcon;
 import 'chat_search.dart';
@@ -280,9 +279,7 @@ class RemoteRail extends StatelessWidget {
             open: state.isOpen(group.key),
             now: clock,
             onToggle: () => state.toggle(group.key),
-            onNewChat: onNewChatIn == null
-                ? null
-                : () => onNewChatIn!(group),
+            onNewChat: onNewChatIn == null ? null : () => onNewChatIn!(group),
           ),
           if (state.isOpen(group.key))
             for (final chat in group.chats)
