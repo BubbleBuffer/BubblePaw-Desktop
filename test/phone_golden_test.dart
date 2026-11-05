@@ -6,8 +6,9 @@ library;
 
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
-import 'package:bubblepaw_desktop/src/remote/remote_chats.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
+import 'package:bubblepaw_desktop/src/remote/chat_search.dart'
+    show searchDebounce;
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,16 +51,7 @@ HostController _controller(
         message: 'unreachable',
       );
     }
-    final fixture = RemoteFixture();
-    if (settings == null) return fixture.start(links, id);
-    return StartedBackend(
-      RemoteBackend(fixture.backend, fixture.rows, rawRequest: fixture.raw),
-      () async {},
-      now: remoteClock,
-      attached: true,
-      remoteRows: fixture.rows,
-      settings: settings,
-    );
+    return RemoteFixture().start(links, id, settings: settings);
   },
 );
 
@@ -77,6 +69,21 @@ void main() {
       failOpen: false,
       settings: null,
       after: null,
+    ),
+    'phone-chats-search': (
+      hosts: [maya],
+      failOpen: false,
+      settings: null,
+      after: (tester, _) async {
+        await tester.enterText(
+          find.byKey(const ValueKey('chat-search-field')),
+          'the',
+        );
+        await tester.pump(searchDebounce);
+        await settle(tester);
+        FocusManager.instance.primaryFocus?.unfocus();
+        await settle(tester);
+      },
     ),
     'phone-chat-open': (
       hosts: [maya],

@@ -18,6 +18,7 @@ import 'feedback/feedback_controller.dart';
 import 'feedback/feedback_sheet.dart';
 import 'guarded_backend.dart';
 import 'host_controller.dart';
+import 'remote/chat_search.dart' show ChatSearcher;
 import 'remote/host_links.dart';
 import 'remote/hosts_controller.dart';
 import 'remote/project_groups.dart';
@@ -297,6 +298,7 @@ class _AppShellState extends State<AppShell> {
       hostMenu: _hostMenu(),
       remoteRows: controller.remoteRows,
       remoteRail: controller.remoteRail,
+      remoteSearch: controller.remoteSearch,
       remoteName: controller.openHost?.label ?? 'Host',
       finishedTurnsOpen: controller.prefs.turnLayout == TurnLayoutSetting.open,
       phone: true,
@@ -385,6 +387,7 @@ class _AppShellState extends State<AppShell> {
         hostMenu: _hostMenu(),
         remoteRows: controller.remoteRows,
         remoteRail: controller.remoteRail,
+        remoteSearch: controller.remoteSearch,
         remoteName: controller.openHost?.label ?? 'Host',
         finishedTurnsOpen:
             controller.prefs.turnLayout == TurnLayoutSetting.open,
@@ -410,6 +413,7 @@ class Workbench extends StatefulWidget {
     this.now,
     this.remoteRows,
     this.remoteRail,
+    this.remoteSearch,
     this.remoteName = 'Host',
     this.phone = false,
     this.finishedTurnsOpen = false,
@@ -447,6 +451,10 @@ class Workbench extends StatefulWidget {
   /// open and its name. The rail then groups the chats by project.
   final RemoteChatRows? remoteRows;
   final ProjectRailState? remoteRail;
+
+  /// How the open saved host searches chat titles; null when it cannot, and
+  /// the rail then has no search box.
+  final ChatSearcher? remoteSearch;
   final String remoteName;
 
   @override
@@ -516,6 +524,7 @@ class _WorkbenchState extends State<Workbench> {
                 backend: widget.backend,
                 rows: widget.remoteRows!,
                 state: widget.remoteRail!,
+                search: widget.remoteSearch,
                 hostName: widget.remoteName,
                 startOnList: widget.phone,
                 initialChatId: _openChatId,

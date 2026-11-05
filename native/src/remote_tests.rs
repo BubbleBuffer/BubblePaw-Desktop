@@ -784,6 +784,76 @@ async fn the_app_pairs_with_a_second_host_opens_it_and_lists_its_chats() {
 }
 
 #[tokio::test]
+async fn a_saved_host_searches_chat_titles_across_its_projects() {
+    let f = fixture().await;
+    f.started().await;
+    let app = app_data(&f);
+    for title in [
+        "Quota bar flickers",
+        "Plan the release",
+        "Per-user QUOTA limits",
+    ] {
+        f.host
+            .call("session.open".into(), json!({ "title": title }).to_string())
+            .await
+            .unwrap();
+    }
+    let saved = pair_app(&f, &app, "read").await;
+    let remote = BubblePawHost::connect_saved(app.clone(), saved.id.clone())
+        .await
+        .unwrap();
+
+    // The host says it can: the app shows no search box without this.
+    let initialized = remote
+        .call("initialize".into(), String::new())
+        .await
+        .unwrap();
+    assert!(
+        initialized.contains("\"session.list.title_search\""),
+        "{initialized}"
+    );
+
+    // A read device searches, case-insensitively, and gets the paged form.
+    let found = remote
+        .call(
+            "session.list".into(),
+            json!({ "query": "quota", "limit": 100 }).to_string(),
+        )
+        .await
+        .unwrap();
+    let found: serde_json::Value = serde_json::from_str(&found).unwrap();
+    let mut titles: Vec<&str> = found["sessions"]
+        .as_array()
+        .expect("a query answers with a page")
+        .iter()
+        .map(|row| row["title"].as_str().unwrap())
+        .collect();
+    titles.sort_unstable();
+    assert_eq!(titles, ["Per-user QUOTA limits", "Quota bar flickers"]);
+    assert!(found["next_cursor"].is_null(), "{found}");
+    // Each row carries what the rail needs to group and mark it.
+    let row = &found["sessions"][0];
+    assert!(row.get("workspace").is_some(), "{row}");
+    assert!(row.get("needs_you").is_some(), "{row}");
+    assert!(row.get("running").is_some(), "{row}");
+
+    // No match is an empty page, not an error and not the whole list.
+    let none = remote
+        .call(
+            "session.list".into(),
+            json!({ "query": "kubernetes" }).to_string(),
+        )
+        .await
+        .unwrap();
+    let none: serde_json::Value = serde_json::from_str(&none).unwrap();
+    assert_eq!(none["sessions"].as_array().map(Vec::len), Some(0), "{none}");
+
+    remote.close().await.unwrap();
+    f.host.close().await.unwrap();
+    f.relay.shutdown().await;
+}
+
+#[tokio::test]
 async fn a_saved_host_opens_chats_only_in_workspaces_it_knows() {
     let f = fixture().await;
     f.started().await;
