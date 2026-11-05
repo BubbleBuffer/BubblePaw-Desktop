@@ -7,7 +7,7 @@ import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 import 'package:agent_kit_core/agent_kit_core.dart' show KitUnavailable;
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_chats.dart'
-    show RawRequest, RpcRefusal;
+    show RpcRefusal;
 import 'package:flutter_test/flutter_test.dart';
 
 class _Transport implements BubblePawTransport {

@@ -499,7 +499,7 @@ class TransportHostSettings implements HostSettings {
     } on RpcRefusal catch (refusal) {
       throw switch (refusal.code) {
         profileRefusedCode => const HostSettingsException(
-          'This device's profile does not allow changing provider keys. '
+          "This device's profile does not allow changing provider keys. "
           'It needs the Full profile.',
           code: profileRefusedCode,
         ),
@@ -533,7 +533,7 @@ class TransportHostSettings implements HostSettings {
     return value.isEmpty ? text : text.replaceAll(value, '[removed]');
   }
 
-  static ProviderKeyStatus _status(Map<String, Object?> wire) {
+  static ProviderKeyStatus _keyStatus(Map<String, Object?> wire) {
     final isSet = wire['is_set'];
     if (isSet is! bool) {
       throw const HostSettingsException('The host sent an unexpected reply.');
@@ -550,14 +550,14 @@ class TransportHostSettings implements HostSettings {
 
   static ProviderKeyChange _change(Map<String, Object?> wire) =>
       ProviderKeyChange(
-        status: _status(wire),
+        status: _keyStatus(wire),
         applied: wire['applied'] == true,
         restartNeeded: wire['restart_needed'] == true,
       );
 
   @override
   Future<ProviderKeyStatus> providerKey(String provider) async =>
-      _status(await _keyCall('providers.key.get', provider));
+      _keyStatus(await _keyCall('providers.key.get', provider));
 
   @override
   Future<ProviderKeyChange> setProviderKey(

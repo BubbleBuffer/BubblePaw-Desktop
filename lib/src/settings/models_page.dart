@@ -178,7 +178,9 @@ class _ModelsPageState extends State<ModelsPage> {
       try {
         statuses[provider.name] = await settings.providerKey(provider.name);
       } on HostSettingsException catch (error) {
-        if (error.code == methodNotFoundCode) return (const {}, true);
+        if (error.code == methodNotFoundCode) {
+          return (const <String, ProviderKeyStatus>{}, true);
+        }
       } on Object {
         // Unknown for this provider; the pill falls back to the host's list.
       }
