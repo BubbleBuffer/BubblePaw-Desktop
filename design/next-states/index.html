@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BubblePaw mockups: next states</title>
+<link rel="stylesheet" href="../feedback/style.css">
+<style>
+  body { padding: 16px; }
+  .review { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; max-width: 1180px; margin: 0 auto 16px; }
+  .review .grow { flex: 1; }
+  section.block { max-width: 1180px; margin: 0 auto 32px; }
+  section.block > h2 { margin: 0 0 2px; font-size: 16px; font-weight: 600; }
+  section.block > p { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+  .cols { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  .label { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .card { background: var(--surface); border: 1px solid var(--thread); border-radius: var(--r-panel); }
+
+  /* 1. Search: the rail. */
+  .mrail { width: 280px; max-width: 100%; height: 400px; padding: 10px 8px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+  .mhost { padding: 4px 10px 6px; font-size: 13px; font-weight: 600; }
+  .mhost small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+  .sbox { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 6px 10px; border-radius: var(--r-md); color: var(--muted); font-size: 13px; }
+  .sbox.on { background: var(--surface2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--thread); }
+  .sbox .q { flex: 1; min-width: 0; }
+  .sbox .k { font: 400 12px/16px var(--mono); }
+  .ghead { margin: 8px 10px 2px; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .chat { padding: 7px 10px; border-radius: var(--r-md); font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+  .chat.sel { background: var(--hover); }
+  mark { background: var(--attn); color: inherit; border-radius: 2px; }
+  .none { padding: 12px 10px; font-size: 13px; color: var(--muted); }
+  .none b { display: block; margin-bottom: 2px; font-weight: 600; color: var(--ink); }
+
+  /* 2. Context pane. */
+  .frame { display: grid; grid-template-columns: 200px minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px; width: 100%; min-height: 420px; padding: 8px; background: var(--bg, transparent); }
+  .frame .pn { padding: 10px; min-width: 0; }
+  .frame .top { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .frame .top .sp { flex: 1; }
+  .frame .ib { display: inline-flex; padding: 3px; border-radius: var(--r-sm); color: var(--muted); }
+  .frame .ib.on { background: var(--hover); color: var(--ink); }
+  .line { font-size: 13px; color: var(--muted); padding: 5px 0; }
+  .big { font-size: 18px; font-weight: 600; }
+  .big small { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .cbar { display: flex; height: 8px; margin: 8px 0 6px; border-radius: 4px; overflow: hidden; background: var(--hover); }
+  .cbar i { display: block; height: 8px; }
+  .tabs { display: flex; gap: 14px; margin: 10px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--seam); font-size: 13px; font-weight: 600; color: var(--muted); }
+  .tabs .on { color: var(--ink); }
+  .cr { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; font-size: 13px; font-weight: 500; }
+  .cr small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+  .hd { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--muted); }
+
+  /* 3. Tray. */
+  .traybox { width: 340px; max-width: 100%; }
+  .trayicon { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+  .mark { position: relative; display: inline-flex; padding: 6px; border-radius: 6px; background: var(--w-bar, var(--surface2)); }
+  .mark img { width: 18px; height: 18px; display: block; }
+  .mark .d { position: absolute; right: 3px; bottom: 3px; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--surface); }
+  .mark .d.ok { background: var(--ok-ink); }
+  .mark .d.bad { background: var(--danger-ink); }
+  .tmenu { position: static; width: 100%; box-shadow: none; }
+  .wck { display: inline-flex; justify-content: center; width: 28px; flex: none; }
+  @media (max-width: 760px) { .frame { grid-template-columns: minmax(0, 1fr); } .frame .railp { display: none; } }
+</style>
+</head>
+<body>
+<!-- Review bar: not part of the app. -->
+<div class="review">
+  <b>Next states</b><span class="muted">Three things the app doesn't have yet.</span>
+  <span class="grow"></span>
+  <div class="seg" role="group" id="theme">
+    <button aria-pressed="true" data-theme-value="light">Light</button>
+    <button aria-pressed="false" data-theme-value="dark">Dark</button>
+  </div>
+</div>
+<main id="main"></main>
+<script src="../feedback/icons.js"></script>
+<script>
+  const ic = (name, size) =>
+    `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${window.LUCIDE[name]}</svg>`;
+  const host = `<div class="mhost">studio-pc<small>Online</small></div>`;
+  const box = (q, on) => `<div class="sbox ${on ? 'on' : ''}">${ic('search', 16)}<span class="q">${q || 'Search all projects'}</span>${on ? ic('x', 14) : '<span class="k">Ctrl K</span>'}</div>`;
+  const rail = (title, body) => `<div><p class="label">${title}</p><div class="card mrail">${host}${body}</div></div>`;
+
+  const search = `<section class="block"><h2>1. Search chats</h2>
+    <p>Works the same on this computer, on a saved host and on the phone. It looks at chat titles in every project on the open host.</p>
+    <div class="cols">
+      ${rail('Empty', `${box('', false)}<div class="ghead">Today</div><div class="chat sel">Quota bar flickers on reconnect</div><div class="chat">Pairing fails behind a proxy</div><div class="ghead">garden-api</div><div class="chat">Tidy the release notes</div>`)}
+      ${rail('Typing', `${box('quota', true)}<div class="ghead">harbor-runtime</div><div class="chat sel"><mark>Quota</mark> bar flickers on reconnect<small>Today</small></div><div class="chat">Reset the <mark>quota</mark> window at midnight<small>12 Oct</small></div><div class="ghead">garden-api</div><div class="chat">Per-user <mark>quota</mark> limits<small>2 Sep</small></div>`)}
+      ${rail('No match', `${box('kubernetes', true)}<div class="none"><b>No chats match "kubernetes"</b>Search looks at chat titles on studio-pc.</div>`)}
+    </div></section>`;
+
+  const seg = (w, c) => `<i style="width:${w}%;background:${c}"></i>`;
+  const context = `<section class="block"><h2>2. Context on a saved host</h2>
+    <p>The same pane as on this computer, opened from the same button in the chat header. It reads from the open host, so nothing new is stored here. Desktop only: the phone has no room beside the chat.</p>
+    <div class="frame">
+      <div class="card pn railp">${host}${box('', false).replace('<span class="k">Ctrl K</span>', '')}<div class="chat sel" style="margin-top:6px">Quota bar flickers on reconnect</div></div>
+      <div class="card pn"><div class="top"><span>Quota bar flickers on reconnect</span><span class="sp"></span><span class="ib on">${ic('layers', 16)}</span></div>
+        <div class="line">${ic('chevron-right', 14)} Ran 1 command · Worked 7s</div>
+        <div style="font-size:13px;padding:6px 0">The bar now keeps the last figure and dims it until the first update after the reconnect.</div></div>
+      <div class="card pn"><div class="top">${ic('layers', 16)}<span>Context</span><span class="sp"></span><span class="ib">${ic('x', 16)}</span></div>
+        <div class="big">48.6k <small>of 128k tokens</small></div>
+        <div class="cbar">${seg(5, 'var(--muted)')}${seg(7, 'var(--info-ink)')}${seg(26, 'var(--ink)')}</div>
+        <div class="tabs"><span class="on">Now</span><span>History</span><span>Compactions</span></div>
+        <div class="hd"><span>Fixed</span><span>6.1k</span></div>
+        <div class="cr"><span>Instructions, tools and your first request<small>Sent every time</small></span><span>6.1k</span></div>
+        <div class="hd"><span>Compacted memory</span><span>9.0k</span></div>
+        <div class="cr"><span>How usage figures flow<small>Chapter 1 summary · messages 1–58</small></span><span>3.8k</span></div>
+        <div class="hd"><span>Live messages</span><span>33.5k</span></div>
+        <div class="cr"><span>Recent messages, as written<small>Messages 97–143</small></span><span>33.5k</span></div>
+      </div>
+    </div></section>`;
+
+  const mi = (label, o = {}) => `<div class="wi ${o.bold ? 'bold' : ''} ${o.status ? 'status' : ''}"><span class="wck">${o.check ? ic('check', 14) : ''}</span><span class="wl">${label}</span></div>`;
+  const sep = '<div class="wsep"></div>';
+  const tray = (title, dot, iconText, status, shared, shareOff) => `<div class="traybox win"><p class="label">${title}</p>
+    <div class="winmenu tmenu">${mi('Open BubblePaw', { bold: true })}${sep}${mi(status, { status: true })}${shareOff ? '' : mi('Share this host', { check: shared })}${sep}${mi('Restart host')}${sep}${mi('Quit BubblePaw')}</div>
+    <div class="trayicon"><span class="mark"><img src="../feedback/bubblepaw-tray.svg" alt="">${dot ? `<span class="d ${dot}"></span>` : ''}</span><span>${iconText}</span></div></div>`;
+  const trays = `<section class="block"><h2>3. Tray</h2>
+    <p>Today's menu plus a share switch, and a dot on the colour mark. There is no "host keeps running" option: the host runs inside the app, so quitting stops it.</p>
+    <div class="cols">
+      ${tray('Running', '', 'The mark alone', 'Host running', false)}
+      ${tray('Shared', 'ok', 'Green dot', 'Host running · shared via relay', true)}
+      ${tray('Stopped', 'bad', 'Red dot', 'Host stopped', false, true)}
+    </div></section>`;
+
+  document.getElementById('main').innerHTML = search + context + trays;
+  document.addEventListener('click', (e) => {
+    const theme = e.target.closest('[data-theme-value]');
+    if (theme) {
+      document.documentElement.dataset.theme = theme.dataset.themeValue;
+      for (const b of document.querySelectorAll('#theme button')) b.setAttribute('aria-pressed', b === theme);
+    }
+  });
+</script>
+</body>
+</html>
