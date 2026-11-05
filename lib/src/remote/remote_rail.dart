@@ -747,4 +747,3 @@ class _SettingsLink extends StatelessWidget {
     );
   }
 }
-

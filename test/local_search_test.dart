@@ -260,10 +260,16 @@ void main() {
 
   group('sameWorkspace', () {
     test('separators and a trailing one do not count', () {
-      expect(sameWorkspace('/home/maya/garden-api/', '/home/maya/garden-api'), isTrue);
+      expect(
+        sameWorkspace('/home/maya/garden-api/', '/home/maya/garden-api'),
+        isTrue,
+      );
       expect(sameWorkspace(r'C:\work\garden', 'C:/work/garden'), isTrue);
       expect(sameWorkspace(r'\\?\C:\work\garden', 'C:/work/garden'), isTrue);
-      expect(sameWorkspace('/home/maya/agent-kit', '/home/maya/garden-api'), isFalse);
+      expect(
+        sameWorkspace('/home/maya/agent-kit', '/home/maya/garden-api'),
+        isFalse,
+      );
     });
   });
 }

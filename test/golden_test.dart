@@ -191,28 +191,28 @@ Scene _remoteChats({
 
 /// The host's answer to a search for "quota": three chats in two projects.
 Future<Object?> _quotaAnswer(Map<String, Object?> params) async => {
-    'sessions': [
-      searchRow(
-        'c1',
-        'Quota bar flickers on reconnect',
-        gardenApi,
-        ago: const Duration(minutes: 1),
-      ),
-      searchRow(
-        'q2',
-        'Reset the quota window at midnight',
-        gardenApi,
-        ago: const Duration(days: 17),
-      ),
-      searchRow(
-        'q3',
-        'Per-user quota limits',
-        agentKit,
-        ago: const Duration(days: 58),
-      ),
-    ],
-    'next_cursor': null,
-  };
+  'sessions': [
+    searchRow(
+      'c1',
+      'Quota bar flickers on reconnect',
+      gardenApi,
+      ago: const Duration(minutes: 1),
+    ),
+    searchRow(
+      'q2',
+      'Reset the quota window at midnight',
+      gardenApi,
+      ago: const Duration(days: 17),
+    ),
+    searchRow(
+      'q3',
+      'Per-user quota limits',
+      agentKit,
+      ago: const Duration(days: 58),
+    ),
+  ],
+  'next_cursor': null,
+};
 
 /// This computer's host with a search typed into the rail's box and, with
 /// [answer], that answer to it (its own title filter when null).
@@ -227,7 +227,10 @@ Scene _localSearch(
       await tester.tap(show);
       await settle(tester);
     }
-    await tester.enterText(find.byKey(const ValueKey('chat-search-field')), text);
+    await tester.enterText(
+      find.byKey(const ValueKey('chat-search-field')),
+      text,
+    );
     await tester.pump(searchDebounce);
     await settle(tester);
     // No blinking cursor in the picture.
