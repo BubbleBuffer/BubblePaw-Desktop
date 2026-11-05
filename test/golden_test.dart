@@ -133,7 +133,8 @@ Scene _remoteChats({
     await tester.runAsync(() => controller.openRemoteHost(_remote!.host.id));
     await settle(tester);
     final show = find.byKey(const ValueKey('rail-show'));
-    if (show.evaluate().isNotEmpty) {
+    // The context scene looks at the chat, not the list.
+    if (!context && show.evaluate().isNotEmpty) {
       await tester.tap(show);
       await settle(tester);
     }

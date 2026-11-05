@@ -224,8 +224,7 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _context.showNow());
   }
 
-  void _toggleWorkspace() =>
-      setState(() => _workspaceShown = !_workspaceShown);
+  void _toggleWorkspace() => setState(() => _workspaceShown = !_workspaceShown);
 
   Widget _paneBuilder(BuildContext context, WorkspaceTab tab) {
     final chat = _selected;
