@@ -18,16 +18,16 @@ local-host = ["bubblepaw-sdk/host"]
 anyhow = "1"
 flutter_rust_bridge = "=2.13.0"
 # The Core release Desktop embeds. Keep CORE_VERSION in src/lib.rs in step.
-bubblepaw-sdk = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.12.0", default-features = false }
+bubblepaw-sdk = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.13.0", default-features = false }
 serde_json = "1"
 tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
 
 [dev-dependencies]
 tempfile = "3"
-bubblepaw-remote = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.12.0" }
+bubblepaw-remote = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.13.0" }
 # The host side of the remote-only tests; it turns the SDK's `host` feature on
 # for test builds only.
-bubblepaw-sdk = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.12.0", features = ["host"] }
+bubblepaw-sdk = { git = "https://github.com/BubbleBuffer/BubblePaw-Core", tag = "v0.13.0", features = ["host"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
