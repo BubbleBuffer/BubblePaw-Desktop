@@ -409,7 +409,7 @@ void main() {
         find.textContaining('It needs the Full profile.'),
         findsOneWidget,
       );
-      expect(find.textContaining(markerKey), findsNothing);
+      expect(_markerOutsideField(), isEmpty);
     });
   });
 
@@ -456,7 +456,7 @@ void main() {
         find.text('Something went wrong. The key was not changed.'),
         findsOneWidget,
       );
-      expect(find.textContaining(markerKey), findsNothing);
+      expect(_markerOutsideField(), isEmpty);
     });
   });
 
@@ -578,3 +578,11 @@ class _ThrowingKeys extends FakeHostSettings {
     return Future<ProviderKeyChange>.error(StateError('boom'));
   }
 }
+
+/// Text on screen that shows the marker, other than the key field itself
+/// (which keeps what was typed while the dialog is open to retry).
+List<Element> _markerOutsideField() => find
+    .textContaining(markerKey)
+    .evaluate()
+    .where((e) => e.widget is! EditableText)
+    .toList();
