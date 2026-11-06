@@ -615,7 +615,10 @@ void main() {
     // keep running in the tray each say what they do.
     'settings_general_off': (
       controller: () => HostController(
-        store: MemoryConfigStore(sampleConfig),
+        store: MemoryConfigStore(
+          sampleConfig,
+          const AppPrefs(keepInTray: false),
+        ),
         starter: Played().start,
       ),
       after: (tester) => openSettings(tester, 'general'),

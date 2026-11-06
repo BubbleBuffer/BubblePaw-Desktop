@@ -123,8 +123,13 @@ void main() {
         ),
         findsOneWidget,
       );
-      // Keep running in the tray is off: closing the window quits.
-      expect(find.text('Closing the window quits BubblePaw.'), findsOneWidget);
+      // Keep running in the tray is on by default: closing the window hides it.
+      expect(
+        find.text(
+          'Closing the window hides it to the tray. Quit from the tray menu.',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Needs Open at login.'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('toggle-open-at-login')));
@@ -139,12 +144,12 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('toggle-keep-in-tray')));
       await settle(tester);
-      expect(find.text('Closing the window quits BubblePaw.'), findsNothing);
+      expect(find.text('Closing the window quits BubblePaw.'), findsOneWidget);
       expect(
         find.text(
           'Closing the window hides it to the tray. Quit from the tray menu.',
         ),
-        findsOneWidget,
+        findsNothing,
       );
     });
 
@@ -180,14 +185,14 @@ void main() {
       await _open(tester, 'general');
       await tester.tap(find.byKey(const ValueKey('toggle-keep-in-tray')));
       await settle(tester);
-      expect(store.prefs.keepInTray, isTrue);
+      expect(store.prefs.keepInTray, isFalse);
 
       controller.trayAvailable = false;
       await settle(tester);
       expect(find.textContaining('shows no tray icon'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('toggle-keep-in-tray')));
       await settle(tester);
-      expect(store.prefs.keepInTray, isTrue);
+      expect(store.prefs.keepInTray, isFalse);
     });
 
     testWidgets('a login entry that cannot be written is reported', (
