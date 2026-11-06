@@ -155,7 +155,8 @@
   }
   function pageHost() {
     const run = M.hostState === 'running', custom = M.coreMode === 'custom';
-    return sec('Core',
+    const dropped = `<p class="hint" style="margin: 0 0 16px"><strong>Dropped: the host runs inside the app.</strong> Core is embedded, so there is no separate binary, no extra arguments and no detach to configure. This page is kept as a record of the design and is not pending work.</p>`;
+    return dropped + sec('Core',
       `<div class="rowline" style="padding-top:0"><div class="grow"><div class="t">Status</div><div class="s mono">bubblepaw ${M.u.core.cur} · protocol 0.1</div></div>${run ? pill('Running', 'ok') : M.hostState === 'restarting' ? pill('Restarting', 'attn') : pill(M.hostState === 'error' ? 'Error' : 'Stopped', 'danger')}${btn('Restart', { icon: 'refresh-cw', act: 'hostRestart', disabled: !run })}</div>`) +
       sec('Binary',
         `<div role="radiogroup" aria-label="Binary">
