@@ -39,7 +39,7 @@ dependencies:
   flutter_rust_bridge: 2.13.0
   # Tray, window hiding and login start. tray_manager stays on the classic
   # plugin (0.5.x): 0.7+ builds on native assets.
-  tray_manager: 0.5.3
+  tray_manager: 0.8.0
   window_manager: 0.5.2
   launch_at_startup: 0.5.1
   # The same pin as bb_ui's, for the Lucide glyphs its Ico enum lacks.
