@@ -574,8 +574,8 @@ void main() {
       await r.desktop.dispose();
     });
 
-    test('close hides to the tray only when asked to keep running', () async {
-      final r = _Rig(prefs: const AppPrefs(keepInTray: true));
+    test('close hides to the tray by default', () async {
+      final r = _Rig();
       await r.start();
       expect(r.window.prevent, isTrue);
       r.window.close();
@@ -586,8 +586,8 @@ void main() {
       await r.desktop.dispose();
     });
 
-    test('close quits when the tray is not kept', () async {
-      final r = _Rig();
+    test('close quits when the tray is turned off', () async {
+      final r = _Rig(prefs: const AppPrefs(keepInTray: false));
       await r.start();
       expect(r.window.prevent, isFalse);
       r.window.close();

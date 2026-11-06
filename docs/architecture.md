@@ -182,9 +182,10 @@ cause (a locked store, a bad config).
   person (counted from `listChats` on each phase change and every 20 s), Restart host and
   Quit BubblePaw. `DesktopIntegration` also listens to `host.remote` (replaced on every
   host restart) so the menu and icon follow sharing; see "From the tray" in
-  [remote-access.md](remote-access.md). With Keep running in the tray, closing
-  the window hides it and the first time `TrayNotice` is shown when the window comes back;
-  otherwise closing quits. The login entry starts the app with `--hidden` when Start in
+  [remote-access.md](remote-access.md). Keep running in the tray is on by default
+  (`AppPrefs.keepInTray`; a saved preference of off still quits). With it on and a tray
+  present, closing the window hides it and the first time `TrayNotice` is shown when the
+  window comes back; otherwise closing quits. The login entry starts the app with `--hidden` when Start in
   the tray is on; the native runners then skip showing the first frame. The icon files
   are named in `trayIconAsset` (`assets/icon/tray/`): the colour BubblePaw mark without
   its tile (`tray.svg`, cropped from `assets/icon/bubblepaw-icon.svg`; `tray.ico` holds

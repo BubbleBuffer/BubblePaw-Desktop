@@ -24,7 +24,7 @@ class AppPrefs {
     this.turnLayout = TurnLayoutSetting.collapsed,
     this.openAtLogin = false,
     this.startInTray = false,
-    this.keepInTray = false,
+    this.keepInTray = true,
     this.startHost = true,
     this.trayNoticeShown = false,
     this.updateChannel = UpdateChannel.stable,
@@ -48,7 +48,9 @@ class AppPrefs {
   /// [openAtLogin]; [effectiveStartInTray] is the combination.
   final bool startInTray;
 
-  /// Closing the window hides it to the tray instead of quitting.
+  /// Closing the window hides it to the tray instead of quitting. On by
+  /// default; a saved preference of false still quits. Without a tray the
+  /// window always quits.
   final bool keepInTray;
 
   /// The host starts when the app does.
