@@ -23,6 +23,7 @@ import 'src/updates/update_controller.dart';
 void main(List<String> args) {
   WidgetsFlutterBinding.ensureInitialized();
   registerFontLicences();
+  registerCrateLicences();
   final scripted = args.contains('--scripted');
   final hidden = args.contains(hiddenFlag);
   final at = args.indexOf('--config-dir');

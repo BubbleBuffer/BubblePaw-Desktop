@@ -58,6 +58,7 @@ dev_dependencies:
 flutter:
   assets:
     - assets/fonts/licenses/
+    - assets/licences/
     - assets/icon/tray/
     - assets/icon/png/icon-128.png
   fonts:

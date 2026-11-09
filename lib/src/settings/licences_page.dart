@@ -7,19 +7,31 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/foundation.dart' show LicenseEntry, LicenseRegistry;
 import 'package:flutter/widgets.dart';
 
+import '../app_licences.dart' show CrateLicenceEntry;
 import 'settings_widgets.dart';
 
 /// One package (or font) and the licence text(s) that cover it.
 class LicenceRecord {
-  LicenceRecord(this.name, this.group);
+  LicenceRecord(this.name, this.group, {this.version, this.declared});
 
   final String name;
   final String group;
+
+  /// The crate's version; null for packages and fonts.
+  final String? version;
+
+  /// The licence a crate declares, such as `Apache-2.0 OR MIT`.
+  final String? declared;
   final List<String> texts = [];
 
-  /// The licences the texts look like, such as `MIT`; empty when none is
-  /// recognised.
+  /// Unique within the list: a crate and a package may share a name.
+  String get id => group == coreCratesGroup ? 'crate:$name' : name;
+
+  /// The licences of the record, such as `MIT`: the declared one for a crate,
+  /// otherwise what the texts look like; empty when none is recognised.
   List<String> get kinds {
+    final declared = this.declared;
+    if (declared != null && declared.isNotEmpty) return [declared];
     final found = <String>{};
     for (final text in texts) {
       final kind = guessLicence(text);
@@ -56,7 +68,10 @@ String licenceGroup(String name) {
   return 'App packages';
 }
 
-const _groupOrder = ['App packages', 'Fonts', 'Icons'];
+/// The group of the Rust crates compiled into the app.
+const coreCratesGroup = 'Core crates';
+
+const _groupOrder = ['App packages', coreCratesGroup, 'Fonts', 'Icons'];
 
 /// Reads every entry of [source] into records, one per package.
 Future<List<LicenceRecord>> loadLicences(Stream<LicenseEntry> source) async {
@@ -64,9 +79,17 @@ Future<List<LicenceRecord>> loadLicences(Stream<LicenseEntry> source) async {
   await for (final entry in source) {
     final text = entry.paragraphs.map((p) => p.text).join('\n');
     for (final name in entry.packages) {
+      final crate = entry is CrateLicenceEntry ? entry : null;
       final record = byName.putIfAbsent(
-        name,
-        () => LicenceRecord(name, licenceGroup(name)),
+        crate == null ? name : 'crate:$name',
+        () => crate == null
+            ? LicenceRecord(name, licenceGroup(name))
+            : LicenceRecord(
+                name,
+                coreCratesGroup,
+                version: crate.version,
+                declared: crate.expression,
+              ),
       );
       if (!record.texts.contains(text)) record.texts.add(text);
     }
@@ -202,11 +225,11 @@ class _LicencesPageState extends State<LicencesPage> {
       ),
       for (final r in rows)
         _LicenceRow(
-          key: ValueKey('licence-${r.name}'),
+          key: ValueKey('licence-${r.id}'),
           record: r,
-          open: _open.contains(r.name),
+          open: _open.contains(r.id),
           onToggle: () => setState(() {
-            if (!_open.remove(r.name)) _open.add(r.name);
+            if (!_open.remove(r.id)) _open.add(r.id);
           }),
         ),
     ];
@@ -243,9 +266,22 @@ class _LicenceRow extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    record.name,
-                    style: ts(theme.typeScale.ui, theme.ink),
+                  child: Text.rich(
+                    TextSpan(
+                      text: record.name,
+                      style: ts(theme.typeScale.ui, theme.ink),
+                      children: [
+                        if (record.version != null)
+                          TextSpan(
+                            text: '  ${record.version}',
+                            style: ts(
+                              theme.typeScale.uiSmall,
+                              theme.muted,
+                              mono: true,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 for (final kind in record.kinds) ...[
@@ -291,7 +327,7 @@ class _LicenceRow extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 child: Text(
                   record.texts.join('\n\n'),
-                  key: ValueKey('licence-text-${record.name}'),
+                  key: ValueKey('licence-text-${record.id}'),
                   style: ts(theme.typeScale.uiSmall, theme.ink, mono: true),
                 ),
               ),

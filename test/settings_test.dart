@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bubblepaw_desktop/src/app_licences.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/platform/download.dart';
@@ -492,6 +493,64 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('licences-back')));
       await settle(tester);
       expect(find.byKey(const ValueKey('page-about')), findsOneWidget);
+    });
+
+    testWidgets('Licences list the Core crates from the generated file', (
+      tester,
+    ) async {
+      // The committed file, so a Core without its licence fails here too.
+      final entries = parseCrateLicences(
+        File(desktopCratesAsset).readAsStringSync(),
+      );
+      await pumpApp(
+        tester,
+        _controller(),
+        licenceSource: () => Stream.fromIterable(entries),
+      );
+      await _open(tester, 'about');
+      await tester.ensureVisible(find.byKey(const ValueKey('about-licences')));
+      await tester.tap(find.byKey(const ValueKey('about-licences')));
+      await settle(tester);
+
+      expect(find.text('Core crates'), findsOneWidget);
+      await tester.enterText(_field('licences-search'), 'bubblepaw-sdk');
+      await settle(tester);
+      final row = find.byKey(const ValueKey('licence-crate:bubblepaw-sdk'));
+      expect(row, findsOneWidget);
+      expect(find.text('AGPL-3.0-only'), findsOneWidget);
+
+      await tester.tap(row);
+      await settle(tester);
+      final text = find.byKey(
+        const ValueKey('licence-text-crate:bubblepaw-sdk'),
+      );
+      expect(text, findsOneWidget);
+      expect(
+        (tester.widget<Text>(text).data ?? '').toLowerCase(),
+        contains('gnu affero general public license'),
+      );
+    });
+
+    testWidgets('a crate and a package of one name are two rows', (
+      tester,
+    ) async {
+      final records = await loadLicences(
+        Stream.fromIterable([
+          LicenseEntryWithLineBreaks([
+            'http',
+          ], 'Permission is hereby granted, free of charge'),
+          const CrateLicenceEntry(
+            name: 'http',
+            version: '1.3.1',
+            expression: 'Apache-2.0 OR MIT',
+            text: 'Apache License',
+          ),
+        ]),
+      );
+      expect(records.map((r) => r.id), unorderedEquals(['http', 'crate:http']));
+      final crate = records.firstWhere((r) => r.group == coreCratesGroup);
+      expect(crate.version, '1.3.1');
+      expect(crate.kinds, ['Apache-2.0 OR MIT']);
     });
   });
 

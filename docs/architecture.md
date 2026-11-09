@@ -167,8 +167,10 @@ cause (a locked store, a bad config).
     Last checked with Review update and Check now), then the versions of the app, agent
     kit, the embedded Core and protocol. Core has no update row: it ships with the app. See
     [Core and updates](core-and-updates.md). **Licences** lists `LicenseRegistry` entries
-    (packages, the font licences from `assets/fonts/licenses`, Lucide), grouped,
-    searchable and expandable.
+    (packages, the font licences from `assets/fonts/licenses`, Lucide) and the Rust
+    crates compiled into the native library (group "Core crates", with version and declared
+    licence), grouped, searchable and expandable. Where the crate list comes from:
+    [licences.md](licences.md).
   - **Feedback**: the saved reports with Open folder, Copy as Markdown and Delete, and a
     way to write a new one. **About** gains a Help section (Send feedback, Saved feedback).
     See [feedback.md](feedback.md).
