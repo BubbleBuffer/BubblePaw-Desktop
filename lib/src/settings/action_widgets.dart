@@ -204,8 +204,8 @@ class NoticeBox extends StatelessWidget {
 }
 
 /// One line of a key/value table: a muted name and a value, mono by default.
-class KeyValueRow extends StatelessWidget {
-  const KeyValueRow(
+class SettingsKeyValueRow extends StatelessWidget {
+  const SettingsKeyValueRow(
     this.name,
     this.value, {
     super.key,

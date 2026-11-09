@@ -12,6 +12,9 @@ import 'dart:io';
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:bubblepaw_desktop/src/core/ffi_transport.dart';
+import 'package:bubblepaw_desktop/src/core/host_settings.dart';
+import 'package:bubblepaw_desktop/src/settings/mcp_servers.dart';
+import 'package:bubblepaw_desktop/src/settings/toolsets.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
     show ExternalLibrary;
 import 'package:flutter_test/flutter_test.dart';
@@ -174,5 +177,184 @@ void main() {
     transport.notifications.listen((_) {}, onDone: done.complete);
     await transport.dispose();
     await done.future.timeout(const Duration(seconds: 10));
+  });
+
+  // The Tools page reads config.get and parses it with ToolsConfig.parse; this
+  // checks that read shape against the real Core, not a fake.
+  test('a toolset and approvals round-trip through config.get', () async {
+    final transport = await open();
+    addTearDown(transport.dispose);
+    final settings = TransportHostSettings(transport);
+
+    await settings.set('toolsets.no-web.tools', ['category:files', 'exec']);
+    final seen = await settings.get('toolsets');
+    try {
+      await settings.set('agent.toolset', 'no-web');
+    } on HostSettingsException catch (e) {
+      fail(
+        '${e.message}; toolsets read back: '
+        '${seen.map((x) => '${x.key}=${x.value}').toList()}',
+      );
+    }
+    await settings.set('approvals.tools.edit', 'allow');
+    await settings.set('approvals.deny', ['exec']);
+
+    final config = ToolsConfig.parse(await settings.get());
+    expect(config.toolsets['no-web'], ['category:files', 'exec']);
+    expect(config.main, 'no-web');
+    expect(config.perTool['edit'], 'allow');
+    expect(config.deny, ['exec']);
+
+    // Narrower reads parse the same values.
+    final narrow = ToolsConfig.parse(await settings.get('toolsets'));
+    expect(narrow.toolsets['no-web'], ['category:files', 'exec']);
+
+    // Removing a toolset removes its entry; Core refuses it while the main
+    // chat uses it.
+    await settings.set('agent.toolset', 'all');
+    await settings.set('toolsets.no-web', null);
+    final after = ToolsConfig.parse(await settings.get());
+    expect(after.toolsets.containsKey('no-web'), isFalse);
+  });
+
+  // The MCP page's add, edit and remove plans, applied to the real Core with
+  // servers that never connect (a command that does not exist, a closed
+  // loopback port).
+  test(
+    'MCP servers round-trip through config.get and mcp.servers.list',
+    () async {
+      final transport = await open();
+      addTearDown(transport.dispose);
+      final settings = TransportHostSettings(transport);
+
+      final files = McpServerForm(
+        name: 'files',
+        command: 'bp-no-such-command',
+        args: '-y "a b"',
+        timeout: '30',
+      );
+      final filesResult = await applyOps(settings, 'files', planAdd(files));
+      expect(filesResult.message, isNull, reason: '${filesResult.field}');
+
+      final wiki = McpServerForm(
+        name: 'wiki',
+        kind: McpKind.url,
+        url: 'http://127.0.0.1:9/mcp',
+        headers: [McpEntry(name: 'X-Org', value: 'garden')],
+      );
+      final wikiResult = await applyOps(settings, 'wiki', planAdd(wiki));
+      expect(wikiResult.message, isNull, reason: '${wikiResult.field}');
+
+      final parsed = McpServerConfig.parse(await settings.get('mcp.servers'));
+      expect(parsed.keys, containsAll(['files', 'wiki']));
+      expect(parsed['files']!.command, 'bp-no-such-command');
+      expect(parsed['files']!.args, ['-y', 'a b']);
+      expect(parsed['files']!.callTimeout, 30);
+      expect(parsed['wiki']!.url, 'http://127.0.0.1:9/mcp');
+
+      final listed = {for (final s in await settings.mcpServers()) s.name: s};
+      expect(listed.keys, containsAll(['files', 'wiki']));
+      expect(listed['wiki']!.transport, 'http');
+      expect(listed['wiki']!.headers, ['X-Org']);
+
+      // The header value is never reported back; removing it by name works.
+      final cleared = await settings.mcpSetHeader('wiki', 'X-Org', null);
+      expect(cleared.headers, isEmpty);
+
+      // Remove takes the server and its settings.
+      await settings.set('mcp.servers.files', null);
+      final left = McpServerConfig.parse(await settings.get('mcp.servers'));
+      expect(left.containsKey('files'), isFalse);
+      expect(left.containsKey('wiki'), isTrue);
+    },
+  );
+
+  // Core v0.7.2: one object `config.set` writes a whole entry, so a server
+  // starts disabled and switches type without losing its stored header.
+  test(
+    'a disabled MCP server switches between URL and command keeping its header',
+    () async {
+      final transport = await open();
+      addTearDown(transport.dispose);
+      final settings = TransportHostSettings(transport);
+
+      final url = McpServerForm(
+        name: 'swap',
+        kind: McpKind.url,
+        url: 'http://127.0.0.1:9/mcp',
+      );
+      final written = await settings.set(
+        'mcp.servers.swap',
+        mcpEntry(url, enabled: false),
+      );
+      expect(written.applied, SettingApplied.live);
+
+      Future<McpServerStatus> status() async =>
+          {for (final s in await settings.mcpServers()) s.name: s}['swap']!;
+      expect((await status()).enabled, isFalse);
+      expect((await status()).state, 'stopped');
+      expect((await settings.mcpSetHeader('swap', 'X-Org', 'garden')).headers, [
+        'X-Org',
+      ]);
+
+      Future<void> edit(McpServerForm after) async {
+        final config = McpServerConfig.parse(
+          await settings.get('mcp.servers'),
+        )['swap']!;
+        final before = McpServerForm.from(config, await status());
+        final result = await applyOps(
+          settings,
+          'swap',
+          planEdit(name: 'swap', before: before, after: after, raw: config.raw),
+        );
+        expect(result.message, isNull, reason: '${result.field}');
+      }
+
+      await edit(McpServerForm(name: 'swap', command: 'bp-no-such-command'));
+      expect((await status()).transport, 'stdio');
+      expect((await status()).enabled, isFalse);
+
+      await edit(url);
+      final back = await status();
+      expect(back.transport, 'http');
+      expect(back.enabled, isFalse);
+      expect(back.headers, ['X-Org'], reason: 'the stored header survived');
+    },
+  );
+
+  // Core v0.7.3: a refused whole-entry write names the failing leaf, and the
+  // form puts the message on that field.
+  test('a refused URL write names the URL field', () async {
+    final transport = await open();
+    addTearDown(transport.dispose);
+    final settings = TransportHostSettings(transport);
+    final form = McpServerForm(
+      name: 'bad',
+      kind: McpKind.url,
+      url: 'http://example.com/mcp',
+    );
+    final result = await applyOps(settings, 'bad', planAdd(form), form: form);
+    expect(result.field, 'url');
+    expect(result.message, contains('https'));
+    final empty = McpServerForm(name: 'bad', command: '');
+    final none = await applyOps(settings, 'bad', planAdd(empty), form: empty);
+    expect(none.field, 'command');
+    // The host holds nothing for the refused server.
+    final held = McpServerConfig.parse(await settings.get('mcp.servers'));
+    expect(held.containsKey('bad'), isFalse);
+  });
+
+  test('a refused MCP setting carries the host reason and code', () async {
+    final transport = await open();
+    addTearDown(transport.dispose);
+    final settings = TransportHostSettings(transport);
+    await expectLater(
+      settings.set('mcp.servers.x.not_a_key', 'v'),
+      throwsA(
+        isA<HostSettingsException>()
+            .having((e) => e.code, 'code', -32010)
+            .having((e) => e.message, 'message', isNotEmpty),
+      ),
+    );
   });
 }

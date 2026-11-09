@@ -7,9 +7,13 @@ import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:agent_kit_core/fake.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
+import 'package:bubblepaw_desktop/src/remote/host_links.dart';
+import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
+import 'package:bubblepaw_desktop/src/preferences.dart';
 import 'package:bubblepaw_desktop/src/scripted.dart';
 
+import 'fakes.dart';
 import 'support.dart';
 
 /// What the BubblePaw stdio host offered before v0.3.0 (the context scenes add
@@ -57,6 +61,49 @@ ChatScript finishedScript() => ChatScript(
   ],
 );
 
+/// A finished chat whose turn has one tool call with arguments and output, for
+/// the steps of a finished turn.
+ChatScript toolTurnScript() => ChatScript(
+  chatId: 'tool-chat',
+  title: 'Find the quota label',
+  steps: [
+    const ScriptStep(Duration.zero, {
+      'kind': 'message.user',
+      'itemId': 'u1',
+      'text': 'Where is the quota label set?',
+    }),
+    const ScriptStep(Duration.zero, {
+      'kind': 'run.started',
+      'runId': 'run-tool-1',
+    }),
+    const ScriptStep(Duration.zero, {
+      'kind': 'tool.started',
+      'callId': 'c1',
+      'name': 'read',
+      'toolKind': 'read',
+      'target': 'web/src/quota-bar.tsx',
+      'arguments': '{"path":"web/src/quota-bar.tsx","limit":40}',
+      'runId': 'run-tool-1',
+    }),
+    const ScriptStep(Duration.zero, {
+      'kind': 'tool.finished',
+      'callId': 'c1',
+      'meta': '40 lines',
+    }),
+    const ScriptStep(Duration(seconds: 1), {
+      'kind': 'message.assistant',
+      'itemId': 'a1',
+      'markdown': 'It is set in the quota bar.',
+      'runId': 'run-tool-1',
+    }),
+    const ScriptStep(Duration.zero, {
+      'kind': 'run.finished',
+      'runId': 'run-tool-1',
+      'outcome': 'completed',
+    }),
+  ],
+);
+
 /// A chat with a plan in progress, for the checklist.
 ChatScript planScript() => ChatScript(
   chatId: 'plan-chat',
@@ -96,6 +143,8 @@ class Played {
     this.version,
     this.attached = false,
     this.settings,
+    this.remote,
+    this.hostLinks,
   });
 
   final List<ChatScript>? scripts;
@@ -110,6 +159,12 @@ class Played {
 
   /// The host's settings; null for none.
   final HostSettings? settings;
+
+  /// The sharing side of the host; null for none.
+  final RemoteAccessFactory? remote;
+
+  /// The hosts this device can open; null for none.
+  final HostLinks? hostLinks;
   Future<Object>? connectionLost;
 
   /// Chats the host creates by itself, as BubblePawBackend does for a rewind.
@@ -135,11 +190,24 @@ class Played {
       version: version,
       attached: attached,
       settings: settings,
+      remote: remote,
     );
   }
 
-  HostController controller({AppConfig config = sampleConfig}) =>
-      HostController(store: MemoryConfigStore(config), starter: start);
+  HostController controller({
+    AppConfig config = sampleConfig,
+    AppPrefs prefs = const AppPrefs(),
+    RemoteStarter? remoteStarter,
+    bool localHost = true,
+    RemoteAccess Function(String)? phoneAccess,
+  }) => HostController(
+    store: MemoryConfigStore(config, prefs),
+    starter: start,
+    linksFactory: hostLinks == null ? null : (_) => hostLinks!,
+    remoteStarter: remoteStarter,
+    localHost: localHost,
+    phoneAccess: phoneAccess,
+  );
 }
 
 /// What the stdio host offers for child agents: their questions can be
@@ -182,6 +250,81 @@ final sampleProviders = ProviderSetup(
       baseUrl: 'https://openrouter.ai/api/v1',
       keyEnv: 'OPENROUTER_API_KEY',
       models: const [ProviderModel(id: 'deepseek-v4.1-flash')],
+    ),
+  ],
+);
+
+/// Providers that take a key: one with a stored key, one whose key comes from
+/// the environment, one with none, and a scripted one that needs none. The
+/// matching host settings are [keyedHostSettings].
+final sampleKeyProviders = ProviderSetup(
+  main: 'demo/scripted',
+  activeMain: 'demo/scripted',
+  providers: [
+    ProviderInfo(
+      name: 'demo',
+      kind: 'scripted',
+      models: const [ProviderModel(id: 'scripted')],
+    ),
+    ProviderInfo(
+      name: 'deepseek',
+      kind: 'chat-completions',
+      baseUrl: 'https://api.deepseek.com/v1',
+      keyEnv: 'DEEPSEEK_API_KEY',
+      keyPresent: true,
+      models: const [ProviderModel(id: 'deepseek-v4.1-flash')],
+    ),
+    ProviderInfo(
+      name: 'anthropic',
+      kind: 'anthropic-messages',
+      baseUrl: 'https://api.anthropic.com',
+      keyEnv: 'ANTHROPIC_API_KEY',
+      keyPresent: true,
+      models: const [ProviderModel(id: 'claude-sonnet-5.5')],
+    ),
+    ProviderInfo(
+      name: 'openrouter',
+      kind: 'chat-completions',
+      baseUrl: 'https://openrouter.ai/api/v1',
+      keyEnv: 'OPENROUTER_API_KEY',
+      models: const [ProviderModel(id: 'qwen3-coder')],
+    ),
+  ],
+);
+
+/// A fake key value that cannot be mistaken for a real one, and that no
+/// screen, report or error may ever show.
+const markerKey = 'MARKER-NOT-A-KEY';
+
+/// Host settings for [sampleKeyProviders]: `deepseek` has a stored key,
+/// `anthropic` finds its key in the host's environment, `openrouter` has none.
+FakeHostSettings keyedHostSettings() => FakeHostSettings(
+  values: {'model.main': 'demo/scripted'},
+  environmentKeys: {'anthropic'},
+)..storedKeys['deepseek'] = '$markerKey-STORED';
+
+/// Providers of kinds that accept `via` (a chat-completions gateway and an
+/// anthropic-messages one) and one that does not (scripted).
+final sampleViaProviders = ProviderSetup(
+  main: 'demo/scripted',
+  activeMain: 'demo/scripted',
+  providers: [
+    ProviderInfo(
+      name: 'demo',
+      kind: 'scripted',
+      models: const [ProviderModel(id: 'scripted')],
+    ),
+    ProviderInfo(
+      name: 'gateway',
+      kind: 'chat-completions',
+      baseUrl: 'https://gateway.example.com/v1',
+      models: const [ProviderModel(id: 'deepseek-v4.1-flash')],
+    ),
+    ProviderInfo(
+      name: 'sidecar',
+      kind: 'anthropic-messages',
+      baseUrl: 'https://sidecar.example.com',
+      models: const [ProviderModel(id: 'sonnet')],
     ),
   ],
 );

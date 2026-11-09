@@ -1,7 +1,10 @@
 # Core and updates
 
-Core is part of the app. `native/` is a Rust crate (`bubblepaw_desktop_native`) that
-depends on `bubblepaw-sdk` at Core tag `v0.7.0`; flutter_rust_bridge exposes it to Dart.
+Core is part of the app, on purpose. If the UI dies, the agents stop with it, because
+the user could not otherwise tell they were still running. With "Keep running in the
+tray" on, closing the window keeps the app and the agents running in the tray. `native/`
+is a Rust crate (`bubblepaw_desktop_native`) that
+depends on `bubblepaw-sdk` at Core tag `v0.7.3`; flutter_rust_bridge exposes it to Dart.
 The app also checks for new versions of itself. Code: `native/`, `rust_builder/`,
 `lib/src/rust/` (generated), `lib/src/core/ffi_transport.dart`, `lib/src/updates/`,
 `lib/src/platform/download.dart`, `lib/src/semver.dart`.
@@ -29,7 +32,7 @@ providers and models are set there. A `ConfigError` (an unreadable file, a bad k
 `startFailed` error whose text the failure notice shows. No provider is not a config error:
 since Core v0.5.1 the host starts without one, and a run that needs a model returns the typed
 error `no_provider_configured` (code -32004). `HostCallError` passes it on as an `rpc` error
-with that code; agent-kit 0.16.3 maps it to `KitNeedsSetup`, and `GuardedBackend` reports it
+with that code; agent-kit 0.16.4 maps it to `KitNeedsSetup`, and `GuardedBackend` reports it
 so the app shows the notice that opens Settings > Models.
 
 `cargo test` covers `session.list` on a fresh temp data dir, host errors keeping their
@@ -70,7 +73,8 @@ previous nightly.
 
 Moving to a new Core means changing the `tag` in `native/Cargo.toml` and `CORE_VERSION`
 together, regenerating nothing unless the API changed, and releasing the app. Settings >
-About shows the embedded version.
+About shows the embedded version, and its Updates section has a Core row, "Bundled with
+BubblePaw. It updates with the app.", because Core has no update of its own.
 
 ## App updates
 
@@ -89,6 +93,12 @@ are injected (`HttpFetcher`, a download folder, `UpdateInstaller`).
   check is over 24 hours old; it opens the dialog for a new version and stays quiet
   about a skipped one. Check now always shows what it finds. Switching channel clears
   the skip and the offer; it never downgrades.
+- **About.** The Updates section reads, in the mockups' wording: the automatic-check
+  switch ("Check for updates automatically"), the BubblePaw row with its status line
+  (`Latest version not checked.`, `Checking GitHub releases…`, `Latest version X.`,
+  `Downloading X, N%.`, `X is ready to install.` or `X is downloaded.` on Linux,
+  `Up to date.`, `Could not check. ...`) and the Check for updates button (Review update
+  appears beside it while a build is offered), the channel, the Core row and Last checked.
 - **Download.** Verified against the manifest's SHA256. A mismatch
   deletes the file and the dialog shows the expected and received hashes with Retry.
 - **Install.** Windows: "Install and restart" runs the Inno installer with `/VERYSILENT

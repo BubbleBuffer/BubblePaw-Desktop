@@ -1,6 +1,7 @@
-// The app's own preferences: theme, what happens at login and when the window
-// closes, and whether the host starts with the app. Stored beside config.json
-// as preferences.json. They apply at once; nothing here restarts the host.
+// The app's own preferences: theme, how finished turns start, what happens at
+// login and when the window closes, and whether the host starts with the app.
+// Stored beside config.json as preferences.json. They apply at once; nothing
+// here restarts the host.
 
 /// How the app picks light or dark.
 enum ThemeSetting {
@@ -10,24 +11,35 @@ enum ThemeSetting {
   dark,
 }
 
+/// How the steps of a finished turn start in a chat: shut behind the summary
+/// line, or open.
+enum TurnLayoutSetting { collapsed, open }
+
 /// Which releases of the app the update check looks at.
 enum UpdateChannel { stable, nightly }
 
 class AppPrefs {
   const AppPrefs({
     this.theme = ThemeSetting.system,
+    this.turnLayout = TurnLayoutSetting.collapsed,
     this.openAtLogin = false,
     this.startInTray = false,
-    this.keepInTray = false,
+    this.keepInTray = true,
     this.startHost = true,
     this.trayNoticeShown = false,
     this.updateChannel = UpdateChannel.stable,
     this.checkUpdates = true,
     this.lastUpdateCheck,
     this.skippedUpdate = '',
+    this.shareAtStart = true,
+    this.deviceName = '',
   });
 
   final ThemeSetting theme;
+
+  /// How a finished turn's steps start in a chat on this device. A running
+  /// turn is always open, and a turn the person opened or closed keeps that.
+  final TurnLayoutSetting turnLayout;
 
   /// BubblePaw starts when the person signs in to the computer.
   final bool openAtLogin;
@@ -36,7 +48,9 @@ class AppPrefs {
   /// [openAtLogin]; [effectiveStartInTray] is the combination.
   final bool startInTray;
 
-  /// Closing the window hides it to the tray instead of quitting.
+  /// Closing the window hides it to the tray instead of quitting. On by
+  /// default; a saved preference of false still quits. Without a tray the
+  /// window always quits.
   final bool keepInTray;
 
   /// The host starts when the app does.
@@ -57,11 +71,19 @@ class AppPrefs {
   /// A version the person chose to skip, such as `0.2.0`.
   final String skippedUpdate;
 
+  /// Remote access: share this host as soon as the host runs (never in the
+  /// temporary-address mode).
+  final bool shareAtStart;
+
+  /// What devices see this computer called; empty means the computer's name.
+  final String deviceName;
+
   /// Whether a login start hides the window.
   bool get effectiveStartInTray => openAtLogin && startInTray;
 
   AppPrefs copyWith({
     ThemeSetting? theme,
+    TurnLayoutSetting? turnLayout,
     bool? openAtLogin,
     bool? startInTray,
     bool? keepInTray,
@@ -71,12 +93,17 @@ class AppPrefs {
     bool? checkUpdates,
     DateTime? lastUpdateCheck,
     String? skippedUpdate,
+    bool? shareAtStart,
+    String? deviceName,
   }) => AppPrefs(
     updateChannel: updateChannel ?? this.updateChannel,
     checkUpdates: checkUpdates ?? this.checkUpdates,
     lastUpdateCheck: lastUpdateCheck ?? this.lastUpdateCheck,
     skippedUpdate: skippedUpdate ?? this.skippedUpdate,
+    shareAtStart: shareAtStart ?? this.shareAtStart,
+    deviceName: deviceName ?? this.deviceName,
     theme: theme ?? this.theme,
+    turnLayout: turnLayout ?? this.turnLayout,
     openAtLogin: openAtLogin ?? this.openAtLogin,
     startInTray: startInTray ?? this.startInTray,
     keepInTray: keepInTray ?? this.keepInTray,
@@ -86,6 +113,7 @@ class AppPrefs {
 
   Map<String, Object?> toJson() => {
     'theme': theme.name,
+    'turnLayout': turnLayout.name,
     'openAtLogin': openAtLogin,
     'startInTray': startInTray,
     'keepInTray': keepInTray,
@@ -96,6 +124,8 @@ class AppPrefs {
     if (lastUpdateCheck != null)
       'lastUpdateCheck': lastUpdateCheck!.toUtc().toIso8601String(),
     if (skippedUpdate.isNotEmpty) 'skippedUpdate': skippedUpdate,
+    'shareAtStart': shareAtStart,
+    if (deviceName.isNotEmpty) 'deviceName': deviceName,
   };
 
   /// Reads what it can; anything missing or of the wrong type is a default.
@@ -111,6 +141,10 @@ class AppPrefs {
       theme: ThemeSetting.values.firstWhere(
         (t) => t.name == json['theme'],
         orElse: () => defaults.theme,
+      ),
+      turnLayout: TurnLayoutSetting.values.firstWhere(
+        (t) => t.name == json['turnLayout'],
+        orElse: () => defaults.turnLayout,
       ),
       openAtLogin: flag('openAtLogin', defaults.openAtLogin),
       startInTray: flag('startInTray', defaults.startInTray),
@@ -130,6 +164,11 @@ class AppPrefs {
         final String text => text,
         _ => '',
       },
+      shareAtStart: flag('shareAtStart', defaults.shareAtStart),
+      deviceName: switch (json['deviceName']) {
+        final String text => text,
+        _ => '',
+      },
     );
   }
 
@@ -137,6 +176,7 @@ class AppPrefs {
   bool operator ==(Object other) =>
       other is AppPrefs &&
       other.theme == theme &&
+      other.turnLayout == turnLayout &&
       other.openAtLogin == openAtLogin &&
       other.startInTray == startInTray &&
       other.keepInTray == keepInTray &&
@@ -145,11 +185,14 @@ class AppPrefs {
       other.updateChannel == updateChannel &&
       other.checkUpdates == checkUpdates &&
       other.lastUpdateCheck == lastUpdateCheck &&
-      other.skippedUpdate == skippedUpdate;
+      other.skippedUpdate == skippedUpdate &&
+      other.shareAtStart == shareAtStart &&
+      other.deviceName == deviceName;
 
   @override
   int get hashCode => Object.hash(
     theme,
+    turnLayout,
     openAtLogin,
     startInTray,
     keepInTray,
@@ -159,5 +202,7 @@ class AppPrefs {
     checkUpdates,
     lastUpdateCheck,
     skippedUpdate,
+    shareAtStart,
+    deviceName,
   );
 }

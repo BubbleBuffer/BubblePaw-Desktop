@@ -12,23 +12,23 @@ dependencies:
   agent_kit:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: d5a9871bce7fcbd91df119667db1585f24527ba1 # v0.16.3
+      ref: 28939d5e0818fb718e87892cace46cd2c98ea99f # v0.19.0
       path: packages/agent_kit
   agent_kit_core:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: d5a9871bce7fcbd91df119667db1585f24527ba1 # v0.16.3
+      ref: 28939d5e0818fb718e87892cace46cd2c98ea99f # v0.19.0
       path: packages/agent_kit_core
   agent_kit_bubblepaw:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: d5a9871bce7fcbd91df119667db1585f24527ba1 # v0.16.3
+      ref: 28939d5e0818fb718e87892cace46cd2c98ea99f # v0.19.0
       path: packages/agent_kit_bubblepaw
   # Same pin as the kit's own, so the primitives come from one place.
   bb_ui:
     git:
       url: https://github.com/BubbleBuffer/bb-ui
-      ref: v0.6.0
+      ref: v0.7.2
       path: packages/bb_ui
   # SHA256 of downloaded app updates (dart:io has no hash).
   crypto: ^3.0.6
@@ -44,6 +44,11 @@ dependencies:
   launch_at_startup: 0.5.1
   # The same pin as bb_ui's, for the Lucide glyphs its Ico enum lacks.
   lucide_icons_flutter: 3.1.25
+  # The QR code of the pairing link, drawn from its modules.
+  qr: ^3.0.2
+  # The phone build: its data directory and the QR scan of a pairing link.
+  path_provider: ^2.1.5
+  mobile_scanner: ^7.0.1
 
 dev_dependencies:
   flutter_test:

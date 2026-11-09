@@ -225,12 +225,24 @@ class _SkillRow extends StatelessWidget {
                       where,
                       style: ts(theme.typeScale.uiSmall, theme.faint),
                     ),
-                    Text(
-                      skillFolder(skill),
-                      style: ts(
-                        theme.typeScale.uiSmall,
-                        theme.muted,
-                        mono: true,
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: theme.surface2,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
+                        child: Text(
+                          skillFolder(skill),
+                          style: ts(
+                            theme.typeScale.uiSmall,
+                            theme.muted,
+                            mono: true,
+                          ),
+                        ),
                       ),
                     ),
                   ],

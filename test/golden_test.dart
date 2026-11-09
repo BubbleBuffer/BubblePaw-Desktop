@@ -6,14 +6,21 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:io';
 
+import 'package:agent_kit_core/agent_kit_core.dart' show KitUnavailable;
 import 'package:agent_kit_core/fake.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
+import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/feedback/feedback_controller.dart';
 import 'package:bubblepaw_desktop/src/feedback/feedback_sheet.dart';
 import 'package:bubblepaw_desktop/src/feedback/log_buffer.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/platform/download.dart';
+import 'package:bubblepaw_desktop/src/platform/releases.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
+import 'package:bubblepaw_desktop/src/search/chat_search.dart'
+    show searchDebounce;
+import 'package:bubblepaw_desktop/src/remote/host_links.dart';
+import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
 import 'package:bubblepaw_desktop/src/semver.dart';
 import 'package:bubblepaw_desktop/src/updates/update_controller.dart';
 import 'package:flutter/foundation.dart'
@@ -21,9 +28,12 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'fake_remote.dart';
 import 'fakes.dart';
+import 'remote_chats_fakes.dart';
 import 'scenes.dart';
 import 'support.dart';
+import 'local_search_fakes.dart';
 import 'tools_samples.dart';
 
 /// A scene: the controller to start and what to do once the app is up.
@@ -45,6 +55,298 @@ Future<void> openSettings(WidgetTester tester, String section) async {
   await tester.tap(find.byKey(ValueKey('settings-nav-$section')));
   await settle(tester);
 }
+
+/// Taps the widget with [key], scrolled into view first.
+Future<void> tapVisible(WidgetTester tester, String key) async {
+  final finder = find.byKey(ValueKey(key));
+  await tester.ensureVisible(finder);
+  await tester.tap(finder);
+  await settle(tester);
+}
+
+/// MCP servers opened on the approved mockups' five servers: [open] servers
+/// expanded, [servers] to show instead, then [after].
+Scene _mcpScene({
+  List<String> open = const [],
+  List<McpServerStatus> servers = sampleMcpServers,
+  Future<void> Function(WidgetTester tester)? after,
+}) => (
+  controller: () =>
+      Played(settings: sampleMcpSettings(servers: servers)).controller(),
+  after: (tester) async {
+    await openSettings(tester, 'mcp');
+    for (final name in open) {
+      await tapVisible(tester, 'server-open-$name');
+    }
+    if (after != null) await after(tester);
+  },
+);
+
+/// Remote access with a fake sharing side: [access] configures it, then
+/// [after] drives the page (the host starts with sharing off).
+Scene _remoteScene({
+  required FakeRemoteAccess Function(FakeHostSettings host) access,
+  Map<String, Object?>? values,
+  FakeHostLinks Function()? links,
+  Future<void> Function(WidgetTester tester)? after,
+}) => (
+  // Each variant of the scene gets its own host and sharing state.
+  controller: () {
+    final host = FakeHostSettings(values: values);
+    final fake = access(host);
+    _links = links?.call();
+    return Played(
+      settings: host,
+      remote: (_) => fake,
+      hostLinks: _links,
+    ).controller(
+      prefs: const AppPrefs(shareAtStart: false, deviceName: 'Maya desktop'),
+    );
+  },
+  after: (tester) async {
+    await openSettings(tester, 'remote');
+    if (after != null) await after(tester);
+  },
+);
+
+/// The sharing side of the pairing scene being built, so its steps can make
+/// a device ask.
+FakeRemoteAccess? _pairAccess;
+
+/// The sharing side of a failure scene, so its steps can make sharing stop.
+FakeRemoteAccess? _failureAccess;
+
+/// The copy of cloudflared that BubblePaw installed, up to date.
+const _managedCloudflared = CloudflaredStatus(
+  installed: true,
+  version: '2025.9.0',
+  pinnedVersion: '2025.9.0',
+  updateAvailable: false,
+  managed: true,
+  chosen: false,
+);
+
+/// The hosts of the scene being built, for the steps that answer as a host.
+FakeHostLinks? _links;
+
+/// The saved host of the scene being built, opened by the scene's steps.
+RemoteFixture? _remote;
+HostController? _remoteController;
+
+/// A saved host with chats in four projects, open, with [open] projects
+/// expanded and, with [pick], the project picker open on that project. With
+/// [search], that text is typed in the search box and the host answers with
+/// [answer] (its own title filter when null).
+Scene _remoteChats({
+  List<String> open = const [],
+  String? pick,
+  bool context = false,
+  String? search,
+  Future<Object?> Function(Map<String, Object?> params)? answer,
+}) => (
+  controller: () {
+    final fixture = RemoteFixture(context: context)..onSearch = answer;
+    _remote = fixture;
+    return _remoteController = fixture.controller();
+  },
+  after: (tester) async {
+    final controller = _remoteController!;
+    await tester.runAsync(() => controller.openRemoteHost(_remote!.host.id));
+    await settle(tester);
+    final show = find.byKey(const ValueKey('rail-show'));
+    // The context scene looks at the chat, not the list.
+    if (!context && show.evaluate().isNotEmpty) {
+      await tester.tap(show);
+      await settle(tester);
+    }
+    for (final path in open) {
+      await tapVisible(tester, 'project-toggle-$path');
+    }
+    if (pick != null) {
+      await tapVisible(tester, 'project-picker');
+      await tapVisible(tester, 'project-pick-$pick');
+      await tapVisible(tester, 'project-picker');
+    }
+    if (search != null) {
+      await tester.enterText(
+        find.byKey(const ValueKey('chat-search-field')),
+        search,
+      );
+      await tester.pump(searchDebounce);
+      await settle(tester);
+      // No blinking cursor in the picture.
+      FocusManager.instance.primaryFocus?.unfocus();
+      await settle(tester);
+    }
+    if (context) {
+      // The label is hidden in the compact layout; the meter's semantics
+      // name it in every size.
+      final semantics = tester.ensureSemantics();
+      await tester.tap(find.bySemanticsLabel(RegExp('Open the context view')));
+      await settle(tester);
+      semantics.dispose();
+    }
+  },
+);
+
+/// The host's answer to a search for "quota": three chats in two projects.
+Future<Object?> _quotaAnswer(Map<String, Object?> params) async => {
+  'sessions': [
+    searchRow(
+      'c1',
+      'Quota bar flickers on reconnect',
+      gardenApi,
+      ago: const Duration(minutes: 1),
+    ),
+    searchRow(
+      'q2',
+      'Reset the quota window at midnight',
+      gardenApi,
+      ago: const Duration(days: 17),
+    ),
+    searchRow(
+      'q3',
+      'Per-user quota limits',
+      agentKit,
+      ago: const Duration(days: 58),
+    ),
+  ],
+  'next_cursor': null,
+};
+
+/// This computer's host with a search typed into the rail's box and, with
+/// [answer], that answer to it (its own title filter when null).
+Scene _localSearch(
+  String text, {
+  Future<Object?> Function(Map<String, Object?> params)? answer,
+}) => (
+  controller: () => (LocalFixture()..onSearch = answer).controller(),
+  after: (tester) async {
+    final show = find.byKey(const ValueKey('rail-show'));
+    if (show.evaluate().isNotEmpty) {
+      await tester.tap(show);
+      await settle(tester);
+    }
+    await tester.enterText(
+      find.byKey(const ValueKey('chat-search-field')),
+      text,
+    );
+    await tester.pump(searchDebounce);
+    await settle(tester);
+    // No blinking cursor in the picture.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(tester);
+  },
+);
+
+/// Settings > Models on providers that take keys (Core v0.13.0): a stored
+/// key, one from the environment and none. [open] opens the key dialog of
+/// that provider, with [typed] in its field; [profile] shows the page of a
+/// saved host this device holds that profile on.
+Scene _keysScene({String? open, String? profile, bool typed = false}) {
+  HostController? host;
+  SavedHostEntry? saved;
+  return (
+    controller: () {
+      final played = Played(
+        capabilities: hostControlCapabilities,
+        providers: sampleKeyProviders,
+        models: sampleModels,
+        settings: keyedHostSettings(),
+      );
+      if (profile == null) return host = played.controller();
+      saved = fakeSavedHost(profile: profile, lastConnected: 1700000100);
+      return host = Played(hostLinks: FakeHostLinks(hosts: [saved!]))
+          .controller(remoteStarter: (links, id) => played.start(sampleConfig));
+    },
+    after: (tester) async {
+      if (profile != null) {
+        await tester.runAsync(() => host!.openRemoteHost(saved!.id));
+        await settle(tester);
+      }
+      await openSettings(tester, 'models');
+      if (open == null) return;
+      await tapVisible(tester, 'key-button-$open');
+      if (typed) {
+        await tester.enterText(
+          find.byKey(const ValueKey('key-field')),
+          markerKey,
+        );
+        await settle(tester);
+      }
+    },
+  );
+}
+
+/// Two saved hosts: one answers, one does not.
+FakeHostLinks _sampleHosts() => FakeHostLinks(
+  hosts: [
+    fakeSavedHost(lastConnected: 1700000100),
+    fakeSavedHost(
+      id: 'HOST-9Z8Y-7X6W-5V4U',
+      label: 'Studio mini',
+      via: HostVia.direct,
+      profile: 'read',
+    ),
+  ],
+  presence: {'HOST-9Z8Y-7X6W-5V4U': HostPresenceKind.offline},
+);
+
+/// Two saved hosts that may carry model traffic and one that may not.
+FakeHostLinks _egressHosts() => FakeHostLinks(
+  hosts: [
+    fakeSavedHost(id: 'OFFC-1111-2222-3333', label: 'Office PC', egress: true),
+    fakeSavedHost(
+      id: 'STUD-4444-5555-6666',
+      label: 'Studio mini',
+      via: HostVia.direct,
+      profile: 'read',
+    ),
+    fakeSavedHost(
+      id: 'SHED-7777-8888-9999',
+      label: 'Shed laptop',
+      egress: true,
+    ),
+  ],
+);
+
+Future<void> _openHosts(WidgetTester tester) =>
+    tapVisible(tester, 'remote-tab-hosts you can open');
+
+/// Devices whose last-seen dates do not depend on the clock.
+final _sampleDevices = [
+  DeviceEntry(
+    id: 'PHON-E123-4567-89AB',
+    label: "Maya's phone",
+    profile: 'edit',
+    kind: 'phone',
+    pairedAt: BigInt.from(1700000000),
+    lastSeen: BigInt.from(1700000100),
+    egress: false,
+  ),
+  const DeviceEntry(
+    id: 'LAPT-OP12-3456-78CD',
+    label: 'Work laptop',
+    profile: 'read',
+    kind: 'laptop',
+    egress: false,
+  ),
+];
+
+/// The same devices, the phone allowed to send model traffic through this
+/// computer.
+final _egressDevices = [
+  DeviceEntry(
+    id: 'PHON-E123-4567-89AB',
+    label: "Maya's phone",
+    profile: 'edit',
+    kind: 'phone',
+    pairedAt: BigInt.from(1700000000),
+    lastSeen: BigInt.from(1700000100),
+    egress: true,
+  ),
+  _sampleDevices.last,
+];
 
 /// Fixed licences, so the page does not depend on the packages in the build.
 Stream<LicenseEntry> sampleLicences() => Stream.fromIterable([
@@ -309,6 +611,18 @@ void main() {
       ),
       after: (tester) => openSettings(tester, 'general'),
     ),
+    // General with every startup switch off: login, start in the tray and
+    // keep running in the tray each say what they do.
+    'settings_general_off': (
+      controller: () => HostController(
+        store: MemoryConfigStore(
+          sampleConfig,
+          const AppPrefs(keepInTray: false),
+        ),
+        starter: Played().start,
+      ),
+      after: (tester) => openSettings(tester, 'general'),
+    ),
     // About with a newer BubblePaw on the Stable channel.
     'settings_about_update': updateScene(
       phase: UpdateAvailable(sampleManifest()),
@@ -324,6 +638,17 @@ void main() {
         updateChannel: UpdateChannel.nightly,
         lastUpdateCheck: DateTime.utc(2026, 10, 27, 9, 14),
       ),
+    ),
+    // About while it checks, and while a download runs.
+    'settings_about_checking': updateScene(
+      phase: const UpdateChecking(),
+      dialog: false,
+      section: 'about',
+    ),
+    'settings_about_downloading': updateScene(
+      phase: UpdateDownloading(sampleManifest(), 18400000, 42100000),
+      dialog: false,
+      section: 'about',
     ),
     // The update dialog, one scene per state.
     'update_available': updateScene(phase: UpdateAvailable(sampleManifest())),
@@ -366,6 +691,45 @@ void main() {
         providers: sampleProviders,
         models: sampleModels,
         settings: FakeHostSettings(values: {'model.main': 'demo/scripted'}),
+      ).controller(),
+      after: (tester) => openSettings(tester, 'models'),
+    ),
+    // Core v0.13.0: Key set and No key beside Add key and Edit key; the key
+    // dialog for a new key and for a stored one; a saved host without the
+    // Full profile, where the buttons are unavailable.
+    'settings_models_keys': _keysScene(),
+    'settings_models_key_add': _keysScene(open: 'openrouter', typed: true),
+    'settings_models_key_edit': _keysScene(open: 'deepseek'),
+    'settings_models_key_blocked': _keysScene(profile: 'edit'),
+    // Core v0.11.0: a provider's model traffic can go through a saved host
+    // that granted this device that.
+    'settings_models_via': (
+      controller: () => Played(
+        capabilities: hostControlCapabilities,
+        providers: sampleViaProviders,
+        models: sampleModels,
+        settings: FakeHostSettings(
+          values: {
+            'model.main': 'demo/scripted',
+            'providers.sidecar.via': 'OFFC-1111-2222-3333',
+          },
+        ),
+        hostLinks: _egressHosts(),
+      ).controller(),
+      after: (tester) => openSettings(tester, 'models'),
+    ),
+    'settings_models_via_unavailable': (
+      controller: () => Played(
+        capabilities: hostControlCapabilities,
+        providers: sampleViaProviders,
+        models: sampleModels,
+        settings: FakeHostSettings(
+          values: {
+            'model.main': 'demo/scripted',
+            'providers.sidecar.via': 'GONE-0000-1111-2222',
+          },
+        ),
+        hostLinks: _egressHosts(),
       ).controller(),
       after: (tester) => openSettings(tester, 'models'),
     ),
@@ -424,6 +788,411 @@ void main() {
           Played(settings: sampleToolSettings(skills: false)).controller(),
       after: (tester) => openSettings(tester, 'skills'),
     ),
+    // Core v0.7.1: MCP servers lists the servers and their status; a server
+    // opens to its tools; Add server and Edit open the form.
+    'settings_mcp': _mcpScene(),
+    'settings_mcp_expanded': _mcpScene(open: ['filesystem']),
+    'settings_mcp_stopped': _mcpScene(open: ['sqlite']),
+    'settings_mcp_error': _mcpScene(open: ['garden-api']),
+    'settings_mcp_waiting': _mcpScene(
+      after: (tester) async {
+        await tapVisible(tester, 'sign-in-docs');
+      },
+    ),
+    'settings_mcp_signed_in': _mcpScene(open: ['github']),
+    'settings_mcp_expired': _mcpScene(
+      open: ['github'],
+      servers: [
+        sampleMcpServers[0],
+        const McpServerStatus(
+          name: 'github',
+          transport: 'http',
+          auth: McpAuthState.expired,
+          headers: ['X-Org'],
+        ),
+        ...sampleMcpServers.skip(2),
+      ],
+    ),
+    'settings_mcp_add': _mcpScene(
+      after: (tester) => tapVisible(tester, 'add-server'),
+    ),
+    'settings_mcp_add_error': _mcpScene(
+      after: (tester) async {
+        await tapVisible(tester, 'add-server');
+        await tapVisible(tester, 'srv-kind-url');
+        await tester.enterText(
+          find.byKey(const ValueKey('srv-name')),
+          'filesystem',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('srv-url')),
+          'mcp.example.com/github',
+        );
+        await tester.enterText(find.byKey(const ValueKey('srv-timeout')), '0');
+        await tapVisible(tester, 'hdr-add');
+        await tester.enterText(
+          find.byKey(const ValueKey('hdr-0-name')),
+          'X Org',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('hdr-0-value')),
+          'garden',
+        );
+        await tapVisible(tester, 'srv-save');
+      },
+    ),
+    'settings_mcp_edit_command': _mcpScene(
+      after: (tester) => tapVisible(tester, 'server-edit-filesystem'),
+    ),
+    'settings_mcp_edit_url': _mcpScene(
+      after: (tester) => tapVisible(tester, 'server-edit-github'),
+    ),
+    'settings_mcp_edit_errors': _mcpScene(
+      after: (tester) async {
+        await tapVisible(tester, 'server-edit-github');
+        await tapVisible(tester, 'srv-auth-header token');
+        await tapVisible(tester, 'hdr-add');
+        await tester.enterText(find.byKey(const ValueKey('srv-timeout')), '0');
+        await tester.enterText(
+          find.byKey(const ValueKey('hdr-0-name')),
+          'X Org',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('hdr-1-name')),
+          'X-Team',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('hdr-1-value')),
+          '1TEAM',
+        );
+        await tapVisible(tester, 'hdr-1-source');
+        await tester.tap(find.byKey(const ValueKey('option-From env var')));
+        await settle(tester);
+        await tester.enterText(
+          find.byKey(const ValueKey('hdr-1-value')),
+          '1TEAM',
+        );
+        await tapVisible(tester, 'srv-save');
+      },
+    ),
+    'settings_mcp_remove': _mcpScene(
+      after: (tester) async {
+        await tapVisible(tester, 'server-edit-filesystem');
+        await tapVisible(tester, 'srv-remove');
+      },
+    ),
+    // Core v0.10.0: Remote access shares the host, and pairs devices.
+    'settings_remote_stopped': _remoteScene(
+      access: (host) =>
+          FakeRemoteAccess(hostSettings: host, devices: _sampleDevices),
+    ),
+    'settings_remote_relay': _remoteScene(
+      access: (host) =>
+          FakeRemoteAccess(hostSettings: host, devices: _sampleDevices),
+      after: (tester) => tapVisible(tester, 'toggle-share'),
+    ),
+    'settings_remote_temporary': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'reach-quick');
+      },
+    ),
+    'settings_remote_domain_signed_out': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) => tapVisible(tester, 'reach-domain'),
+    ),
+    'settings_remote_domain_token': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'reach-domain');
+        await tapVisible(tester, 'cf-use-token');
+      },
+    ),
+    'settings_remote_domain_signed_in': _remoteScene(
+      values: {
+        'remote.mode': 'domain',
+        'remote.hostname': 'bubblepaw-desk.example.com',
+      },
+      access: (host) => FakeRemoteAccess(
+        hostSettings: host,
+        cloudflare: const CloudflareStatus(
+          signedIn: true,
+          via: CloudflareVia.tokenFile,
+          account: 'maya@example.com',
+          zones: ['example.com', 'maya.dev'],
+        ),
+        cloudflaredStatus: const CloudflaredStatus(
+          installed: true,
+          version: '2025.9.0',
+          pinnedVersion: '2025.9.0',
+          updateAvailable: false,
+          managed: true,
+          chosen: false,
+        ),
+        devices: _sampleDevices,
+      ),
+      after: (tester) => tapVisible(tester, 'toggle-share'),
+    ),
+    // Core v0.13.0: choose the cloudflared file, and the failure copy.
+    'settings_remote_cloudflared_chosen': _remoteScene(
+      values: {'remote.mode': 'quick'},
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) => tapVisible(tester, 'cloudflared-choose'),
+    ),
+    'settings_remote_cloudflared_refused': _remoteScene(
+      values: {'remote.mode': 'quick'},
+      access: (host) => FakeRemoteAccess(hostSettings: host)
+        ..rejectCloudflared = ShareError(
+          kind: ShareErrorKind.other,
+          message:
+              'The selected program did not identify itself as cloudflared.',
+        ),
+      after: (tester) => tapVisible(tester, 'cloudflared-choose'),
+    ),
+    'settings_remote_failure_cloudflared': _remoteScene(
+      values: {'remote.mode': 'quick'},
+      access: (host) => _failureAccess = FakeRemoteAccess(
+        hostSettings: host,
+        cloudflaredStatus: _managedCloudflared,
+      ),
+      after: (tester) async {
+        await tapVisible(tester, 'toggle-share');
+        _failureAccess!.emit(
+          const ShareState(
+            status: ShareStatus.offline,
+            mode: ShareMode.quick,
+            lastError: 'cloudflared exited; restarting in 4s',
+            failure: ShareFailure(
+              transport: 'cloudflared',
+              exitCode: 1,
+              retryAfterSecs: 4,
+            ),
+            devices: 0,
+          ),
+        );
+        await settle(tester);
+      },
+    ),
+    'settings_remote_failure_relay': _remoteScene(
+      access: (host) => _failureAccess = FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'toggle-share');
+        _failureAccess!.emit(
+          const ShareState(
+            status: ShareStatus.offline,
+            mode: ShareMode.relay,
+            lastError: 'could not register at the relay',
+            failure: ShareFailure(transport: 'relay', retryAfterSecs: 8),
+            devices: 0,
+          ),
+        );
+        await settle(tester);
+      },
+    ),
+    'settings_remote_other_host': _remoteScene(
+      access: (host) => FakeRemoteAccess(
+        hostSettings: host,
+        other: const OtherShare(
+          shared: true,
+          ours: false,
+          cli: true,
+          hostId: 'T4WK-9HDB-2QXN-6MRE',
+          dataDir: '/var/lib/bubblepaw/data',
+        ),
+      ),
+    ),
+    'settings_remote_pair_profile': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'toggle-share');
+        await tapVisible(tester, 'remote-pair');
+      },
+    ),
+    'settings_remote_pair_egress': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'toggle-share');
+        await tapVisible(tester, 'remote-pair');
+        await tapVisible(tester, 'pair-egress');
+      },
+    ),
+    'settings_remote_devices_egress': _remoteScene(
+      access: (host) =>
+          FakeRemoteAccess(hostSettings: host, devices: _egressDevices),
+      after: (tester) => tapVisible(tester, 'toggle-share'),
+    ),
+    'settings_remote_pair_code': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'toggle-share');
+        await tapVisible(tester, 'remote-pair');
+        await tapVisible(tester, 'pair-continue');
+      },
+    ),
+    // The number step: the device's announced name, ready to change.
+    'settings_remote_pair_confirm': _remoteScene(
+      access: (host) => _pairAccess = FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'toggle-share');
+        await tapVisible(tester, 'remote-pair');
+        await tapVisible(tester, 'pair-continue');
+        final access = _pairAccess!;
+        access.offers.last.requests.add(FakeRequest(access, 'edit'));
+        await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+        await settle(tester);
+      },
+    ),
+    'settings_remote_key': _remoteScene(
+      access: (host) =>
+          FakeRemoteAccess(hostSettings: host, devices: _sampleDevices),
+      after: (tester) => tapVisible(tester, 'remote-manage-key'),
+    ),
+    'settings_remote_key_export': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'remote-manage-key');
+        await tapVisible(tester, 'key-export');
+      },
+    ),
+    // Saved straight to Downloads: no picker, the note names the folder.
+    'settings_remote_key_saved': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      after: (tester) async {
+        await tapVisible(tester, 'remote-manage-key');
+        await tapVisible(tester, 'key-export');
+        await tester.enterText(
+          find.byKey(const ValueKey('export-pass1')),
+          'long enough',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('export-pass2')),
+          'long enough',
+        );
+        await settle(tester);
+        await tapVisible(tester, 'export-save');
+      },
+    ),
+    'settings_remote_key_regenerate': _remoteScene(
+      access: (host) =>
+          FakeRemoteAccess(hostSettings: host, devices: _sampleDevices),
+      after: (tester) async {
+        await tapVisible(tester, 'remote-manage-key');
+        await tapVisible(tester, 'key-regenerate');
+      },
+    ),
+    'settings_remote_hosts': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: _sampleHosts,
+      after: _openHosts,
+    ),
+    'settings_remote_hosts_empty': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: FakeHostLinks.new,
+      after: _openHosts,
+    ),
+    'settings_remote_add_link': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: FakeHostLinks.new,
+      after: (tester) async {
+        await _openHosts(tester);
+        await tapVisible(tester, 'hosts-add');
+      },
+    ),
+    'settings_remote_add_compare': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: FakeHostLinks.new,
+      after: (tester) async {
+        await _openHosts(tester);
+        await tapVisible(tester, 'hosts-add');
+        await tester.enterText(
+          find.byKey(const ValueKey('add-host-link')),
+          'bubblepaw://pair?v=1&code=K7M2QX9PD4',
+        );
+        await settle(tester);
+        await tapVisible(tester, 'add-host-connect');
+      },
+    ),
+    'settings_remote_add_done': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: FakeHostLinks.new,
+      after: (tester) async {
+        await _openHosts(tester);
+        await tapVisible(tester, 'hosts-add');
+        await tester.enterText(
+          find.byKey(const ValueKey('add-host-link')),
+          'bubblepaw://pair?v=1&code=K7M2QX9PD4',
+        );
+        await settle(tester);
+        await tapVisible(tester, 'add-host-connect');
+        _links!.pairings.single.confirm();
+        await settle(tester);
+      },
+    ),
+    'settings_remote_add_error': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: () => FakeHostLinks()
+        ..pairFails = const HostLinkError(
+          kind: HostLinkErrorKind.expiredCode,
+          message: 'expired',
+        ),
+      after: (tester) async {
+        await _openHosts(tester);
+        await tapVisible(tester, 'hosts-add');
+        await tester.enterText(
+          find.byKey(const ValueKey('add-host-link')),
+          'bubblepaw://pair?v=1&code=K7M2QX9PD4',
+        );
+        await settle(tester);
+        await tapVisible(tester, 'add-host-connect');
+      },
+    ),
+    'settings_remote_remove_host': _remoteScene(
+      access: (host) => FakeRemoteAccess(hostSettings: host),
+      links: _sampleHosts,
+      after: (tester) async {
+        await _openHosts(tester);
+        await tapVisible(tester, 'host-remove-HOST-A1B2-C3D4-E5F6');
+      },
+    ),
+    'settings_remote_key_hosts': _remoteScene(
+      access: (host) =>
+          FakeRemoteAccess(hostSettings: host, devices: _sampleDevices),
+      links: _sampleHosts,
+      after: (tester) => tapVisible(tester, 'remote-manage-key'),
+    ),
+    'rail_host_switcher': (
+      controller: () => Played(hostLinks: _sampleHosts()).controller(),
+      after: (tester) async {
+        final show = find.byKey(const ValueKey('rail-show'));
+        if (show.evaluate().isNotEmpty) {
+          await tester.tap(show);
+          await settle(tester);
+        }
+        await tester.tap(find.text('project').first);
+        await settle(tester);
+      },
+    ),
+    // The chat list of an open saved host: Needs you first, then the projects.
+    'rail_remote_chats': _remoteChats(),
+    // Two of its projects opened.
+    'rail_remote_chats_open': _remoteChats(open: [gardenApi, agentKit]),
+    // The project picker beside New chat, with a project picked.
+    'rail_remote_chats_picker': _remoteChats(pick: agentKit),
+    // Chat search on a saved host: matches by project, the text marked.
+    'rail_search_results': _remoteChats(search: 'quota', answer: _quotaAnswer),
+    // Nothing in the titles matches.
+    'rail_search_none': _remoteChats(search: 'kubernetes'),
+    // The host did not answer the search.
+    'rail_search_failed': _remoteChats(
+      search: 'quota',
+      answer: (_) async =>
+          throw const KitUnavailable('Maya desktop stopped answering.'),
+    ),
+    // The same search on this computer's rail.
+    'rail_local_search_results': _localSearch('quota', answer: _quotaAnswer),
+    'rail_local_search_none': _localSearch('kubernetes'),
+    // Context on a saved host: the pane beside the chat, as on this computer.
+    'remote_context': _remoteChats(context: true),
     'settings_about': (
       controller: () => HostController(
         store: MemoryConfigStore(sampleConfig),
@@ -471,12 +1240,25 @@ void main() {
             size: size.value,
             brightness: theme.value,
             licenceSource: sampleLicences,
+            // A sign-in opens nothing in a golden.
+            services: PlatformServices(
+              open: (_) async {},
+              saveKeyFile: (name) async => '/home/maya/Downloads/$name',
+              keyFileInDownloads: true,
+              pickCloudflared: () async => '/opt/cloudflared/cloudflared',
+            ),
           );
           await scene.value.after?.call(tester);
           await expectLater(
             find.byType(BubblePawApp),
             matchesGoldenFile('goldens/$name.png'),
           );
+          // The pairing countdown ticks until its dialog closes.
+          final close = find.byKey(const ValueKey('dialog-close'));
+          if (close.evaluate().isNotEmpty) {
+            await tester.tap(close);
+            await settle(tester);
+          }
         });
       }
     }

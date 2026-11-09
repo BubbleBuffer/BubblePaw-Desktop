@@ -178,10 +178,15 @@ void main() {
       await tester.tap(find.text('Settings'));
       await settle(tester);
       expect(find.byKey(const ValueKey('page-general')), findsOneWidget);
-      for (final section in ['general', 'models', 'feedback', 'about']) {
+      for (final section in [
+        'general',
+        'models',
+        'remote',
+        'feedback',
+        'about',
+      ]) {
         expect(find.byKey(ValueKey('settings-nav-$section')), findsOneWidget);
       }
-      expect(find.textContaining('Remote'), findsNothing);
 
       expect(find.byKey(const ValueKey('settings-nav-core')), findsNothing);
       await tester.tap(find.byKey(const ValueKey('settings-nav-about')));

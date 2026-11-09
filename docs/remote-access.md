@@ -1,0 +1,376 @@
+# Remote access
+
+Settings > Remote access shares the host this app runs, pairs devices with it,
+lists the hosts this device can open, and holds the device key. The rail menu
+switches between this computer and those hosts. Core `v0.13.0` does the work; the app is a thin page
+over it.
+
+The Share tab's status block always shows a danger-toned `Stopped` pill when the tunnel or relay is not up. Under it, one line says why: `Sharing is off.` when the switch is off, the missing cloudflared, Cloudflare sign-in or hostname, or the failure text. A failure after the share started is built from Core's structured `ShareState.failure` (`transport`, `exit_code`, `retry_after_secs`, carried through the native `ShareState.failure`): "cloudflared exited with code 1. Paired devices stay paired." with the real exit code, and "The relay did not answer. The host retries in 8 seconds." with the delay Core scheduled (relay backoff starts at 1 second and doubles to 60, so the mockup's "every 30 seconds" is not stated). A cloudflared that left no exit code reads "cloudflared stopped. Paired devices stay paired.". Without a structured failure the page shows Core's `ShareState.lastError`, or the controller's fixed words when a start call failed. The tray reads the same `RemoteController.failure`, so it agrees.
+
+## Where the code is
+
+| Part | File |
+|---|---|
+| Native sharing side (`RemoteShare`, `PairOffer`, `PairRequest`) | `native/src/api/remote.rs`, tests in `native/src/remote_tests.rs` |
+| Interface the page uses, and its native implementation | `lib/src/remote/remote_access.dart` |
+| State, autostart, persistence | `lib/src/remote/remote_controller.dart` |
+| Pairing steps and countdown | `lib/src/remote/pairing_flow.dart` |
+| Page, key page, dialogs | `lib/src/settings/remote_page.dart`, `device_key_page.dart`, `remote_dialogs.dart` |
+| Native opening side (saved hosts, pairing, probe, `connect_saved`) | `native/src/api/hosts.rs`, `BubblePawHost::connect_saved` in `native/src/api/host.rs` |
+| Interface and native implementation for it | `lib/src/remote/host_links.dart` |
+| Saved hosts and presence, the add flow | `lib/src/remote/hosts_controller.dart` |
+| "Hosts you can open" list and Add / Remove dialogs | `lib/src/settings/hosts_section.dart` |
+| Provider picker "Send model traffic through…" | `lib/src/settings/models_page.dart` (`_ViaPicker`) |
+| Provider keys: Add key, Edit key, Remove key | `lib/src/settings/models_page.dart`, `provider_key_dialog.dart` |
+| Rail host switcher | `lib/src/screens/workspace_menu.dart` (`HostMenu`), wired in `lib/src/app.dart` |
+| Chat list of a saved host (rows, backend wrapper, grouping, rail, workbench) | `lib/src/remote/remote_chats.dart`, `project_groups.dart`, `remote_rail.dart`, `remote_workbench.dart` |
+| Chat search (controller, debounce, stale answers, highlight) | `lib/src/search/chat_search.dart` |
+| Chat search widgets (box, results, rows), shared by a saved host's rail and this computer's | `lib/src/search/search_widgets.dart` |
+
+`HostController.remote` is built when the embedded host starts. It is null for
+an attached host (another program runs it), for the scripted backend, and while
+the host is stopped; the page then says there is no host to share.
+
+## Hosts you can open
+
+The hosts are `remote/hosts.json` in the data directory, next to the device
+key (`remote/host.bpkey`), which the sharing side uses too. Core's
+`remote::list_hosts`, `forget_host` and `probe_host` read and change them.
+
+- **Adding.** The person pastes the pairing link the host shows (the text of
+  its QR code, which the host's Pair a device dialog copies with "Copy pairing
+  link"). A 10-character code alone cannot say which host or address it is for,
+  and Desktop has no camera. The link is proved to the host, both sides compare
+  the 6-digit number, and the host's owner confirms and picks the profile. A
+  failed link says why (wrong, expired or used code, declined, unreachable).
+  The link and code are never logged.
+- **List rows.** Each row shows the host's name, then its ID in monospace
+  (`SavedHostEntry.id`), how it is reached and when it was last opened, with
+  the presence pill and Remove beside them.
+- **Presence.** Asked on demand (when the list or the rail menu shows), not on
+  a timer: Online, Offline, or Not checked when the relay did not answer.
+- **Opening.** `HostController.openRemoteHost` connects with
+  `BubblePawHost.connect_saved` and builds a second `BubblePawBackend`. The
+  workbench draws that backend; this computer's host keeps running. The host
+  settings pages (Models, Tools, MCP, Skills) work against the open host. The
+  sharing side stays this computer's. With a saved host open the rail menu
+  lists no workspaces: the host's chat list shows all of its projects (next
+  section). A host that cannot be reached or stops answering leaves this
+  computer open and says so.
+- **Removing.** Forgets the pairing on this device only. The host keeps the
+  device until it is revoked there. The device key pages count the saved hosts
+  in their warnings.
+
+## Chat list of a saved host
+
+Core's `session.list` rows carry each chat's `workspace` (the absolute path as
+the host sees it, or null), `needs_you` (a pending approval or question),
+`waiting_for` (`approval`, `question` or null; Core 0.10.2) and `running`. The kit's `BubblePawBackend` keeps only id, title, parent and time,
+and binds one workspace directory to the whole backend, so the app reads the
+rows itself (`startSavedHost` in `lib/src/host_controller.dart`):
+
+- `RowTapTransport` passes every request through and hands each `session.list`
+  answer, array or paged, to `RemoteChatRows` (chat id to path, `needsYou`,
+  `running`, `waitingFor`).
+- `RemoteBackend` wraps the kit's backend (the pattern of `GuardedBackend`).
+  `listChats` returns the status `needsYou` or `running` from the row and the
+  project's folder name as `workspace`. `loadChat` reports the row's own path
+  as the snapshot's workspace (name is its last segment), so a remote project
+  is the host's path and not the empty directory the kit was connected with.
+  `createChat` for a project is described under "New chat in a project".
+- The rail is the app's own (`RemoteRail`), because `SessionRail` has fixed
+  Today and Earlier groups and `AgentWorkbench` takes no rail. `RemoteWorkbench`
+  composes the kit's public pieces (`RailLayout`, `AgentChatPane`) with it.
+  This computer keeps the kit's rail and workbench.
+- The rail's hide button reads "Hide the rail". Its host button always reads
+  Online: a saved host that stops answering closes it and returns to this
+  computer, so the rail never shows an offline host.
+- The rail shows "Needs you" with a count first, then "Projects": one group per
+  path, groups with a running or waiting chat first, then the latest change.
+  A group's toggle row shows "N running · N waiting", or the time of its last
+  activity. All groups start closed; which are open is kept per opened host in
+  `ProjectRailState` (`HostController.remoteRail`). The plus beside a group is
+  "New chat in <project>".
+
+- Rows say what a chat waits for: "Needs approval" or "Needs an answer" from
+  `waiting_for`, in "Needs you" and inside a project's group. A host before
+  Core 0.10.2 sends no `waiting_for`; its rows keep the kit's "Waiting for
+  you". "N running · N waiting" counts both kinds and does not change.
+
+### New chat in a project
+
+Core 0.10.2: `session.open {workspace}` opens a new root chat in that path.
+Over the tunnel the host accepts only a workspace it already knows (its
+default or one some chat uses); any other path is refused with code `-32003`
+(HTTP 403) and `data.workspace`. A `-32003` without `data.workspace` is the
+profile refusal (a read device may not open chats).
+
+- The plus beside a project, and the project picker beside New chat, start the
+  chat in that project's path. The picker ("Project for the new chat") lists
+  "Host default" and the projects of the loaded rows, distinct paths by name;
+  the plus and the picker both set the project the next New chat uses. New chat
+  with "Host default" sends no workspace, so the host picks its own.
+- The kit's `createChat` sends only the title and refuses a workspace other
+  than the one it was connected with, so `RemoteBackend.createChat` sends the
+  request itself through `FfiBubblePawTransport.rawRequest` (the kit's
+  transport turns every refusal into a fixed message and drops the code and
+  data). It returns a `ChatSummary` and records the path in `RemoteChatRows`,
+  so the snapshot carries it. The rail refreshes and the chat opens.
+- A refused project shows a notice (the style of the host-open notice, with
+  Dismiss): "This host will not start a chat in <project>. Start one there from
+  the host itself, or choose another project." The chat is not started in any
+  other project. A profile refusal says the device needs the edit profile.
+
+### Chat search
+
+Core 0.13 (`session.list` with `query`): a box above the rail's list, placeholder
+"Search all projects", asks the host for chats whose title contains the typed
+text, case-insensitively, in every project on the host. It is on a saved host's
+rail, on the phone's chat list and on this computer's rail (see "On this
+computer" below), and only when `initialize.features` lists
+`session.list.title_search` (an older host ignores `query`, so it gets no box,
+and Ctrl+K has nothing to focus).
+
+- `RemoteBackend.searchChats` sends the request through `rawRequest` (the kit's
+  `listChats(query:)` only filters the page it already loaded) with
+  `limit` 100 and the page cursor, keeps the rows in `RemoteChatRows` and
+  returns a `ChatPage`. `StartedBackend.searchChats` carries it to
+  `HostController.remoteSearch`, `RemoteWorkbench` and the rail; it is null when
+  the host lacks the feature.
+- `ChatSearchController` (`chat_search.dart`) owns the box's text and focus. It
+  waits 250 ms after the last keystroke, then asks; every keystroke makes an
+  older answer stale, and a stale answer is dropped, so a slow reply for "qu"
+  never replaces the reply for "quota". Empty text returns to the normal list.
+- While a query is typed the list is the host's answer, grouped by project
+  (`groupByProject`, as the rail does), each title with the typed text marked;
+  a result opens the chat like any row. More than one page ends in "Show more
+  matches". No match reads `No chats match "<query>"` / `Search looks at chat
+  titles on <host>.`; before the first answer it reads "Searching…". A search
+  that fails reads "Search failed", the host's reason and Try again in the same
+  place, and never "no match".
+- Ctrl+K (Cmd+K) focuses the box on desktop, showing the rail first when it is
+  hidden; Escape or the clear button empties it. The phone has no shortcut hint.
+
+On this computer: the rail is the kit's `SessionRail` (agent_kit 0.19.0), which
+takes the host's own field (`search`) in place of its Search row and a
+`searchResults` builder that may swap the session list for the results.
+`AgentWorkbench` passes them as `railSearch` and `railSearchResults`; with
+neither set the rail is as before. The embedded host is asked through the same
+`RemoteBackend.searchChats` (built in `startBubblePaw` only for its search and its
+rows, not as the workbench's backend) and the same `ChatSearchController`,
+`ChatSearchBox` and `ChatSearchResults`. `Workbench` holds the controller, so it
+survives the kit's rebuilds. The box reads "Search all projects", no match reads
+`Search looks at chat titles on this computer.`, and Ctrl+K works as on a saved
+host. The host is bound to one project, so a result of the open project opens in
+place (the kit's `select`), while a result of another project calls
+`HostController.switchWorkspace(path, openChat: id)`, the same restart the project
+menu does, and the new workbench opens that chat (`HostController.openChat` ->
+`Workbench.initialChatId`). A chat without a known project path, or paths that
+`sameWorkspace` calls equal, open in place. A host without the feature keeps the
+kit's Search row.
+
+Context pane: on desktop, the chat header's context button opens the same
+Context pane as on this computer beside a saved host's chat (Now, History,
+Compactions). It reads the context view from the chat snapshot and the
+structure through `loadContext`, `loadHistoryRange` and `loadSummary` on the
+open host; nothing is stored here. A host that does not report the `context`
+capability has no button and no pane, and the phone never has one.
+
+Limits:
+
+- No workspace column next to a saved host's chat beyond the Context pane;
+  the crew shows as the strip under the header.
+- The picker lists only projects that have chats in the loaded list, so a
+  project whose chats are all older than the loaded pages is not offered.
+
+## What is stored where
+
+- Core config (restart-only keys): `remote.mode` (`relay`, `quick`, `domain`),
+  `remote.relay` (default `wss://paw-relay.breadcat.cc`), `remote.hostname`.
+  `remote.enabled` is not written.
+- `preferences.json`: `shareAtStart` (default on) and `deviceName`. Sharing
+  starts with the host only in relay and domain modes, never in quick mode.
+- The Cloudflare API token goes to Core as a secret (owner-only file). It is
+  never in the config or the preferences.
+- cloudflared: downloaded by Core with a checksum check, or found on the path,
+  or a file the person chose (`remote.cloudflared`, below).
+
+## cloudflared and Cloudflare sign-out
+
+- **Choose file.** Where cloudflared is missing the row offers "Download
+  cloudflared" and "Choose file…" (a file picker, `PlatformServices.pickCloudflared`).
+  The path goes to Core's `remote.cloudflared.set` (`RemoteShare.set_cloudflared`).
+  Core runs `--version` first and refuses a missing, non-executable or wrong
+  program; the page shows that reason under the row (`cloudflared-error`) and the
+  earlier choice stands. Core refuses the call from a device that reached the host
+  remotely, so only this computer's page offers it (`RemoteAccess.canChooseCloudflared`;
+  the phone's access answers false).
+- **Chosen reads as chosen.** `CloudflaredStatus.chosen` comes from Core's info. A
+  chosen file reads "cloudflared 2026.9.0, chosen file at <path>", never "managed by
+  BubblePaw" (even when it is the managed copy's path), and has no Update button.
+  "Choose another file…" changes it and "Use managed copy" clears it
+  (`set_cloudflared(None)`: the managed copy, else the one on the path). A chosen
+  file that no longer exists reads "The chosen file is missing".
+- **Restart.** The running sharing keeps the executable it started with: while
+  sharing is on, a change shows "Restart sharing to run the new cloudflared." until
+  sharing stops or starts again.
+- **Sign out.** The Cloudflare panel's Sign out forgets the credential in use: a
+  stored API token (`forget_cloudflare_token`) or a browser sign-in
+  (`RemoteShare.cloudflare_sign_out`, Core's `remote.cloudflare.sign_out`, which
+  removes only `cert.pem`). An API token from the environment is not the app's to
+  forget, and a host that cannot sign out (`canSignOutCloudflare` false) shows no
+  button. The native crate shows a Windows chosen path without the `\?\` prefix Core
+  adds when it resolves it.
+
+## Pairing
+
+The profile (read, edit, full) is fixed when the offer is created, so the
+dialog asks for it first: permissions, then a QR code and a 10-character code
+(valid 5 minutes), then the 6-digit number both sides compare, then done.
+The number step also has a "Device name" field, filled with the name the
+device announced (`PairingRequest.deviceName`); "They match" waits while it is
+empty and `PairingFlow.approve` stores the device under the trimmed name, which
+the Device added line and the Paired devices list then show. The mockup asks
+for the name in a step of its own after the number check; here both are one
+step because the profile is already fixed. Revoking a device closes its live connection.
+
+## Exporting the device key
+
+"Export key file" asks for a passphrase (twice, at least 8 characters) and
+saves `bubblepaw-<first 9 characters of the key ID>.bpkey` straight to the
+Downloads folder, with no save picker, then says "Saved <file> to Downloads."
+`lib/src/platform/key_files.dart` finds the folder: `%USERPROFILE%\Downloads` on
+Windows, `XDG_DOWNLOAD_DIR` from `~/.config/user-dirs.dirs` else `~/Downloads`
+elsewhere. An existing file is never replaced: the name becomes
+`bubblepaw-<id> (2).bpkey`, `(3)` and so on. A missing or unwritable folder shows
+an error under the passphrases and no file is written. On a phone, which has no
+such folder, the save picker is still used. The adapter is
+`PlatformServices.saveKeyFile`, which tests replace.
+
+## Model traffic through a paired device
+
+Core 0.11.0 can send a provider's model requests through another paired
+computer, for a host whose network blocks the provider. It forwards bytes: the
+chat, tools, files and key stay on the device, and TLS ends there. The app only
+sets and shows the grant and the choice.
+
+- **Grant, on the sharing side.** The Pair a device dialog has "Allow this
+  device to send model traffic through this computer", off by default, with
+  one line under it: "The device's model requests pass through this computer.
+  Prompts and keys stay on the device." `PairingFlow.egress` goes to
+  `RemoteAccess.pair(profile, egress:)` and so to the SDK's
+  `RemoteServer::pair_with_egress`. The grant is separate from the read, edit
+  and full profiles. The Paired devices list shows "Model traffic allowed" under
+  a device that has it (`DeviceEntry.egress`). A device paired before Core 0.11
+  has none.
+- **Choice, on the device.** `SavedHostEntry.egress` says whether a saved host
+  granted this device model traffic. On each provider card in Settings > Models,
+  "Send model traffic through…" offers Direct and the saved hosts with
+  `egress` true, by name. The choice is the host setting
+  `providers.<name>.via` (a saved host's device ID, live), written with
+  `config.set`; Direct writes `null`, which removes it. The page reads
+  `providers` with `config.get` and selects the host whose ID is the saved
+  `via`. A `via` that names a host no longer saved here, or one that no longer
+  grants it, stays selected under its ID as "Unavailable", and the host's own
+  setting is not changed. Only codex, responses, chat-completions and
+  anthropic-messages providers accept a `via`, so the picker is shown on those
+  kinds only. The host also needs an https base URL on port 443; when it
+  refuses a write (a non-https base URL, say) the page shows its reason as it is,
+  under that provider's picker.
+- **Only this computer's host.** The saved hosts are this device's. With a saved
+  host open, the settings pages work against that host, whose own saved hosts
+  are not known here, so the picker is not shown.
+- **Errors.** The forwarding host must be sharing. A failed model call already
+  names the device and the reason in the provider's error text, so the app adds
+  nothing for it.
+
+## Provider keys on a saved host
+
+Settings > Models works against the open host, so Add key, Edit key and Remove
+key change the key on the host that runs the provider, not on this device
+(`providers.key.get` needs Read; `providers.key.set` and `providers.key.remove`
+need the Full profile). The pair profile is `HostController.openHost?.profile`;
+this computer's own host has none and always may.
+
+- **Below Full.** With a Read or Edit profile the page still shows Key set or No
+  key, the buttons are present but unavailable, and "Changing a key needs the
+  Full profile. This device has the Edit profile on this host." sits under the
+  card, so nothing fails after a key was typed. A host saved before profiles
+  were kept (empty profile) is left to refuse.
+- **Refusals.** If Core refuses anyway (`-32003`) the dialog shows "This device's
+  profile does not allow changing provider keys. It needs the Full profile." A
+  host older than Core v0.13.0 answers `-32601`: the buttons go away and the page
+  says to update Core. Other refusals show the host's message with the submitted
+  key cut out. The calls use `RawRequest` because the kit's transport drops
+  these codes.
+- **The key.** It goes from the field to the host once and is never stored,
+  logged, reported or shown by the app; the field is emptied after a save, on
+  Cancel and when the dialog closes. See [architecture.md](architecture.md) for
+  the dialog and the host's storage.
+
+## From the tray
+
+The tray menu has a "Share this host" check item, shown while the host runs and
+`HostController.remote` is not null. It is ticked while sharing is on or coming
+up (`RemoteController.share.status` is not `off`: connecting, online or offline
+and retrying). Choosing it calls the same `RemoteController.setEnabled` as the
+Share switch on this page. If sharing then cannot start (a `ShareBlock`, an
+`error` or `failure`, or another program sharing the data directory), the app
+opens Settings on Remote access and shows the window, where the reason is
+written. The status line says how the host is reached: "shared via relay" in
+relay mode, "shared via Cloudflare Tunnel" in the two tunnel modes. The icon
+carries a green dot while shared and a red one while the host is stopped or
+failed (`TrayDot`, `lib/src/platform/tray_icon.dart`; the files are made by
+`assets/icon/tray/make_tray_dots.py`). Tests: `test/tray_test.dart`.
+
+## Tests
+
+Pages run against `test/fake_remote.dart` (`FakeHostLinks` for the hosts
+side, with `Played.hostLinks` and a `RemoteStarter`). Native tests run real Core in
+process with a local relay: a test client pairs with the read profile, calls
+`session.list`, and revoke closes it; the app pairs with a second in-process
+host, opens it and lists its chats, and reads it offline once it stops sharing.
+Model traffic: `test/model_egress_test.dart` (picker, writes, unavailable
+`via`, refusal, the pair grant, the devices' state) and the native test
+`model_traffic_is_granted_only_when_the_host_owner_allows_it` (a real grant shows
+on the host's device list and on the saved host); goldens `settings_models_via*`,
+`settings_remote_pair_egress` and `settings_remote_devices_egress`.
+Sharing settings: `test/remote_page_test.dart` (Choose file accepted and refused
+with the host's reason, chosen against managed wording, clearing back, the restart
+note, nothing offered where the host refuses it, sign-out for a browser sign-in and
+a stored token and none where unavailable or for an environment token, failure copy
+with different codes and delays, an offline share without a failure),
+`test/share_failure_test.dart` (the sentence for each transport) and the native tests
+in `native/src/sharing_tests.rs` (a relay that does not answer reports delays 1 then
+2, an online share has no failure, a refused file leaves the choice, a chosen
+cloudflared reads as chosen and clears; the last needs a shell script, so unix only);
+goldens `settings_remote_cloudflared_chosen`, `settings_remote_cloudflared_refused`,
+`settings_remote_failure_cloudflared` and `settings_remote_failure_relay`.
+Provider keys: `test/provider_key_test.dart` (a saved host at Full, Edit and Read,
+refusals, a host without the methods, the marker key that must never surface) and
+`test/host_settings_test.dart`; goldens `settings_models_keys*`, including
+`settings_models_key_blocked` (a saved host with the Edit profile).
+Pairing name and key export: `test/remote_page_test.dart` (the device name field,
+the save to Downloads and its error), `test/key_files_test.dart` (folder lookup
+and free file names); goldens `settings_remote_pair_confirm` and
+`settings_remote_key_saved`.
+Chat list: `test/remote_chats_test.dart` runs scripted `session.list` rows through
+the kit's backend and the wrapper (statuses, folder names, snapshot path, grouping,
+`session.open` with a workspace, refusals, `waiting_for`);
+`test/local_search_test.dart` runs the same search on this computer's rail (the
+box, grouped and marked results, no match, a stale answer, no box without the
+feature, Ctrl+K, a result of the same project and one of another, `sameWorkspace`);
+`test/chat_search_test.dart` covers chat search (the controller's debounce and
+stale answers, the box, grouped and marked results, no match, a failed search,
+no box without the feature, Ctrl+K, Escape and clear) and `test/remote_chats_test.dart`
+`searchChats`; the `rail_search_*` goldens and `phone-chats-search` show it, and the native test
+`a_saved_host_searches_chat_titles_across_its_projects` searches a real second
+host over the relay;
+`test/remote_rail_test.dart` covers group order, open and close, New chat in a
+project, the picker, the refusal notice and the approval and question row text on
+`test/remote_chats_fakes.dart`; `test/ffi_transport_test.dart` covers `rawRequest`;
+the `rail_remote_chats*` goldens (including `rail_remote_chats_picker`) show it in
+both themes and sizes. The native test `a_saved_host_opens_chats_only_in_workspaces_it_knows`
+opens chats through a real second host: a known workspace works, an unknown one is
+refused with -32003 and its path.
+No external network.

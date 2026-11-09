@@ -24,11 +24,17 @@ class FeedbackChat {
     required this.id,
     required this.title,
     required this.lines,
+    this.parentId,
+    this.archived = false,
   });
 
   final String id;
   final String title;
   final List<ChatLine> lines;
+
+  /// The host's parent chat, set for a child session or a fork.
+  final String? parentId;
+  final bool archived;
 }
 
 class FeedbackController extends ChangeNotifier {
@@ -146,7 +152,26 @@ class FeedbackController extends ChangeNotifier {
       id: id,
       title: snapshot.title,
       lines: chatLines(snapshot.items),
+      parentId: snapshot.parentId,
+      archived: snapshot.archived,
     );
+  }
+
+  /// The file holding the whole of [chat] on this computer; null when the
+  /// chat is on a remote host (the host API gives no path), there is no
+  /// local data folder, or it has a parent (child session or fork: the app
+  /// cannot tell which file). An archived chat is `<id>.db.zst`.
+  String? chatFile(FeedbackChat chat) {
+    if (host.usingScripted || host.openHostId != null) return null;
+    final dir = host.formConfig.dataDirectory.trim();
+    return dir.isEmpty
+        ? null
+        : chatFileFor(
+            dir,
+            chat.id,
+            parentId: chat.parentId,
+            archived: chat.archived,
+          );
   }
 
   /// chat.md for [chat]: the last 20 messages, redacted.
@@ -154,6 +179,7 @@ class FeedbackController extends ChangeNotifier {
     chatId: chat.id,
     title: chat.title,
     lines: chat.lines,
+    chatFile: chatFile(chat),
     home: home,
   );
 

@@ -133,3 +133,84 @@ FakeHostSettings sampleToolSettings({
   toolList: sampleTools,
   skillList: skills ? sampleSkills : const [],
 );
+
+/// The five servers of the approved MCP mockups: a running command server with
+/// one tool off, a signed-in URL server, one that needs sign-in, one that
+/// failed to start, and one turned off.
+const sampleMcpServers = [
+  McpServerStatus(
+    name: 'filesystem',
+    tools: [
+      McpTool(name: 'read_text_file', enabled: true),
+      McpTool(name: 'list_directory', enabled: true),
+      McpTool(name: 'search_files', enabled: true),
+      McpTool(name: 'edit_file', enabled: false),
+    ],
+  ),
+  McpServerStatus(
+    name: 'github',
+    transport: 'http',
+    auth: McpAuthState.signedIn,
+    headers: ['X-Org'],
+    tools: [
+      McpTool(name: 'list_issues', enabled: true),
+      McpTool(name: 'get_pull_request', enabled: true),
+      McpTool(name: 'create_issue_comment', enabled: false),
+    ],
+  ),
+  McpServerStatus(
+    name: 'docs',
+    transport: 'http',
+    auth: McpAuthState.needsSignIn,
+  ),
+  McpServerStatus(
+    name: 'garden-api',
+    state: 'error',
+    error: "Exited with code 1: Cannot find module './tools/garden-mcp.js'",
+  ),
+  McpServerStatus(
+    name: 'sqlite',
+    enabled: false,
+    state: 'stopped',
+    tools: [
+      McpTool(name: 'query', enabled: true),
+      McpTool(name: 'list_tables', enabled: true),
+    ],
+  ),
+];
+
+/// The config behind [sampleMcpServers].
+Map<String, Object?> sampleMcpValues() => {
+  'mcp.servers.filesystem.command': 'npx',
+  'mcp.servers.filesystem.args': [
+    '-y',
+    '@modelcontextprotocol/server-filesystem',
+    '/home/maya/projects/garden-api',
+  ],
+  'mcp.servers.filesystem.cwd': '/home/maya/projects/garden-api',
+  'mcp.servers.filesystem.env': {'LOG_LEVEL': 'info'},
+  'mcp.servers.filesystem.env_from': {'API_TOKEN': 'GARDEN_TOKEN'},
+  'mcp.servers.filesystem.call_timeout_secs': 60,
+  'mcp.servers.filesystem.exclude_tools': ['edit_file'],
+  'mcp.servers.github.url': 'https://mcp.example.com/github',
+  'mcp.servers.github.oauth': true,
+  'mcp.servers.github.call_timeout_secs': 30,
+  'mcp.servers.github.exclude_tools': ['create_issue_comment'],
+  'mcp.servers.docs.url': 'https://mcp.example.com/docs',
+  'mcp.servers.docs.oauth': true,
+  'mcp.servers.docs.call_timeout_secs': 60,
+  'mcp.servers.garden-api.command': 'node',
+  'mcp.servers.garden-api.args': ['./tools/garden-mcp.js'],
+  'mcp.servers.sqlite.command': 'uvx',
+  'mcp.servers.sqlite.args': ['mcp-server-sqlite', '--db-path', './garden.db'],
+  'mcp.servers.sqlite.enabled': false,
+};
+
+/// A host's settings with the sample MCP servers.
+FakeHostSettings sampleMcpSettings({
+  List<McpServerStatus> servers = sampleMcpServers,
+  Map<String, Object?>? extra,
+}) => FakeHostSettings(
+  values: {...sampleMcpValues(), ...?extra},
+  mcpList: servers,
+);

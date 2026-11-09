@@ -1,28 +1,34 @@
-// Settings: General, Models, Tools, Skills, Feedback and About. At expanded and
+// Settings: General, Models, Tools, MCP, Skills, Remote access, Feedback and About. At expanded and
 // medium width a
 // section list sits on the left and the page beside it; at compact width the
 // list is the first screen and a section is pushed over it.
-// Remote access joins the list with the remote work.
 
 import 'package:agent_kit/agent_kit.dart';
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/foundation.dart' show LicenseEntry;
 import 'package:flutter/widgets.dart';
 
+import '../core/host_settings.dart';
 import '../feedback/feedback_controller.dart';
 import '../feedback/glyphs.dart';
 import '../host_controller.dart';
+import '../rust/api/hosts.dart' show HostPresenceKind;
 import '../platform/releases.dart';
 import '../versions.dart';
 import 'about_page.dart';
 import 'feedback_page.dart';
 import 'general_page.dart';
 import 'licences_page.dart';
+import 'mcp_page.dart';
+import 'mcp_servers.dart' show McpPhase, mcpPhase;
 import 'models_page.dart';
+import 'remote_glyphs.dart';
+import 'remote_page.dart';
 import 'settings_section.dart';
 import 'settings_widgets.dart';
 import 'skills_page.dart';
 import 'tools_page.dart';
+import 'toolsets.dart' show ToolsConfig;
 
 class SettingsShell extends StatefulWidget {
   const SettingsShell({
@@ -32,6 +38,7 @@ class SettingsShell extends StatefulWidget {
     required this.onSendFeedback,
     this.services = const PlatformServices(),
     this.onClose,
+    this.phone = false,
     this.licenceSource = LicencesPage.defaultSource,
   });
 
@@ -48,6 +55,9 @@ class SettingsShell extends StatefulWidget {
   /// Leave settings for the chat. Null when there is no chat to go back to.
   final VoidCallback? onClose;
 
+  /// The phone: no host of its own, so no sharing and no Feedback page.
+  final bool phone;
+
   final Stream<LicenseEntry> Function() licenceSource;
 
   @override
@@ -63,6 +73,72 @@ class _SettingsShellState extends State<SettingsShell> {
   void initState() {
     super.initState();
     widget.feedback.addListener(_feedbackChanged);
+    if (widget.phone) {
+      _loadLive();
+      widget.controller.addListener(_hostChanged);
+    }
+  }
+
+  void _hostChanged() {
+    if (mounted) _loadLive();
+  }
+
+  // The phone's list rows for Models, Tools, MCP and Skills, read from the
+  // host when the list opens. Null while loading or when a read failed.
+  final Map<SettingsSection, String?> _live = {};
+  HostSettings? _liveFor;
+  int _liveTicket = 0;
+
+  Future<void> _loadLive({bool force = false}) async {
+    final settings = widget.controller.phase == HostPhase.running
+        ? widget.controller.settings
+        : null;
+    final same = identical(settings, _liveFor);
+    if (same && _live.isNotEmpty && !force) return;
+    _liveFor = settings;
+    final ticket = ++_liveTicket;
+    if (!same) _live.clear();
+    if (settings == null) return;
+    Future<void> read(
+      SettingsSection section,
+      Future<String?> Function() load,
+    ) async {
+      String? text;
+      try {
+        text = await load();
+      } catch (_) {
+        text = null;
+      }
+      if (!mounted || ticket != _liveTicket) return;
+      setState(() => _live[section] = text);
+    }
+
+    await Future.wait([
+      read(SettingsSection.models, () async {
+        final entries = {for (final e in await settings.get('model')) e.key: e};
+        final main = entries['model.main']?.value;
+        return main is String && main.isNotEmpty ? 'Default $main' : null;
+      }),
+      read(SettingsSection.tools, () async {
+        final config = ToolsConfig.parse(await settings.get('agent.toolset'));
+        return 'Main chat uses ${config.main}';
+      }),
+      read(SettingsSection.mcp, () async {
+        final servers = await settings.mcpServers();
+        final running = servers
+            .where((v) => mcpPhase(v) == McpPhase.running)
+            .length;
+        final n = servers.length;
+        return '$n server${n == 1 ? '' : 's'}, $running running';
+      }),
+      read(SettingsSection.skills, () async {
+        final found = await settings.skills();
+        final all = found.skills;
+        if (all.isEmpty) return 'None found';
+        final on = all.where((v) => v.enabled).length;
+        return '$on of ${all.length} on';
+      }),
+    ]);
   }
 
   void _feedbackChanged() {
@@ -72,19 +148,45 @@ class _SettingsShellState extends State<SettingsShell> {
   @override
   void dispose() {
     widget.feedback.removeListener(_feedbackChanged);
+    widget.controller.removeListener(_hostChanged);
     super.dispose();
   }
 
   void _select(SettingsSection? section) => setState(() {
     _section = section;
     _licences = false;
+    // Back on the list, the rows read what the pages may have changed.
+    if (widget.phone && section == null) _loadLive(force: true);
   });
 
-  String _summary(SettingsSection section) => switch (section) {
+  List<SettingsSection> get _sections => [
+    for (final s in SettingsSection.values)
+      if (!(widget.phone && s == SettingsSection.feedback)) s,
+  ];
+
+  /// "2 hosts, 1 online" for the phone's list.
+  String _hostsSummary() {
+    final hosts = widget.controller.hosts;
+    if (hosts == null || !hosts.loaded) return 'Hosts you can open';
+    final n = hosts.hosts.length;
+    final online = hosts.hosts
+        .where((h) => hosts.presenceOf(h.id) == HostPresenceKind.online)
+        .length;
+    return '$n host${n == 1 ? '' : 's'}, $online online';
+  }
+
+  String? _summary(SettingsSection section) => switch (section) {
     SettingsSection.general => themeSummary(widget.controller.prefs.theme),
-    SettingsSection.models => 'Default model and providers',
-    SettingsSection.tools => 'Toolsets and approvals',
-    SettingsSection.skills => 'Discovered skills',
+    SettingsSection.models =>
+      widget.phone ? _live[section] : 'Default model and providers',
+    SettingsSection.tools =>
+      widget.phone ? _live[section] : 'Toolsets and approvals',
+    SettingsSection.mcp =>
+      widget.phone ? _live[section] : 'Servers and sign-in',
+    SettingsSection.skills =>
+      widget.phone ? _live[section] : 'Discovered skills',
+    SettingsSection.remote =>
+      widget.phone ? _hostsSummary() : 'Share this host and pair devices',
     SettingsSection.feedback => switch (widget.feedback.reports.length) {
       0 => 'No reports saved',
       1 => '1 report saved',
@@ -97,7 +199,9 @@ class _SettingsShellState extends State<SettingsShell> {
     SettingsSection.general => glyphSliders,
     SettingsSection.models => glyphLayers,
     SettingsSection.tools => glyphWrench,
+    SettingsSection.mcp => glyphPlug,
     SettingsSection.skills => glyphBookOpen,
+    SettingsSection.remote => glyphGlobe,
     SettingsSection.feedback => glyphMessageSquareText,
     SettingsSection.about => glyphInfo,
   };
@@ -109,11 +213,20 @@ class _SettingsShellState extends State<SettingsShell> {
         key: const ValueKey('page-general'),
         controller: host,
         onBack: onBack,
+        phone: widget.phone,
       ),
       SettingsSection.models => ModelsPage(
         key: const ValueKey('page-models'),
         backend: host.phase == HostPhase.running ? host.backend : null,
         settings: host.phase == HostPhase.running ? host.settings : null,
+        // The saved hosts here are this computer's, so they are offered only
+        // while this computer's host is the one being configured.
+        hosts: host.openHostId == null ? host.hosts : null,
+        // Keys are changed with the Full profile only; this computer's own
+        // host has no pair profile.
+        hostProfile: host.openHostId == null
+            ? null
+            : host.openHost?.profile ?? '',
         onBack: onBack,
       ),
       SettingsSection.tools => ToolsPage(
@@ -121,9 +234,26 @@ class _SettingsShellState extends State<SettingsShell> {
         settings: host.phase == HostPhase.running ? host.settings : null,
         onBack: onBack,
       ),
+      SettingsSection.mcp => McpPage(
+        key: const ValueKey('page-mcp'),
+        settings: host.phase == HostPhase.running ? host.settings : null,
+        services: widget.services,
+        onBack: onBack,
+      ),
       SettingsSection.skills => SkillsPage(
         key: const ValueKey('page-skills'),
         settings: host.phase == HostPhase.running ? host.settings : null,
+        onBack: onBack,
+      ),
+      SettingsSection.remote => RemotePage(
+        key: const ValueKey('page-remote'),
+        remote: host.phase == HostPhase.running ? host.remote : null,
+        hosts: host.hosts,
+        deviceName: host.deviceName,
+        addHostPending: host.addHostPending,
+        onAddHostHandled: host.addHostHandled,
+        phone: widget.phone,
+        services: widget.services,
         onBack: onBack,
       ),
       SettingsSection.feedback => FeedbackPage(
@@ -148,6 +278,7 @@ class _SettingsShellState extends State<SettingsShell> {
                 onViewFeedback: () => _select(SettingsSection.feedback),
                 onLicences: () => setState(() => _licences = true),
                 onBack: onBack,
+                phone: widget.phone,
               ),
     };
   }
@@ -164,20 +295,26 @@ class _SettingsShellState extends State<SettingsShell> {
             if (section != null) {
               return _page(section, onBack: () => _select(null));
             }
-            return SettingsPage(
-              title: 'Settings',
-              onBack: widget.onClose,
-              backKey: const ValueKey('settings-back'),
-              children: [
-                for (final s in SettingsSection.values)
-                  _ListRow(
-                    key: ValueKey('settings-nav-${s.name}'),
-                    title: s.title,
-                    summary: _summary(s),
-                    glyph: _glyph(s),
-                    onTap: () => _select(s),
-                  ),
-              ],
+            final hosts = widget.controller.hosts;
+            return ListenableBuilder(
+              listenable: hosts == null
+                  ? widget.controller
+                  : Listenable.merge([widget.controller, hosts]),
+              builder: (context, _) => SettingsPage(
+                title: 'Settings',
+                onBack: widget.onClose,
+                backKey: const ValueKey('settings-back'),
+                children: [
+                  for (final s in _sections)
+                    _ListRow(
+                      key: ValueKey('settings-nav-${s.name}'),
+                      title: s.title,
+                      summary: _summary(s),
+                      glyph: _glyph(s),
+                      onTap: () => _select(s),
+                    ),
+                ],
+              ),
             );
           }
           final section = _section ?? SettingsSection.general;
@@ -189,6 +326,7 @@ class _SettingsShellState extends State<SettingsShell> {
                 glyphOf: _glyph,
                 onSelect: _select,
                 onClose: widget.onClose,
+                sections: _sections,
               ),
               Expanded(child: _page(section)),
             ],
@@ -205,8 +343,10 @@ class _Nav extends StatelessWidget {
     required this.glyphOf,
     required this.onSelect,
     required this.onClose,
+    required this.sections,
   });
 
+  final List<SettingsSection> sections;
   final SettingsSection selected;
   final LucideGlyph Function(SettingsSection) glyphOf;
   final ValueChanged<SettingsSection> onSelect;
@@ -255,7 +395,7 @@ class _Nav extends StatelessWidget {
                   ),
                 ),
               ),
-              for (final s in SettingsSection.values)
+              for (final s in sections)
                 _NavItem(
                   key: ValueKey('settings-nav-${s.name}'),
                   title: s.title,
@@ -339,7 +479,9 @@ class _ListRow extends StatelessWidget {
   });
 
   final String title;
-  final String summary;
+
+  /// Null or empty draws the row without a summary line.
+  final String? summary;
   final LucideGlyph glyph;
   final VoidCallback onTap;
 
@@ -348,7 +490,7 @@ class _ListRow extends StatelessWidget {
     final theme = context.bb;
     return Semantics(
       button: true,
-      label: '$title. $summary',
+      label: summary == null || summary!.isEmpty ? title : '$title. $summary',
       excludeSemantics: true,
       child: Hover(
         onTap: onTap,
@@ -366,10 +508,11 @@ class _ListRow extends StatelessWidget {
                     title,
                     style: ts(theme.typeScale.body, theme.ink, weight: 600),
                   ),
-                  Text(
-                    summary,
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
-                  ),
+                  if (summary != null && summary!.isNotEmpty)
+                    Text(
+                      summary!,
+                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                    ),
                 ],
               ),
             ),

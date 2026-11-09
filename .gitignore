@@ -12,3 +12,4 @@ pubspec.lock
 .cursor/
 .vscode/
 /test/failures/
+/android/

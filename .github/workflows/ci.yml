@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -50,14 +50,14 @@ jobs:
         run: flutter test --exclude-tags "golden || native"
       # Goldens are rendered on Linux with the bundled fonts. To accept new
       # renders, run this workflow by hand (workflow_dispatch): the last step
-      # formats the code, re-renders the goldens and uploads the result as
-      # fix.patch (`git apply fix.patch`).
+      # regenerates the flutter_rust_bridge code, formats the code, re-renders
+      # the goldens and uploads the result as fix.patch (`git apply fix.patch`).
       - name: goldens
         if: always()
         run: flutter test --tags golden
       - name: Save golden failures
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: golden-failures
           path: test/failures
@@ -68,6 +68,13 @@ jobs:
           cargo fmt --manifest-path native/Cargo.toml --check
           cargo clippy --manifest-path native/Cargo.toml --all-targets -- -D warnings
           cargo test --manifest-path native/Cargo.toml
+      # The phone build: the same crate without the embedded host. The test
+      # pairs with and opens an in-process host through a local relay.
+      - name: native crate, remote only (clippy, tests)
+        if: always()
+        run: |
+          cargo clippy --manifest-path native/Cargo.toml --all-targets --no-default-features -- -D warnings
+          cargo test --manifest-path native/Cargo.toml --no-default-features
       # Scripted provider only: no model is called. The Dart FFI transport
       # runs against the crate built here.
       - name: native host (FFI transport, real crate)
@@ -92,6 +99,9 @@ jobs:
       - name: Patch with formatting and new goldens (manual runs)
         if: always() && github.event_name == 'workflow_dispatch'
         run: |
+          # The bridge code follows native/src/api (committed, regenerated here).
+          cargo install flutter_rust_bridge_codegen --version 2.13.0 --locked
+          flutter_rust_bridge_codegen generate
           dart format lib test
           flutter test --tags golden --update-goldens || true
           rm -rf test/failures
@@ -104,7 +114,7 @@ jobs:
           echo "PATCH-END"
       - name: Save patch
         if: always() && github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fix-patch
           path: fix.patch
@@ -115,10 +125,10 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
           flutter-version: 3.47.7
@@ -136,3 +146,94 @@ jobs:
       - name: windows build (debug)
         if: always()
         run: flutter build windows --debug
+
+  android:
+    name: phone app (arm64 debug APK)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+      - name: rust toolchain
+        run: rustup toolchain install stable --profile minimal && rustup default stable && rustup target add aarch64-linux-android
+      - name: cargo-ndk
+        run: cargo install cargo-ndk --locked
+      - run: flutter pub get
+      - name: android project
+        run: |
+          flutter create --platforms=android --org cc.breadcat --project-name bubblepaw_desktop .
+          python3 tool/android_setup.py
+      - name: native crate for arm64 (remote client only)
+        run: |
+          export ANDROID_NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          cd native
+          cargo ndk -t arm64-v8a -o ../android/app/src/main/jniLibs build --release --no-default-features
+      - name: apk (debug-signed)
+        run: flutter build apk --debug -t lib/main_phone.dart --target-platform android-arm64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bubblepaw-phone-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+
+  android-smoke:
+    name: phone app starts on an emulator (x86_64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+      - name: rust toolchain
+        run: rustup toolchain install stable --profile minimal && rustup default stable && rustup target add x86_64-linux-android
+      - name: cargo-ndk
+        run: cargo install cargo-ndk --locked
+      - run: flutter pub get
+      - name: android project
+        env:
+          ANDROID_ABI: x86_64
+        run: |
+          flutter create --platforms=android --org cc.breadcat --project-name bubblepaw_desktop .
+          python3 tool/android_setup.py
+      - name: native crate for x86_64 (remote client only)
+        run: |
+          export ANDROID_NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          cd native
+          cargo ndk -t x86_64 -o ../android/app/src/main/jniLibs build --release --no-default-features
+      - name: apk (debug, x86_64, for the emulator only)
+        run: flutter build apk --debug -t lib/main_phone.dart --target-platform android-x64
+      - name: enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: launch on the emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 33
+          arch: x86_64
+          target: google_apis
+          script: bash tool/android_smoke.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: phone-emulator-screenshot
+          path: smoke.png
+          if-no-files-found: ignore

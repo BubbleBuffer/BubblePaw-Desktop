@@ -14,16 +14,26 @@ import 'package:flutter/services.dart'
     show HardwareKeyboard, KeyDownEvent, KeyEvent, LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 
+import 'config.dart' show sameWorkspace;
 import 'feedback/feedback_controller.dart';
 import 'feedback/feedback_sheet.dart';
 import 'guarded_backend.dart';
 import 'host_controller.dart';
+import 'search/chat_search.dart' show ChatSearchController, ChatSearcher;
+import 'search/search_widgets.dart';
+import 'remote/host_links.dart';
+import 'remote/hosts_controller.dart';
+import 'remote/project_groups.dart';
+import 'remote/remote_chats.dart';
+import 'remote/remote_workbench.dart';
 import 'pick_folder.dart' as picker;
 import 'platform/releases.dart';
 import 'preferences.dart';
 import 'screens/diff_review.dart';
+import 'screens/host_open_notice.dart';
 import 'screens/needs_setup_notice.dart';
 import 'screens/notice.dart';
+import 'screens/phone_home.dart';
 import 'screens/saved_notice.dart';
 import 'screens/tray_notice.dart';
 import 'screens/update_dialog.dart';
@@ -215,6 +225,24 @@ class _AppShellState extends State<AppShell> {
                 onDismiss: feedback.dismissSaved,
               ),
             ),
+          if (controller.openError != null)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom:
+                  (controller.trayNoticePending ? 72 : 16) +
+                  (controller.needsSetupPending ? 56 : 0) +
+                  (feedback.savedId != null ? 56 : 0),
+              // Bounded on both sides, so a long message wraps on a phone.
+              child: Align(
+                alignment: Alignment.bottomRight,
+                heightFactor: 1,
+                child: HostOpenNotice(
+                  message: controller.openError!,
+                  onDismiss: controller.dismissOpenError,
+                ),
+              ),
+            ),
           if (controller.updates.dialogOpen)
             Positioned.fill(
               child: UpdateDialog(
@@ -226,6 +254,58 @@ class _AppShellState extends State<AppShell> {
       ),
     ),
   );
+
+  /// The hosts in the switcher; null when this app has no saved hosts side.
+  HostMenu? _hostMenu() {
+    final hosts = controller.hosts;
+    if (hosts == null) return null;
+    return HostMenu(
+      listenable: Listenable.merge([controller, hosts]),
+      choices: () => hostChoices(controller, hosts),
+      onPick: (id) {
+        if (id == null) {
+          unawaited(controller.openLocalHost());
+        } else {
+          unawaited(controller.openRemoteHost(id));
+        }
+      },
+      onAdd: controller.requestAddHost,
+    );
+  }
+
+  /// The phone: the open host's chats, or the empty home without one.
+  Widget _phone() {
+    final backend = controller.backend;
+    final hosts = controller.hosts;
+    if (backend == null) {
+      return ListenableBuilder(
+        listenable: hosts ?? controller,
+        builder: (context, _) => PhoneHome(
+          hostMenu: _hostMenu(),
+          onSettings: controller.openSettings,
+          hasHosts: hosts != null && hosts.hosts.isNotEmpty,
+          opening: controller.opening,
+        ),
+      );
+    }
+    return Workbench(
+      // A new host is a new workbench.
+      key: ObjectKey(backend),
+      backend: backend,
+      createdChats: controller.createdChats,
+      now: controller.now,
+      workspaceName: '',
+      initials: '',
+      onSettings: controller.openSettings,
+      hostMenu: _hostMenu(),
+      remoteRows: controller.remoteRows,
+      remoteRail: controller.remoteRail,
+      remoteSearch: controller.remoteSearch,
+      remoteName: controller.openHost?.label ?? 'Host',
+      finishedTurnsOpen: controller.prefs.turnLayout == TurnLayoutSetting.open,
+      phone: true,
+    );
+  }
 
   Widget _screen(BuildContext context) {
     final pickFolder = widget.pickFolder;
@@ -241,8 +321,10 @@ class _AppShellState extends State<AppShell> {
         onSendFeedback: () => unawaited(_sendFeedback()),
         licenceSource: licenceSource,
         onClose: controller.closeSettings,
+        phone: !controller.localHost,
       );
     }
+    if (!controller.localHost) return _phone();
     return switch (controller.phase) {
       HostPhase.stopped => Notice(
         title: 'The host is not running',
@@ -303,7 +385,19 @@ class _AppShellState extends State<AppShell> {
         workspaces: controller.recentWorkspaces,
         onSwitchWorkspace: (path) =>
             unawaited(controller.switchWorkspace(path)),
+        onOpenChatIn: (path, chatId) =>
+            unawaited(controller.switchWorkspace(path, openChat: chatId)),
+        initialChatId: controller.openChat,
+        localSearch: controller.localSearch,
+        localWorkspaceOf: controller.localWorkspaceOf,
         pickFolder: pickFolder,
+        hostMenu: _hostMenu(),
+        remoteRows: controller.remoteRows,
+        remoteRail: controller.remoteRail,
+        remoteSearch: controller.remoteSearch,
+        remoteName: controller.openHost?.label ?? 'Host',
+        finishedTurnsOpen:
+            controller.prefs.turnLayout == TurnLayoutSetting.open,
       ),
     };
   }
@@ -319,11 +413,45 @@ class Workbench extends StatefulWidget {
     required this.onSettings,
     this.workspace = '',
     this.workspaces = const [],
+    this.hostMenu,
     this.onSwitchWorkspace,
     this.pickFolder,
     this.createdChats,
     this.now,
+    this.remoteRows,
+    this.remoteRail,
+    this.remoteSearch,
+    this.remoteName = 'Host',
+    this.localSearch,
+    this.localWorkspaceOf,
+    this.onOpenChatIn,
+    this.initialChatId,
+    this.phone = false,
+    this.finishedTurnsOpen = false,
   });
+
+  /// How this computer's host searches chat titles; null when it cannot, and
+  /// the rail then keeps its plain Search row.
+  final ChatSearcher? localSearch;
+
+  /// A chat's project path on this computer's host, to group search results
+  /// and to tell a chat of another project.
+  final String? Function(String chatId)? localWorkspaceOf;
+
+  /// Picks a search result of another project: switches to the project at
+  /// the path and opens the chat there.
+  final void Function(String path, String chatId)? onOpenChatIn;
+
+  /// The chat to open first.
+  final String? initialChatId;
+
+  /// Whether the steps of a finished turn start open (Settings, General, Turn
+  /// layout).
+  final bool finishedTurnsOpen;
+
+  /// A phone: the chat list is home, a chat opens over it, and the host menu
+  /// is a sheet from the bottom.
+  final bool phone;
 
   final GuardedBackend backend;
   final Stream<ChatSummary>? createdChats;
@@ -342,6 +470,19 @@ class Workbench extends StatefulWidget {
   /// Asks for a folder for "Open folder…".
   final Future<String?> Function()? pickFolder;
 
+  /// The hosts group of the rail menu; null for none.
+  final HostMenu? hostMenu;
+
+  /// Set for an open saved host: its chat rows, which project groups are
+  /// open and its name. The rail then groups the chats by project.
+  final RemoteChatRows? remoteRows;
+  final ProjectRailState? remoteRail;
+
+  /// How the open saved host searches chat titles; null when it cannot, and
+  /// the rail then has no search box.
+  final ChatSearcher? remoteSearch;
+  final String remoteName;
+
   @override
   State<Workbench> createState() => _WorkbenchState();
 }
@@ -350,17 +491,29 @@ class _WorkbenchState extends State<Workbench> {
   StreamSubscription<ChatSummary>? _created;
   String? _openChatId;
   FileDiff? _review;
+  final RailController _rail = RailController();
+
+  // Chat search in the rail of this computer's host; a saved host's
+  // RemoteWorkbench has its own.
+  late final ChatSearchController? _search =
+      widget.remoteRows == null && !widget.phone && widget.localSearch != null
+      ? ChatSearchController(searcher: widget.localSearch!)
+      : null;
 
   // The workspace holds the Context pane. Without the capability the pane
-  // has nothing to show, so the workbench gets no workspace at all.
+  // has nothing to show, so the workbench gets no workspace at all. The
+  // phone has no room beside the chat.
   late final WorkspaceController? _workspace =
-      widget.backend.capabilities.has(KitCapability.context)
+      !widget.phone && widget.backend.capabilities.has(KitCapability.context)
       ? (WorkspaceController()..addPane(WorkspaceKind.context.id))
       : null;
 
   @override
   void initState() {
     super.initState();
+    _openChatId = widget.initialChatId;
+    // Not a focus shortcut: Ctrl+K works from the chat as well.
+    if (_search != null) HardwareKeyboard.instance.addHandler(_onSearchKey);
     // A rewind makes a new chat; open it. The key also refreshes the rail.
     _created = widget.createdChats?.listen((chat) {
       if (mounted) setState(() => _openChatId = chat.id);
@@ -370,11 +523,64 @@ class _WorkbenchState extends State<Workbench> {
   @override
   void dispose() {
     unawaited(_created?.cancel());
+    HardwareKeyboard.instance.removeHandler(_onSearchKey);
+    _search?.dispose();
+    _rail.dispose();
     _workspace?.dispose();
     super.dispose();
   }
 
+  /// Ctrl+K (Cmd+K) puts the cursor in the search box, showing the rail
+  /// first when it is hidden.
+  bool _onSearchKey(KeyEvent event) {
+    if (_search == null ||
+        event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.keyK ||
+        !(HardwareKeyboard.instance.isControlPressed ||
+            HardwareKeyboard.instance.isMetaPressed)) {
+      return false;
+    }
+    _rail.show(SizeClass.forWidth(MediaQuery.sizeOf(context).width));
+    _focusSearch();
+    return true;
+  }
+
+  // A rail that was hidden builds its box a few frames later; ask again until
+  // the box is there.
+  void _focusSearch([int tries = 30]) {
+    final search = _search;
+    if (search == null || !mounted) return;
+    search.focus.requestFocus();
+    if (search.focus.context == null && tries > 0) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _focusSearch(tries - 1),
+      );
+    }
+  }
+
+  // A result of this project opens in place; one of another project switches
+  // to that project first, as the project menu does, and opens there.
+  void _openResult(ChatSummary chat, ValueChanged<ChatSummary> select) {
+    final path = widget.localWorkspaceOf?.call(chat.id);
+    final here = widget.workspace;
+    final switchTo = widget.onOpenChatIn;
+    if (switchTo != null &&
+        path != null &&
+        path.isNotEmpty &&
+        here.isNotEmpty &&
+        !sameWorkspace(path, here)) {
+      switchTo(path, chat.id);
+      return;
+    }
+    select(chat);
+  }
+
   void _openWorkspaceMenu() {
+    if (widget.phone) {
+      final hosts = widget.hostMenu;
+      if (hosts != null) unawaited(showHostSheet(context, hosts: hosts));
+      return;
+    }
     final switchTo = widget.onSwitchWorkspace;
     if (switchTo == null) return;
     unawaited(
@@ -382,6 +588,7 @@ class _WorkbenchState extends State<Workbench> {
         context,
         current: widget.workspace,
         workspaces: widget.workspaces,
+        hosts: widget.hostMenu,
         onPick: switchTo,
         onOpenFolder: () async {
           final path = await widget.pickFolder?.call();
@@ -397,28 +604,79 @@ class _WorkbenchState extends State<Workbench> {
   Widget build(BuildContext context) => Stack(
     children: [
       Positioned.fill(
-        child: AgentWorkbench(
-          key: ValueKey(_openChatId),
-          backend: widget.backend,
-          initialChatId: _openChatId,
-          workspaceName: widget.workspaceName,
-          initials: widget.initials,
-          workspaceController: _workspace,
-          workspacePaneBuilder: _workspace == null
-              ? null
-              : (context, tab) => const SizedBox.shrink(),
-          now: widget.now,
-          onSettings: widget.onSettings,
-          onSwitchWorkspace: _openWorkspaceMenu,
-          onReviewApproval: (approval) {
-            final diff = approval.diff;
-            if (diff != null) _showDiff(diff);
-          },
-          transcriptActions: TranscriptActions(
-            now: widget.now,
-            onReviewDiff: (edit) => _showDiff(edit.diff),
-          ),
-        ),
+        child: widget.remoteRows != null && widget.remoteRail != null
+            ? RemoteWorkbench(
+                backend: widget.backend,
+                rows: widget.remoteRows!,
+                state: widget.remoteRail!,
+                search: widget.remoteSearch,
+                hostName: widget.remoteName,
+                startOnList: widget.phone,
+                initialChatId: _openChatId,
+                now: widget.now,
+                onSettings: widget.onSettings,
+                onSwitchHost: _openWorkspaceMenu,
+                workspaceController: _workspace,
+                transcriptActions: TranscriptActions(
+                  now: widget.now,
+                  onReviewDiff: (edit) => _showDiff(edit.diff),
+                  finishedActivityOpen: widget.finishedTurnsOpen,
+                ),
+                onReviewApproval: (approval) {
+                  final diff = approval.diff;
+                  if (diff != null) _showDiff(diff);
+                },
+              )
+            : AgentWorkbench(
+                key: ValueKey(_openChatId),
+                backend: widget.backend,
+                initialChatId: _openChatId,
+                railController: _rail,
+                railSearch: _search == null
+                    ? null
+                    : Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: ChatSearchBox(
+                          search: _search,
+                          showKeyHint: true,
+                        ),
+                      ),
+                railSearchResults: _search == null
+                    ? null
+                    : (context, sessions, selectedId, select) =>
+                          ListenableBuilder(
+                            listenable: _search,
+                            builder: (context, _) => _search.active
+                                ? ChatSearchResults(
+                                    search: _search,
+                                    hostName: 'this computer',
+                                    pathOf: widget.localWorkspaceOf,
+                                    selectedId: selectedId,
+                                    now: widget.now,
+                                    onSelect: (chat) =>
+                                        _openResult(chat, select),
+                                  )
+                                : sessions,
+                          ),
+                workspaceName: widget.workspaceName,
+                initials: widget.initials,
+                workspaceController: _workspace,
+                workspacePaneBuilder: _workspace == null
+                    ? null
+                    : (context, tab) => const SizedBox.shrink(),
+                now: widget.now,
+                onSettings: widget.onSettings,
+                onSwitchWorkspace: _openWorkspaceMenu,
+                onReviewApproval: (approval) {
+                  final diff = approval.diff;
+                  if (diff != null) _showDiff(diff);
+                },
+                transcriptActions: TranscriptActions(
+                  now: widget.now,
+                  onReviewDiff: (edit) => _showDiff(edit.diff),
+                  finishedActivityOpen: widget.finishedTurnsOpen,
+                ),
+              ),
       ),
       if (_review != null)
         Positioned.fill(
@@ -430,3 +688,35 @@ class _WorkbenchState extends State<Workbench> {
     ],
   );
 }
+
+/// The rows of the host switcher: this computer, then each saved host with
+/// whether it answers.
+List<HostChoice> hostChoices(HostController controller, HostsController hosts) {
+  final open = controller.openHostId;
+  return [
+    if (controller.localHost)
+      HostChoice(
+        id: null,
+        name: 'This computer',
+        state: 'Running',
+        dot: true,
+        selected: open == null,
+      ),
+    for (final h in hosts.hosts)
+      HostChoice(
+        id: h.id,
+        name: h.label,
+        state: switch (hosts.presenceOf(h.id)) {
+          HostPresenceKind.online => 'Online · ${_via(h.via)}',
+          HostPresenceKind.offline => 'Offline',
+          HostPresenceKind.unknown => 'Not checked',
+          null => 'Checking',
+        },
+        dot: hosts.presenceOf(h.id) == HostPresenceKind.online,
+        selected: open == h.id,
+      ),
+  ];
+}
+
+String _via(HostVia via) =>
+    via == HostVia.relay ? 'Relay' : 'Cloudflare Tunnel';

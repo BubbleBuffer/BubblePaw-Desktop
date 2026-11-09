@@ -4,6 +4,8 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/host.dart';
+import 'api/hosts.dart';
+import 'api/remote.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -69,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 497170995;
+  int get rustContentHash => -1996710592;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -91,6 +93,11 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiHostBubblePawHostClose({required BubblePawHost that});
 
+  Future<BubblePawHost> crateApiHostBubblePawHostConnectSaved({
+    required String dataDir,
+    required String hostId,
+  });
+
   Stream<String> crateApiHostBubblePawHostNotifications({
     required BubblePawHost that,
   });
@@ -100,9 +107,202 @@ abstract class RustLibApi extends BaseApi {
     required String workspaceDir,
   });
 
+  Future<void> crateApiHostsHostPairingCancel({required HostPairing that});
+
+  String crateApiHostsHostPairingComparison({required HostPairing that});
+
+  Future<SavedHostEntry> crateApiHostsHostPairingFinish({
+    required HostPairing that,
+  });
+
+  String crateApiHostsHostPairingHostId({required HostPairing that});
+
+  String crateApiHostsHostPairingHostName({required HostPairing that});
+
+  String crateApiRemotePairOfferAddress({required PairOffer that});
+
+  Future<void> crateApiRemotePairOfferCancel({required PairOffer that});
+
+  String crateApiRemotePairOfferCode({required PairOffer that});
+
+  int crateApiRemotePairOfferExpiresInSecs({required PairOffer that});
+
+  Future<PairRequest?> crateApiRemotePairOfferNextRequest({
+    required PairOffer that,
+  });
+
+  String crateApiRemotePairOfferQrPayload({required PairOffer that});
+
+  Future<DeviceEntry> crateApiRemotePairRequestApprove({
+    required PairRequest that,
+    required String name,
+  });
+
+  String crateApiRemotePairRequestComparison({required PairRequest that});
+
+  Future<void> crateApiRemotePairRequestDecline({required PairRequest that});
+
+  String crateApiRemotePairRequestDeviceId({required PairRequest that});
+
+  String crateApiRemotePairRequestDeviceName({required PairRequest that});
+
+  Future<void> crateApiRemoteRemoteShareCheckHostname({
+    required RemoteShare that,
+    required String hostname,
+  });
+
+  Future<bool> crateApiRemoteRemoteShareCloudflareSignOut({
+    required RemoteShare that,
+  });
+
+  Future<CloudflareStatus> crateApiRemoteRemoteShareCloudflareStatus({
+    required RemoteShare that,
+  });
+
+  Future<CloudflaredStatus> crateApiRemoteRemoteShareCloudflaredInfo({
+    required RemoteShare that,
+  });
+
+  Future<List<DeviceEntry>> crateApiRemoteRemoteShareDevices({
+    required RemoteShare that,
+  });
+
+  Future<void> crateApiRemoteRemoteShareExportKey({
+    required RemoteShare that,
+    required String dest,
+    required String passphrase,
+  });
+
+  Future<void> crateApiRemoteRemoteShareForgetCloudflareToken({
+    required RemoteShare that,
+  });
+
+  Future<KeyChange> crateApiRemoteRemoteShareImportKey({
+    required RemoteShare that,
+    required String src,
+    required String passphrase,
+  });
+
+  Future<CloudflaredStatus> crateApiRemoteRemoteShareInstallCloudflared({
+    required RemoteShare that,
+  });
+
+  Future<KeyInfo> crateApiRemoteRemoteShareKeyInfo({required RemoteShare that});
+
+  Future<void> crateApiRemoteRemoteShareLoginCancel({
+    required RemoteShare that,
+  });
+
+  Future<LoginPrompt> crateApiRemoteRemoteShareLoginStart({
+    required RemoteShare that,
+  });
+
+  Future<bool> crateApiRemoteRemoteShareLoginWait({
+    required RemoteShare that,
+    required int timeoutSecs,
+  });
+
+  RemoteShare crateApiRemoteRemoteShareNew({
+    required BubblePawHost host,
+    required String dataDir,
+    required String workspaceDir,
+    required String deviceName,
+  });
+
+  Future<PairOffer> crateApiRemoteRemoteSharePair({
+    required RemoteShare that,
+    required String profile,
+    required bool egress,
+  });
+
+  Future<KeyChange> crateApiRemoteRemoteShareRegenerateKey({
+    required RemoteShare that,
+  });
+
+  Future<bool> crateApiRemoteRemoteShareRevoke({
+    required RemoteShare that,
+    required String id,
+  });
+
+  Future<OtherShare> crateApiRemoteRemoteShareServeStatus({
+    required RemoteShare that,
+  });
+
+  Future<CloudflaredStatus> crateApiRemoteRemoteShareSetCloudflared({
+    required RemoteShare that,
+    String? path,
+  });
+
+  Future<ShareState> crateApiRemoteRemoteShareStart({
+    required RemoteShare that,
+  });
+
+  Future<ShareState> crateApiRemoteRemoteShareState({
+    required RemoteShare that,
+  });
+
+  Future<void> crateApiRemoteRemoteShareStop({required RemoteShare that});
+
+  Future<void> crateApiRemoteRemoteShareStoreCloudflareToken({
+    required RemoteShare that,
+    required String token,
+  });
+
+  Future<CloudflaredStatus> crateApiRemoteRemoteShareUpdateCloudflared({
+    required RemoteShare that,
+  });
+
+  Stream<ShareState> crateApiRemoteRemoteShareWatch({
+    required RemoteShare that,
+  });
+
   String crateApiHostCoreVersion();
 
+  Future<KeyInfo> crateApiHostsDeviceKeyInfo({required String dataDir});
+
+  Future<void> crateApiHostsExportDeviceKey({
+    required String dataDir,
+    required String dest,
+    required String passphrase,
+  });
+
+  Future<bool> crateApiHostsForgetSavedHost({
+    required String dataDir,
+    required String id,
+  });
+
+  Future<KeyChange> crateApiHostsImportDeviceKey({
+    required String dataDir,
+    required String src,
+    required String passphrase,
+  });
+
   Future<void> crateApiHostInitApp();
+
+  Future<List<SavedHostEntry>> crateApiHostsListSavedHosts({
+    required String dataDir,
+  });
+
+  Future<HostPairing> crateApiHostsPairWithHost({
+    required String dataDir,
+    required String link,
+    required String deviceName,
+  });
+
+  LinkTarget crateApiHostsParsePairingLink({required String text});
+
+  Future<HostPresenceKind> crateApiHostsProbeSavedHost({
+    required String dataDir,
+    required String id,
+    required int timeoutSecs,
+  });
+
+  Future<KeyChange> crateApiHostsRegenerateDeviceKey({required String dataDir});
+
+  Future<ShareSettings> crateApiRemoteShareSettings({
+    required String dataDir,
+    required String workspaceDir,
+  });
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_BubblePawHost;
@@ -112,6 +312,38 @@ abstract class RustLibApi extends BaseApi {
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_BubblePawHostPtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_HostPairing;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_HostPairing;
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_HostPairingPtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_PairOffer;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_PairOffer;
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PairOfferPtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_PairRequest;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_PairRequest;
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PairRequestPtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_RemoteShare;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_RemoteShare;
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_RemoteSharePtr;
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -223,6 +455,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "BubblePawHost_close", argNames: ["that"]);
 
   @override
+  Future<BubblePawHost> crateApiHostBubblePawHostConnectSaved({
+    required String dataDir,
+    required String hostId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          sse_encode_String(hostId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostBubblePawHostConnectSavedConstMeta,
+        argValues: [dataDir, hostId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostBubblePawHostConnectSavedConstMeta =>
+      const TaskConstMeta(
+        debugName: "BubblePawHost_connect_saved",
+        argNames: ["dataDir", "hostId"],
+      );
+
+  @override
   Stream<String> crateApiHostBubblePawHostNotifications({
     required BubblePawHost that,
   }) {
@@ -240,7 +508,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 4,
+              funcId: 5,
               port: port_,
             );
           },
@@ -277,7 +545,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 6,
             port: port_,
           );
         },
@@ -300,12 +568,1410 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiHostsHostPairingCancel({required HostPairing that}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiHostsHostPairingCancelConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsHostPairingCancelConstMeta =>
+      const TaskConstMeta(debugName: "HostPairing_cancel", argNames: ["that"]);
+
+  @override
+  String crateApiHostsHostPairingComparison({required HostPairing that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiHostsHostPairingComparisonConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsHostPairingComparisonConstMeta =>
+      const TaskConstMeta(
+        debugName: "HostPairing_comparison",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<SavedHostEntry> crateApiHostsHostPairingFinish({
+    required HostPairing that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_saved_host_entry,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsHostPairingFinishConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsHostPairingFinishConstMeta =>
+      const TaskConstMeta(debugName: "HostPairing_finish", argNames: ["that"]);
+
+  @override
+  String crateApiHostsHostPairingHostId({required HostPairing that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiHostsHostPairingHostIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsHostPairingHostIdConstMeta =>
+      const TaskConstMeta(debugName: "HostPairing_host_id", argNames: ["that"]);
+
+  @override
+  String crateApiHostsHostPairingHostName({required HostPairing that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiHostsHostPairingHostNameConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsHostPairingHostNameConstMeta =>
+      const TaskConstMeta(
+        debugName: "HostPairing_host_name",
+        argNames: ["that"],
+      );
+
+  @override
+  String crateApiRemotePairOfferAddress({required PairOffer that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRemotePairOfferAddressConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemotePairOfferAddressConstMeta =>
+      const TaskConstMeta(debugName: "PairOffer_address", argNames: ["that"]);
+
+  @override
+  Future<void> crateApiRemotePairOfferCancel({required PairOffer that}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 13,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRemotePairOfferCancelConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemotePairOfferCancelConstMeta =>
+      const TaskConstMeta(debugName: "PairOffer_cancel", argNames: ["that"]);
+
+  @override
+  String crateApiRemotePairOfferCode({required PairOffer that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRemotePairOfferCodeConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemotePairOfferCodeConstMeta =>
+      const TaskConstMeta(debugName: "PairOffer_code", argNames: ["that"]);
+
+  @override
+  int crateApiRemotePairOfferExpiresInSecs({required PairOffer that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_u_32,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRemotePairOfferExpiresInSecsConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemotePairOfferExpiresInSecsConstMeta =>
+      const TaskConstMeta(
+        debugName: "PairOffer_expires_in_secs",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<PairRequest?> crateApiRemotePairOfferNextRequest({
+    required PairOffer that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 16,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRemotePairOfferNextRequestConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemotePairOfferNextRequestConstMeta =>
+      const TaskConstMeta(
+        debugName: "PairOffer_next_request",
+        argNames: ["that"],
+      );
+
+  @override
+  String crateApiRemotePairOfferQrPayload({required PairOffer that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRemotePairOfferQrPayloadConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemotePairOfferQrPayloadConstMeta =>
+      const TaskConstMeta(
+        debugName: "PairOffer_qr_payload",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<DeviceEntry> crateApiRemotePairRequestApprove({
+    required PairRequest that,
+    required String name,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+            that,
+            serializer,
+          );
+          sse_encode_String(name, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_device_entry,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemotePairRequestApproveConstMeta,
+        argValues: [that, name],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemotePairRequestApproveConstMeta =>
+      const TaskConstMeta(
+        debugName: "PairRequest_approve",
+        argNames: ["that", "name"],
+      );
+
+  @override
+  String crateApiRemotePairRequestComparison({required PairRequest that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRemotePairRequestComparisonConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemotePairRequestComparisonConstMeta =>
+      const TaskConstMeta(
+        debugName: "PairRequest_comparison",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiRemotePairRequestDecline({required PairRequest that}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 20,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemotePairRequestDeclineConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemotePairRequestDeclineConstMeta =>
+      const TaskConstMeta(debugName: "PairRequest_decline", argNames: ["that"]);
+
+  @override
+  String crateApiRemotePairRequestDeviceId({required PairRequest that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRemotePairRequestDeviceIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemotePairRequestDeviceIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "PairRequest_device_id",
+        argNames: ["that"],
+      );
+
+  @override
+  String crateApiRemotePairRequestDeviceName({required PairRequest that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRemotePairRequestDeviceNameConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemotePairRequestDeviceNameConstMeta =>
+      const TaskConstMeta(
+        debugName: "PairRequest_device_name",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiRemoteRemoteShareCheckHostname({
+    required RemoteShare that,
+    required String hostname,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          sse_encode_String(hostname, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 23,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareCheckHostnameConstMeta,
+        argValues: [that, hostname],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareCheckHostnameConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_check_hostname",
+        argNames: ["that", "hostname"],
+      );
+
+  @override
+  Future<bool> crateApiRemoteRemoteShareCloudflareSignOut({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 24,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareCloudflareSignOutConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareCloudflareSignOutConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_cloudflare_sign_out",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<CloudflareStatus> crateApiRemoteRemoteShareCloudflareStatus({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 25,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_cloudflare_status,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareCloudflareStatusConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareCloudflareStatusConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_cloudflare_status",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<CloudflaredStatus> crateApiRemoteRemoteShareCloudflaredInfo({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 26,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_cloudflared_status,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareCloudflaredInfoConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareCloudflaredInfoConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_cloudflared_info",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<List<DeviceEntry>> crateApiRemoteRemoteShareDevices({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 27,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_device_entry,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareDevicesConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareDevicesConstMeta =>
+      const TaskConstMeta(debugName: "RemoteShare_devices", argNames: ["that"]);
+
+  @override
+  Future<void> crateApiRemoteRemoteShareExportKey({
+    required RemoteShare that,
+    required String dest,
+    required String passphrase,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          sse_encode_String(dest, serializer);
+          sse_encode_String(passphrase, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 28,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareExportKeyConstMeta,
+        argValues: [that, dest, passphrase],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareExportKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_export_key",
+        argNames: ["that", "dest", "passphrase"],
+      );
+
+  @override
+  Future<void> crateApiRemoteRemoteShareForgetCloudflareToken({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 29,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareForgetCloudflareTokenConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareForgetCloudflareTokenConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_forget_cloudflare_token",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<KeyChange> crateApiRemoteRemoteShareImportKey({
+    required RemoteShare that,
+    required String src,
+    required String passphrase,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          sse_encode_String(src, serializer);
+          sse_encode_String(passphrase, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 30,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_key_change,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareImportKeyConstMeta,
+        argValues: [that, src, passphrase],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareImportKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_import_key",
+        argNames: ["that", "src", "passphrase"],
+      );
+
+  @override
+  Future<CloudflaredStatus> crateApiRemoteRemoteShareInstallCloudflared({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 31,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_cloudflared_status,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareInstallCloudflaredConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareInstallCloudflaredConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_install_cloudflared",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<KeyInfo> crateApiRemoteRemoteShareKeyInfo({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 32,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_key_info,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareKeyInfoConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareKeyInfoConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_key_info",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiRemoteRemoteShareLoginCancel({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 33,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareLoginCancelConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareLoginCancelConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_login_cancel",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<LoginPrompt> crateApiRemoteRemoteShareLoginStart({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 34,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_login_prompt,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareLoginStartConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareLoginStartConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_login_start",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<bool> crateApiRemoteRemoteShareLoginWait({
+    required RemoteShare that,
+    required int timeoutSecs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          sse_encode_u_32(timeoutSecs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 35,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareLoginWaitConstMeta,
+        argValues: [that, timeoutSecs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareLoginWaitConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_login_wait",
+        argNames: ["that", "timeoutSecs"],
+      );
+
+  @override
+  RemoteShare crateApiRemoteRemoteShareNew({
+    required BubblePawHost host,
+    required String dataDir,
+    required String workspaceDir,
+    required String deviceName,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost(
+            host,
+            serializer,
+          );
+          sse_encode_String(dataDir, serializer);
+          sse_encode_String(workspaceDir, serializer);
+          sse_encode_String(deviceName, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareNewConstMeta,
+        argValues: [host, dataDir, workspaceDir, deviceName],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareNewConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_new",
+        argNames: ["host", "dataDir", "workspaceDir", "deviceName"],
+      );
+
+  @override
+  Future<PairOffer> crateApiRemoteRemoteSharePair({
+    required RemoteShare that,
+    required String profile,
+    required bool egress,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          sse_encode_String(profile, serializer);
+          sse_encode_bool(egress, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 37,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteSharePairConstMeta,
+        argValues: [that, profile, egress],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteSharePairConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_pair",
+        argNames: ["that", "profile", "egress"],
+      );
+
+  @override
+  Future<KeyChange> crateApiRemoteRemoteShareRegenerateKey({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 38,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_key_change,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareRegenerateKeyConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareRegenerateKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_regenerate_key",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<bool> crateApiRemoteRemoteShareRevoke({
+    required RemoteShare that,
+    required String id,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 39,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareRevokeConstMeta,
+        argValues: [that, id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareRevokeConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_revoke",
+        argNames: ["that", "id"],
+      );
+
+  @override
+  Future<OtherShare> crateApiRemoteRemoteShareServeStatus({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 40,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_other_share,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareServeStatusConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareServeStatusConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_serve_status",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<CloudflaredStatus> crateApiRemoteRemoteShareSetCloudflared({
+    required RemoteShare that,
+    String? path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          sse_encode_opt_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 41,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_cloudflared_status,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareSetCloudflaredConstMeta,
+        argValues: [that, path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareSetCloudflaredConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_set_cloudflared",
+        argNames: ["that", "path"],
+      );
+
+  @override
+  Future<ShareState> crateApiRemoteRemoteShareStart({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 42,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_share_state,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareStartConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareStartConstMeta =>
+      const TaskConstMeta(debugName: "RemoteShare_start", argNames: ["that"]);
+
+  @override
+  Future<ShareState> crateApiRemoteRemoteShareState({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 43,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_share_state,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareStateConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareStateConstMeta =>
+      const TaskConstMeta(debugName: "RemoteShare_state", argNames: ["that"]);
+
+  @override
+  Future<void> crateApiRemoteRemoteShareStop({required RemoteShare that}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 44,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareStopConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareStopConstMeta =>
+      const TaskConstMeta(debugName: "RemoteShare_stop", argNames: ["that"]);
+
+  @override
+  Future<void> crateApiRemoteRemoteShareStoreCloudflareToken({
+    required RemoteShare that,
+    required String token,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          sse_encode_String(token, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 45,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareStoreCloudflareTokenConstMeta,
+        argValues: [that, token],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareStoreCloudflareTokenConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_store_cloudflare_token",
+        argNames: ["that", "token"],
+      );
+
+  @override
+  Future<CloudflaredStatus> crateApiRemoteRemoteShareUpdateCloudflared({
+    required RemoteShare that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 46,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_cloudflared_status,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteRemoteShareUpdateCloudflaredConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareUpdateCloudflaredConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_update_cloudflared",
+        argNames: ["that"],
+      );
+
+  @override
+  Stream<ShareState> crateApiRemoteRemoteShareWatch({
+    required RemoteShare that,
+  }) {
+    final sink = RustStreamSink<ShareState>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+              that,
+              serializer,
+            );
+            sse_encode_StreamSink_share_state_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 47,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_share_error,
+          ),
+          constMeta: kCrateApiRemoteRemoteShareWatchConstMeta,
+          argValues: [that, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiRemoteRemoteShareWatchConstMeta =>
+      const TaskConstMeta(
+        debugName: "RemoteShare_watch",
+        argNames: ["that", "sink"],
+      );
+
+  @override
   String crateApiHostCoreVersion() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 48)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -322,6 +1988,143 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "core_version", argNames: []);
 
   @override
+  Future<KeyInfo> crateApiHostsDeviceKeyInfo({required String dataDir}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 49,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_key_info,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsDeviceKeyInfoConstMeta,
+        argValues: [dataDir],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsDeviceKeyInfoConstMeta =>
+      const TaskConstMeta(debugName: "device_key_info", argNames: ["dataDir"]);
+
+  @override
+  Future<void> crateApiHostsExportDeviceKey({
+    required String dataDir,
+    required String dest,
+    required String passphrase,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          sse_encode_String(dest, serializer);
+          sse_encode_String(passphrase, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 50,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsExportDeviceKeyConstMeta,
+        argValues: [dataDir, dest, passphrase],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsExportDeviceKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "export_device_key",
+        argNames: ["dataDir", "dest", "passphrase"],
+      );
+
+  @override
+  Future<bool> crateApiHostsForgetSavedHost({
+    required String dataDir,
+    required String id,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 51,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsForgetSavedHostConstMeta,
+        argValues: [dataDir, id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsForgetSavedHostConstMeta =>
+      const TaskConstMeta(
+        debugName: "forget_saved_host",
+        argNames: ["dataDir", "id"],
+      );
+
+  @override
+  Future<KeyChange> crateApiHostsImportDeviceKey({
+    required String dataDir,
+    required String src,
+    required String passphrase,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          sse_encode_String(src, serializer);
+          sse_encode_String(passphrase, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 52,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_key_change,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsImportDeviceKeyConstMeta,
+        argValues: [dataDir, src, passphrase],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsImportDeviceKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "import_device_key",
+        argNames: ["dataDir", "src", "passphrase"],
+      );
+
+  @override
   Future<void> crateApiHostInitApp() {
     return handler.executeNormal(
       NormalTask(
@@ -330,7 +2133,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 53,
             port: port_,
           );
         },
@@ -348,6 +2151,201 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiHostInitAppConstMeta =>
       const TaskConstMeta(debugName: "init_app", argNames: []);
 
+  @override
+  Future<List<SavedHostEntry>> crateApiHostsListSavedHosts({
+    required String dataDir,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 54,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_saved_host_entry,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsListSavedHostsConstMeta,
+        argValues: [dataDir],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsListSavedHostsConstMeta =>
+      const TaskConstMeta(debugName: "list_saved_hosts", argNames: ["dataDir"]);
+
+  @override
+  Future<HostPairing> crateApiHostsPairWithHost({
+    required String dataDir,
+    required String link,
+    required String deviceName,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          sse_encode_String(link, serializer);
+          sse_encode_String(deviceName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 55,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsPairWithHostConstMeta,
+        argValues: [dataDir, link, deviceName],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsPairWithHostConstMeta => const TaskConstMeta(
+    debugName: "pair_with_host",
+    argNames: ["dataDir", "link", "deviceName"],
+  );
+
+  @override
+  LinkTarget crateApiHostsParsePairingLink({required String text}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(text, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 56)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_link_target,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsParsePairingLinkConstMeta,
+        argValues: [text],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsParsePairingLinkConstMeta =>
+      const TaskConstMeta(debugName: "parse_pairing_link", argNames: ["text"]);
+
+  @override
+  Future<HostPresenceKind> crateApiHostsProbeSavedHost({
+    required String dataDir,
+    required String id,
+    required int timeoutSecs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          sse_encode_String(id, serializer);
+          sse_encode_u_32(timeoutSecs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 57,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_host_presence_kind,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsProbeSavedHostConstMeta,
+        argValues: [dataDir, id, timeoutSecs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsProbeSavedHostConstMeta =>
+      const TaskConstMeta(
+        debugName: "probe_saved_host",
+        argNames: ["dataDir", "id", "timeoutSecs"],
+      );
+
+  @override
+  Future<KeyChange> crateApiHostsRegenerateDeviceKey({
+    required String dataDir,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 58,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_key_change,
+          decodeErrorData: sse_decode_host_link_error,
+        ),
+        constMeta: kCrateApiHostsRegenerateDeviceKeyConstMeta,
+        argValues: [dataDir],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHostsRegenerateDeviceKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "regenerate_device_key",
+        argNames: ["dataDir"],
+      );
+
+  @override
+  Future<ShareSettings> crateApiRemoteShareSettings({
+    required String dataDir,
+    required String workspaceDir,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(dataDir, serializer);
+          sse_encode_String(workspaceDir, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 59,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_share_settings,
+          decodeErrorData: sse_decode_share_error,
+        ),
+        constMeta: kCrateApiRemoteShareSettingsConstMeta,
+        argValues: [dataDir, workspaceDir],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiRemoteShareSettingsConstMeta =>
+      const TaskConstMeta(
+        debugName: "share_settings",
+        argNames: ["dataDir", "workspaceDir"],
+      );
+
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_BubblePawHost => wire
       .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost;
@@ -355,6 +2353,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   RustArcDecrementStrongCountFnType
   get rust_arc_decrement_strong_count_BubblePawHost => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_HostPairing => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_HostPairing => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_PairOffer => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_PairOffer => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_PairRequest => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_PairRequest => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_RemoteShare => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_RemoteShare => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare;
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
@@ -372,12 +2402,84 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  HostPairing
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return HostPairingImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  PairOffer
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PairOfferImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  PairRequest
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PairRequestImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RemoteShare
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RemoteShareImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   BubblePawHost
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return BubblePawHostImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  HostPairing
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return HostPairingImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  PairOffer
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PairOfferImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  PairRequest
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PairRequestImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RemoteShare
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RemoteShareImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -390,7 +2492,51 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  HostPairing
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return HostPairingImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  PairOffer
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PairOfferImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  PairRequest
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PairRequestImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RemoteShare
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RemoteShareImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<ShareState> dco_decode_StreamSink_share_state_Sse(
+    dynamic raw,
+  ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     throw UnimplementedError();
   }
@@ -405,6 +2551,96 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
+  }
+
+  @protected
+  PairRequest
+  dco_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+      raw,
+    );
+  }
+
+  @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  ShareFailure dco_decode_box_autoadd_share_failure(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_share_failure(raw);
+  }
+
+  @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_u_64(raw);
+  }
+
+  @protected
+  CloudflareStatus dco_decode_cloudflare_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return CloudflareStatus(
+      signedIn: dco_decode_bool(arr[0]),
+      via: dco_decode_cloudflare_via(arr[1]),
+      account: dco_decode_opt_String(arr[2]),
+      zones: dco_decode_list_String(arr[3]),
+      error: dco_decode_opt_String(arr[4]),
+    );
+  }
+
+  @protected
+  CloudflareVia dco_decode_cloudflare_via(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CloudflareVia.values[raw as int];
+  }
+
+  @protected
+  CloudflaredStatus dco_decode_cloudflared_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return CloudflaredStatus(
+      installed: dco_decode_bool(arr[0]),
+      path: dco_decode_opt_String(arr[1]),
+      version: dco_decode_opt_String(arr[2]),
+      pinnedVersion: dco_decode_String(arr[3]),
+      updateAvailable: dco_decode_bool(arr[4]),
+      managed: dco_decode_bool(arr[5]),
+      chosen: dco_decode_bool(arr[6]),
+    );
+  }
+
+  @protected
+  DeviceEntry dco_decode_device_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return DeviceEntry(
+      id: dco_decode_String(arr[0]),
+      label: dco_decode_String(arr[1]),
+      profile: dco_decode_String(arr[2]),
+      kind: dco_decode_String(arr[3]),
+      pairedAt: dco_decode_opt_box_autoadd_u_64(arr[4]),
+      lastSeen: dco_decode_opt_box_autoadd_u_64(arr[5]),
+      egress: dco_decode_bool(arr[6]),
+    );
   }
 
   @protected
@@ -428,6 +2664,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  HostLinkError dco_decode_host_link_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return HostLinkError(
+      kind: dco_decode_host_link_error_kind(arr[0]),
+      message: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  HostLinkErrorKind dco_decode_host_link_error_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return HostLinkErrorKind.values[raw as int];
+  }
+
+  @protected
+  HostPresenceKind dco_decode_host_presence_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return HostPresenceKind.values[raw as int];
+  }
+
+  @protected
+  HostVia dco_decode_host_via(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return HostVia.values[raw as int];
+  }
+
+  @protected
   int dco_decode_i_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -440,15 +2706,241 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  KeyChange dco_decode_key_change(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return KeyChange(
+      oldId: dco_decode_opt_String(arr[0]),
+      id: dco_decode_String(arr[1]),
+      fingerprint: dco_decode_String(arr[2]),
+      clearedDevices: dco_decode_u_32(arr[3]),
+      clearedHosts: dco_decode_u_32(arr[4]),
+    );
+  }
+
+  @protected
+  KeyInfo dco_decode_key_info(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return KeyInfo(
+      id: dco_decode_String(arr[0]),
+      fingerprint: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  LinkTarget dco_decode_link_target(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return LinkTarget(
+      hostId: dco_decode_String(arr[0]),
+      address: dco_decode_String(arr[1]),
+      via: dco_decode_host_via(arr[2]),
+    );
+  }
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<DeviceEntry> dco_decode_list_device_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_device_entry).toList();
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
   }
 
   @protected
+  List<SavedHostEntry> dco_decode_list_saved_host_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_saved_host_entry).toList();
+  }
+
+  @protected
+  LoginPrompt dco_decode_login_prompt(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return LoginPrompt(url: dco_decode_String(arr[0]));
+  }
+
+  @protected
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  PairRequest?
+  dco_decode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+            raw,
+          );
+  }
+
+  @protected
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_i_32(raw);
+  }
+
+  @protected
+  ShareFailure? dco_decode_opt_box_autoadd_share_failure(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_share_failure(raw);
+  }
+
+  @protected
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_32(raw);
+  }
+
+  @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_64(raw);
+  }
+
+  @protected
+  OtherShare dco_decode_other_share(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return OtherShare(
+      shared: dco_decode_bool(arr[0]),
+      ours: dco_decode_bool(arr[1]),
+      pid: dco_decode_opt_box_autoadd_u_32(arr[2]),
+      cli: dco_decode_bool(arr[3]),
+      hostId: dco_decode_opt_String(arr[4]),
+      dataDir: dco_decode_opt_String(arr[5]),
+    );
+  }
+
+  @protected
+  SavedHostEntry dco_decode_saved_host_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return SavedHostEntry(
+      id: dco_decode_String(arr[0]),
+      label: dco_decode_String(arr[1]),
+      address: dco_decode_String(arr[2]),
+      via: dco_decode_host_via(arr[3]),
+      profile: dco_decode_String(arr[4]),
+      pairedAt: dco_decode_opt_box_autoadd_u_64(arr[5]),
+      lastConnected: dco_decode_opt_box_autoadd_u_64(arr[6]),
+      egress: dco_decode_bool(arr[7]),
+    );
+  }
+
+  @protected
+  ShareError dco_decode_share_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return ShareError(
+      kind: dco_decode_share_error_kind(arr[0]),
+      message: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  ShareErrorKind dco_decode_share_error_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ShareErrorKind.values[raw as int];
+  }
+
+  @protected
+  ShareFailure dco_decode_share_failure(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ShareFailure(
+      transport: dco_decode_String(arr[0]),
+      exitCode: dco_decode_opt_box_autoadd_i_32(arr[1]),
+      retryAfterSecs: dco_decode_u_32(arr[2]),
+    );
+  }
+
+  @protected
+  ShareMode dco_decode_share_mode(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ShareMode.values[raw as int];
+  }
+
+  @protected
+  ShareSettings dco_decode_share_settings(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return ShareSettings(
+      enabled: dco_decode_bool(arr[0]),
+      mode: dco_decode_share_mode(arr[1]),
+      relay: dco_decode_String(arr[2]),
+      hostname: dco_decode_String(arr[3]),
+      cloudflared: dco_decode_opt_String(arr[4]),
+      autostart: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
+  ShareState dco_decode_share_state(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return ShareState(
+      status: dco_decode_share_status(arr[0]),
+      mode: dco_decode_share_mode(arr[1]),
+      address: dco_decode_opt_String(arr[2]),
+      hostId: dco_decode_opt_String(arr[3]),
+      lastError: dco_decode_opt_String(arr[4]),
+      failure: dco_decode_opt_box_autoadd_share_failure(arr[5]),
+      devices: dco_decode_u_32(arr[6]),
+    );
+  }
+
+  @protected
+  ShareStatus dco_decode_share_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ShareStatus.values[raw as int];
+  }
+
+  @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
   }
 
   @protected
@@ -489,12 +2981,108 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  HostPairing
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return HostPairingImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PairOffer
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PairOfferImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PairRequest
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PairRequestImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  RemoteShare
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return RemoteShareImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   BubblePawHost
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return BubblePawHostImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  HostPairing
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return HostPairingImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PairOffer
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PairOfferImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PairRequest
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PairRequestImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  RemoteShare
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return RemoteShareImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -513,7 +3101,63 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  HostPairing
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return HostPairingImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PairOffer
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PairOfferImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PairRequest
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PairRequestImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  RemoteShare
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return RemoteShareImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   RustStreamSink<String> sse_decode_StreamSink_String_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<ShareState> sse_decode_StreamSink_share_state_Sse(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -531,6 +3175,111 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  PairRequest
+  sse_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+      deserializer,
+    ));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_i_32(deserializer));
+  }
+
+  @protected
+  ShareFailure sse_decode_box_autoadd_share_failure(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_share_failure(deserializer));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_32(deserializer));
+  }
+
+  @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_64(deserializer));
+  }
+
+  @protected
+  CloudflareStatus sse_decode_cloudflare_status(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_signedIn = sse_decode_bool(deserializer);
+    var var_via = sse_decode_cloudflare_via(deserializer);
+    var var_account = sse_decode_opt_String(deserializer);
+    var var_zones = sse_decode_list_String(deserializer);
+    var var_error = sse_decode_opt_String(deserializer);
+    return CloudflareStatus(
+      signedIn: var_signedIn,
+      via: var_via,
+      account: var_account,
+      zones: var_zones,
+      error: var_error,
+    );
+  }
+
+  @protected
+  CloudflareVia sse_decode_cloudflare_via(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CloudflareVia.values[inner];
+  }
+
+  @protected
+  CloudflaredStatus sse_decode_cloudflared_status(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_installed = sse_decode_bool(deserializer);
+    var var_path = sse_decode_opt_String(deserializer);
+    var var_version = sse_decode_opt_String(deserializer);
+    var var_pinnedVersion = sse_decode_String(deserializer);
+    var var_updateAvailable = sse_decode_bool(deserializer);
+    var var_managed = sse_decode_bool(deserializer);
+    var var_chosen = sse_decode_bool(deserializer);
+    return CloudflaredStatus(
+      installed: var_installed,
+      path: var_path,
+      version: var_version,
+      pinnedVersion: var_pinnedVersion,
+      updateAvailable: var_updateAvailable,
+      managed: var_managed,
+      chosen: var_chosen,
+    );
+  }
+
+  @protected
+  DeviceEntry sse_decode_device_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    var var_profile = sse_decode_String(deserializer);
+    var var_kind = sse_decode_String(deserializer);
+    var var_pairedAt = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_lastSeen = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_egress = sse_decode_bool(deserializer);
+    return DeviceEntry(
+      id: var_id,
+      label: var_label,
+      profile: var_profile,
+      kind: var_kind,
+      pairedAt: var_pairedAt,
+      lastSeen: var_lastSeen,
+      egress: var_egress,
+    );
   }
 
   @protected
@@ -556,6 +3305,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  HostLinkError sse_decode_host_link_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_host_link_error_kind(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    return HostLinkError(kind: var_kind, message: var_message);
+  }
+
+  @protected
+  HostLinkErrorKind sse_decode_host_link_error_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return HostLinkErrorKind.values[inner];
+  }
+
+  @protected
+  HostPresenceKind sse_decode_host_presence_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return HostPresenceKind.values[inner];
+  }
+
+  @protected
+  HostVia sse_decode_host_via(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return HostVia.values[inner];
+  }
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getInt32();
@@ -568,10 +3348,89 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  KeyChange sse_decode_key_change(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_oldId = sse_decode_opt_String(deserializer);
+    var var_id = sse_decode_String(deserializer);
+    var var_fingerprint = sse_decode_String(deserializer);
+    var var_clearedDevices = sse_decode_u_32(deserializer);
+    var var_clearedHosts = sse_decode_u_32(deserializer);
+    return KeyChange(
+      oldId: var_oldId,
+      id: var_id,
+      fingerprint: var_fingerprint,
+      clearedDevices: var_clearedDevices,
+      clearedHosts: var_clearedHosts,
+    );
+  }
+
+  @protected
+  KeyInfo sse_decode_key_info(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_fingerprint = sse_decode_String(deserializer);
+    return KeyInfo(id: var_id, fingerprint: var_fingerprint);
+  }
+
+  @protected
+  LinkTarget sse_decode_link_target(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_hostId = sse_decode_String(deserializer);
+    var var_address = sse_decode_String(deserializer);
+    var var_via = sse_decode_host_via(deserializer);
+    return LinkTarget(hostId: var_hostId, address: var_address, via: var_via);
+  }
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <String>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<DeviceEntry> sse_decode_list_device_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <DeviceEntry>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_device_entry(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  List<SavedHostEntry> sse_decode_list_saved_host_entry(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <SavedHostEntry>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_saved_host_entry(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  LoginPrompt sse_decode_login_prompt(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_url = sse_decode_String(deserializer);
+    return LoginPrompt(url: var_url);
   }
 
   @protected
@@ -583,6 +3442,204 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     } else {
       return null;
     }
+  }
+
+  @protected
+  PairRequest?
+  sse_decode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+        deserializer,
+      ));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_i_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ShareFailure? sse_decode_opt_box_autoadd_share_failure(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_share_failure(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  OtherShare sse_decode_other_share(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_shared = sse_decode_bool(deserializer);
+    var var_ours = sse_decode_bool(deserializer);
+    var var_pid = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_cli = sse_decode_bool(deserializer);
+    var var_hostId = sse_decode_opt_String(deserializer);
+    var var_dataDir = sse_decode_opt_String(deserializer);
+    return OtherShare(
+      shared: var_shared,
+      ours: var_ours,
+      pid: var_pid,
+      cli: var_cli,
+      hostId: var_hostId,
+      dataDir: var_dataDir,
+    );
+  }
+
+  @protected
+  SavedHostEntry sse_decode_saved_host_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    var var_address = sse_decode_String(deserializer);
+    var var_via = sse_decode_host_via(deserializer);
+    var var_profile = sse_decode_String(deserializer);
+    var var_pairedAt = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_lastConnected = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_egress = sse_decode_bool(deserializer);
+    return SavedHostEntry(
+      id: var_id,
+      label: var_label,
+      address: var_address,
+      via: var_via,
+      profile: var_profile,
+      pairedAt: var_pairedAt,
+      lastConnected: var_lastConnected,
+      egress: var_egress,
+    );
+  }
+
+  @protected
+  ShareError sse_decode_share_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_share_error_kind(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    return ShareError(kind: var_kind, message: var_message);
+  }
+
+  @protected
+  ShareErrorKind sse_decode_share_error_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ShareErrorKind.values[inner];
+  }
+
+  @protected
+  ShareFailure sse_decode_share_failure(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_transport = sse_decode_String(deserializer);
+    var var_exitCode = sse_decode_opt_box_autoadd_i_32(deserializer);
+    var var_retryAfterSecs = sse_decode_u_32(deserializer);
+    return ShareFailure(
+      transport: var_transport,
+      exitCode: var_exitCode,
+      retryAfterSecs: var_retryAfterSecs,
+    );
+  }
+
+  @protected
+  ShareMode sse_decode_share_mode(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ShareMode.values[inner];
+  }
+
+  @protected
+  ShareSettings sse_decode_share_settings(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_enabled = sse_decode_bool(deserializer);
+    var var_mode = sse_decode_share_mode(deserializer);
+    var var_relay = sse_decode_String(deserializer);
+    var var_hostname = sse_decode_String(deserializer);
+    var var_cloudflared = sse_decode_opt_String(deserializer);
+    var var_autostart = sse_decode_bool(deserializer);
+    return ShareSettings(
+      enabled: var_enabled,
+      mode: var_mode,
+      relay: var_relay,
+      hostname: var_hostname,
+      cloudflared: var_cloudflared,
+      autostart: var_autostart,
+    );
+  }
+
+  @protected
+  ShareState sse_decode_share_state(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_status = sse_decode_share_status(deserializer);
+    var var_mode = sse_decode_share_mode(deserializer);
+    var var_address = sse_decode_opt_String(deserializer);
+    var var_hostId = sse_decode_opt_String(deserializer);
+    var var_lastError = sse_decode_opt_String(deserializer);
+    var var_failure = sse_decode_opt_box_autoadd_share_failure(deserializer);
+    var var_devices = sse_decode_u_32(deserializer);
+    return ShareState(
+      status: var_status,
+      mode: var_mode,
+      address: var_address,
+      hostId: var_hostId,
+      lastError: var_lastError,
+      failure: var_failure,
+      devices: var_devices,
+    );
+  }
+
+  @protected
+  ShareStatus sse_decode_share_status(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ShareStatus.values[inner];
+  }
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
+  }
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
   }
 
   @protected
@@ -626,6 +3683,58 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    HostPairing self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as HostPairingImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+    PairOffer self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PairOfferImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    PairRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PairRequestImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+    RemoteShare self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as RemoteShareImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost(
     BubblePawHost self,
     SseSerializer serializer,
@@ -639,6 +3748,58 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    HostPairing self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as HostPairingImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+    PairOffer self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PairOfferImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    PairRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PairRequestImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+    RemoteShare self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as RemoteShareImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBubblePawHost(
     BubblePawHost self,
     SseSerializer serializer,
@@ -646,6 +3807,58 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as BubblePawHostImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerHostPairing(
+    HostPairing self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as HostPairingImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairOffer(
+    PairOffer self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PairOfferImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    PairRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PairRequestImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRemoteShare(
+    RemoteShare self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as RemoteShareImpl).frbInternalSseEncode(move: null),
       serializer,
     );
   }
@@ -668,6 +3881,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_StreamSink_share_state_Sse(
+    RustStreamSink<ShareState> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_share_state,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
@@ -677,6 +3907,92 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void
+  sse_encode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    PairRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+      self,
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_share_failure(
+    ShareFailure self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_share_failure(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_cloudflare_status(
+    CloudflareStatus self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.signedIn, serializer);
+    sse_encode_cloudflare_via(self.via, serializer);
+    sse_encode_opt_String(self.account, serializer);
+    sse_encode_list_String(self.zones, serializer);
+    sse_encode_opt_String(self.error, serializer);
+  }
+
+  @protected
+  void sse_encode_cloudflare_via(CloudflareVia self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_cloudflared_status(
+    CloudflaredStatus self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.installed, serializer);
+    sse_encode_opt_String(self.path, serializer);
+    sse_encode_opt_String(self.version, serializer);
+    sse_encode_String(self.pinnedVersion, serializer);
+    sse_encode_bool(self.updateAvailable, serializer);
+    sse_encode_bool(self.managed, serializer);
+    sse_encode_bool(self.chosen, serializer);
+  }
+
+  @protected
+  void sse_encode_device_entry(DeviceEntry self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.label, serializer);
+    sse_encode_String(self.profile, serializer);
+    sse_encode_String(self.kind, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.pairedAt, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.lastSeen, serializer);
+    sse_encode_bool(self.egress, serializer);
   }
 
   @protected
@@ -701,6 +4017,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_host_link_error(
+    HostLinkError self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_host_link_error_kind(self.kind, serializer);
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_host_link_error_kind(
+    HostLinkErrorKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_host_presence_kind(
+    HostPresenceKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_host_via(HostVia self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
   void sse_encode_i_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putInt32(self);
@@ -710,6 +4060,52 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
+  void sse_encode_key_change(KeyChange self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.oldId, serializer);
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.fingerprint, serializer);
+    sse_encode_u_32(self.clearedDevices, serializer);
+    sse_encode_u_32(self.clearedHosts, serializer);
+  }
+
+  @protected
+  void sse_encode_key_info(KeyInfo self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.fingerprint, serializer);
+  }
+
+  @protected
+  void sse_encode_link_target(LinkTarget self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.hostId, serializer);
+    sse_encode_String(self.address, serializer);
+    sse_encode_host_via(self.via, serializer);
+  }
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_device_entry(
+    List<DeviceEntry> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_device_entry(item, serializer);
+    }
   }
 
   @protected
@@ -723,6 +4119,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_saved_host_entry(
+    List<SavedHostEntry> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_saved_host_entry(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_login_prompt(LoginPrompt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.url, serializer);
+  }
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -730,6 +4144,164 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     if (self != null) {
       sse_encode_String(self, serializer);
     }
+  }
+
+  @protected
+  void
+  sse_encode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+    PairRequest? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPairRequest(
+        self,
+        serializer,
+      );
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_i_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_share_failure(
+    ShareFailure? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_share_failure(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_other_share(OtherShare self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.shared, serializer);
+    sse_encode_bool(self.ours, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.pid, serializer);
+    sse_encode_bool(self.cli, serializer);
+    sse_encode_opt_String(self.hostId, serializer);
+    sse_encode_opt_String(self.dataDir, serializer);
+  }
+
+  @protected
+  void sse_encode_saved_host_entry(
+    SavedHostEntry self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.label, serializer);
+    sse_encode_String(self.address, serializer);
+    sse_encode_host_via(self.via, serializer);
+    sse_encode_String(self.profile, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.pairedAt, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.lastConnected, serializer);
+    sse_encode_bool(self.egress, serializer);
+  }
+
+  @protected
+  void sse_encode_share_error(ShareError self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_share_error_kind(self.kind, serializer);
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_share_error_kind(
+    ShareErrorKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_share_failure(ShareFailure self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.transport, serializer);
+    sse_encode_opt_box_autoadd_i_32(self.exitCode, serializer);
+    sse_encode_u_32(self.retryAfterSecs, serializer);
+  }
+
+  @protected
+  void sse_encode_share_mode(ShareMode self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_share_settings(ShareSettings self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.enabled, serializer);
+    sse_encode_share_mode(self.mode, serializer);
+    sse_encode_String(self.relay, serializer);
+    sse_encode_String(self.hostname, serializer);
+    sse_encode_opt_String(self.cloudflared, serializer);
+    sse_encode_bool(self.autostart, serializer);
+  }
+
+  @protected
+  void sse_encode_share_state(ShareState self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_share_status(self.status, serializer);
+    sse_encode_share_mode(self.mode, serializer);
+    sse_encode_opt_String(self.address, serializer);
+    sse_encode_opt_String(self.hostId, serializer);
+    sse_encode_opt_String(self.lastError, serializer);
+    sse_encode_opt_box_autoadd_share_failure(self.failure, serializer);
+    sse_encode_u_32(self.devices, serializer);
+  }
+
+  @protected
+  void sse_encode_share_status(ShareStatus self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
+  }
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
   }
 
   @protected
@@ -793,4 +4365,276 @@ class BubblePawHostImpl extends RustOpaque implements BubblePawHost {
   /// (`event`, `events.gap`). The stream ends when the session does.
   Stream<String> notifications() =>
       RustLib.instance.api.crateApiHostBubblePawHostNotifications(that: this);
+}
+
+@sealed
+class HostPairingImpl extends RustOpaque implements HostPairing {
+  // Not to be used by end users
+  HostPairingImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  HostPairingImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_HostPairing,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_HostPairing,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_HostPairingPtr,
+  );
+
+  /// Abandons the pairing before it finished.
+  Future<void> cancel() =>
+      RustLib.instance.api.crateApiHostsHostPairingCancel(that: this);
+
+  /// The six-digit number the host shows too.
+  String comparison() =>
+      RustLib.instance.api.crateApiHostsHostPairingComparison(that: this);
+
+  /// Waits for the person at the host to confirm, then saves the host.
+  Future<SavedHostEntry> finish() =>
+      RustLib.instance.api.crateApiHostsHostPairingFinish(that: this);
+
+  String hostId() =>
+      RustLib.instance.api.crateApiHostsHostPairingHostId(that: this);
+
+  /// The host's name as it introduced itself.
+  String hostName() =>
+      RustLib.instance.api.crateApiHostsHostPairingHostName(that: this);
+}
+
+@sealed
+class PairOfferImpl extends RustOpaque implements PairOffer {
+  // Not to be used by end users
+  PairOfferImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  PairOfferImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_PairOffer,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_PairOffer,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_PairOfferPtr,
+  );
+
+  /// Where the device reaches the host.
+  String address() =>
+      RustLib.instance.api.crateApiRemotePairOfferAddress(that: this);
+
+  /// Withdraws the offer; a waiting [`Self::next_request`] returns `None`.
+  Future<void> cancel() =>
+      RustLib.instance.api.crateApiRemotePairOfferCancel(that: this);
+
+  /// The ten-character code to type on the device.
+  String code() => RustLib.instance.api.crateApiRemotePairOfferCode(that: this);
+
+  /// Seconds until the code expires.
+  int expiresInSecs() =>
+      RustLib.instance.api.crateApiRemotePairOfferExpiresInSecs(that: this);
+
+  /// Waits for a device that proved the code. `None` when the code expired
+  /// or the offer was cancelled. A wrong code keeps waiting.
+  Future<PairRequest?> nextRequest() =>
+      RustLib.instance.api.crateApiRemotePairOfferNextRequest(that: this);
+
+  /// The text for the QR code (the pairing payload JSON).
+  String qrPayload() =>
+      RustLib.instance.api.crateApiRemotePairOfferQrPayload(that: this);
+}
+
+@sealed
+class PairRequestImpl extends RustOpaque implements PairRequest {
+  // Not to be used by end users
+  PairRequestImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  PairRequestImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_PairRequest,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_PairRequest,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_PairRequestPtr,
+  );
+
+  /// Stores the device under `name` (empty keeps the name it gave) with the
+  /// offer's profile.
+  Future<DeviceEntry> approve({required String name}) => RustLib.instance.api
+      .crateApiRemotePairRequestApprove(that: this, name: name);
+
+  /// The six-digit number the device shows too; approve only when they match.
+  String comparison() =>
+      RustLib.instance.api.crateApiRemotePairRequestComparison(that: this);
+
+  /// Refuses the device; nothing is stored.
+  Future<void> decline() =>
+      RustLib.instance.api.crateApiRemotePairRequestDecline(that: this);
+
+  String deviceId() =>
+      RustLib.instance.api.crateApiRemotePairRequestDeviceId(that: this);
+
+  String deviceName() =>
+      RustLib.instance.api.crateApiRemotePairRequestDeviceName(that: this);
+}
+
+@sealed
+class RemoteShareImpl extends RustOpaque implements RemoteShare {
+  // Not to be used by end users
+  RemoteShareImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  RemoteShareImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_RemoteShare,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_RemoteShare,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_RemoteSharePtr,
+  );
+
+  Future<void> checkHostname({required String hostname}) => RustLib.instance.api
+      .crateApiRemoteRemoteShareCheckHostname(that: this, hostname: hostname);
+
+  /// Forgets the browser sign-in (`cert.pem`) and nothing else: an API token
+  /// and tunnel state stay. True when there was a sign-in to forget.
+  Future<bool> cloudflareSignOut() => RustLib.instance.api
+      .crateApiRemoteRemoteShareCloudflareSignOut(that: this);
+
+  /// Whether a Cloudflare credential is there, and the account it opens.
+  Future<CloudflareStatus> cloudflareStatus() => RustLib.instance.api
+      .crateApiRemoteRemoteShareCloudflareStatus(that: this);
+
+  /// The `cloudflared` the host would run, and whether the pinned release is newer.
+  Future<CloudflaredStatus> cloudflaredInfo() =>
+      RustLib.instance.api.crateApiRemoteRemoteShareCloudflaredInfo(that: this);
+
+  /// The paired devices, read from the store (works while not sharing).
+  Future<List<DeviceEntry>> devices() =>
+      RustLib.instance.api.crateApiRemoteRemoteShareDevices(that: this);
+
+  /// Writes the key to `dest` (which must not exist), protected by `passphrase`.
+  Future<void> exportKey({required String dest, required String passphrase}) =>
+      RustLib.instance.api.crateApiRemoteRemoteShareExportKey(
+        that: this,
+        dest: dest,
+        passphrase: passphrase,
+      );
+
+  Future<void> forgetCloudflareToken() => RustLib.instance.api
+      .crateApiRemoteRemoteShareForgetCloudflareToken(that: this);
+
+  /// Replaces the key with the one in `src`. Stops sharing first and leaves
+  /// it stopped. A different key clears every pairing (see [`KeyChange`]).
+  Future<KeyChange> importKey({
+    required String src,
+    required String passphrase,
+  }) => RustLib.instance.api.crateApiRemoteRemoteShareImportKey(
+    that: this,
+    src: src,
+    passphrase: passphrase,
+  );
+
+  /// Downloads the pinned `cloudflared` into the data directory and checks
+  /// its SHA-256 against the published digests.
+  Future<CloudflaredStatus> installCloudflared() => RustLib.instance.api
+      .crateApiRemoteRemoteShareInstallCloudflared(that: this);
+
+  /// This device's ID and fingerprint (host and client roles share one key).
+  /// Creates the key when missing.
+  Future<KeyInfo> keyInfo() =>
+      RustLib.instance.api.crateApiRemoteRemoteShareKeyInfo(that: this);
+
+  /// Abandons a login in progress.
+  Future<void> loginCancel() =>
+      RustLib.instance.api.crateApiRemoteRemoteShareLoginCancel(that: this);
+
+  /// Starts `cloudflared tunnel login` and returns the page to open. The
+  /// login lives in this share until [`Self::login_wait`] or [`Self::login_cancel`].
+  Future<LoginPrompt> loginStart() =>
+      RustLib.instance.api.crateApiRemoteRemoteShareLoginStart(that: this);
+
+  /// Waits up to `timeout_secs` for the browser login to finish: true when
+  /// it did, false when it timed out or was cancelled.
+  Future<bool> loginWait({required int timeoutSecs}) => RustLib.instance.api
+      .crateApiRemoteRemoteShareLoginWait(that: this, timeoutSecs: timeoutSecs);
+
+  /// Opens a pairing offer for a device that will get `profile` (`read`,
+  /// `edit` or `full`). One offer is open at a time: a new one replaces the
+  /// last. Sharing must be online. With `egress` the device may also send
+  /// its model traffic through this computer.
+  Future<PairOffer> pair({required String profile, required bool egress}) =>
+      RustLib.instance.api.crateApiRemoteRemoteSharePair(
+        that: this,
+        profile: profile,
+        egress: egress,
+      );
+
+  /// Replaces the key with a fresh one. Stops sharing first and leaves it
+  /// stopped. Every pairing in both directions is cleared.
+  Future<KeyChange> regenerateKey() =>
+      RustLib.instance.api.crateApiRemoteRemoteShareRegenerateKey(that: this);
+
+  /// Removes a device. While sharing, its open tunnels close at once and its
+  /// next connection is refused. False when no such device was paired.
+  Future<bool> revoke({required String id}) =>
+      RustLib.instance.api.crateApiRemoteRemoteShareRevoke(that: this, id: id);
+
+  /// Whether this data directory is being shared, and by whom.
+  Future<OtherShare> serveStatus() =>
+      RustLib.instance.api.crateApiRemoteRemoteShareServeStatus(that: this);
+
+  /// Chooses the `cloudflared` at `path`, or with `None` goes back to the
+  /// managed copy (or the one on `PATH`). The host runs it with `--version`
+  /// first; a refusal comes back as a [`ShareError`] carrying its reason and
+  /// leaves the choice as it was. Sharing must restart to run the new one.
+  Future<CloudflaredStatus> setCloudflared({String? path}) => RustLib
+      .instance
+      .api
+      .crateApiRemoteRemoteShareSetCloudflared(that: this, path: path);
+
+  /// Starts sharing as `[remote]` says and returns at once, without waiting
+  /// for the host to come online (watch [`Self::state`]). Already sharing is
+  /// not an error: the current state comes back.
+  Future<ShareState> start() =>
+      RustLib.instance.api.crateApiRemoteRemoteShareStart(that: this);
+
+  Future<ShareState> state() =>
+      RustLib.instance.api.crateApiRemoteRemoteShareState(that: this);
+
+  /// Stops sharing and closes every device tunnel. Harmless when not sharing.
+  Future<void> stop() =>
+      RustLib.instance.api.crateApiRemoteRemoteShareStop(that: this);
+
+  /// Stores a Cloudflare API token (Tunnel edit and DNS edit) in the
+  /// owner-only token file, never in the config.
+  Future<void> storeCloudflareToken({required String token}) => RustLib
+      .instance
+      .api
+      .crateApiRemoteRemoteShareStoreCloudflareToken(that: this, token: token);
+
+  /// Installs (or updates to) the pinned `cloudflared`, checksum-verified.
+  Future<CloudflaredStatus> updateCloudflared() => RustLib.instance.api
+      .crateApiRemoteRemoteShareUpdateCloudflared(that: this);
+
+  /// The current state first, then every change of status, address, error
+  /// text or open-tunnel count. The stream ends after sharing stops, or when
+  /// the host closes.
+  Stream<ShareState> watch() =>
+      RustLib.instance.api.crateApiRemoteRemoteShareWatch(that: this);
 }

@@ -345,8 +345,8 @@ class UpdateDialog extends StatelessWidget {
           const SizedBox(height: 12),
           GroupCard(
             children: [
-              KeyValueRow('Expected', cut(error.expected)),
-              KeyValueRow('Got', cut(error.actual)),
+              SettingsKeyValueRow('Expected', cut(error.expected)),
+              SettingsKeyValueRow('Got', cut(error.actual)),
             ],
           ),
           Text(
