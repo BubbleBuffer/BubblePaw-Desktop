@@ -196,7 +196,7 @@ cause (a locked store, a bad config).
   icon file (`TrayDot`: none while running or starting, green while shared, red while
   stopped or failed): `tray-{shared,stopped}.ico` and `tray-{16,20,24,32}-{shared,stopped}.png`
   are made from the plain files by `assets/icon/tray/make_tray_dots.py` (Pillow; run it
-  after changing the mark), and `DesktopIntegration` calls `setIcon` when the dot changes. Linux needs libayatana-appindicator to build.
+  after changing the mark), and `DesktopIntegration` calls `setIcon` when the dot changes. Linux needs GTK 3, X11 and Xi development files to build (tray_manager's native asset).
 - **Rail avatar**: two letters from the workspace folder name (`my-cool_app` is
   MC, `BubblePaw` is BP). The kit draws the circle; it cannot be left out.
 - **Plan, question, usage, context meter, branch**: the kit's chat pane already

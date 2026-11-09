@@ -38,6 +38,9 @@ jobs:
           flutter-version: 3.47.7
       - name: rust toolchain
         run: rustup toolchain install stable --profile minimal -c rustfmt,clippy && rustup default stable
+      # tray_manager's native assets (nativeapi) compile against GTK 3, X11 and Xi.
+      - name: Linux desktop development files
+        run: sudo apt-get install -y -qq pkg-config libgtk-3-dev libx11-dev libxi-dev
       - run: flutter pub get
       - name: dart format
         if: always()
@@ -82,13 +85,13 @@ jobs:
         run: |
           cargo build --manifest-path native/Cargo.toml
           flutter test --tags native test/native_host_test.dart
-      # Catches native breakage: the plugin registrants, the tray's
-      # libayatana-appindicator and the runner changes.
+      # Catches native breakage: the plugin registrants, the tray's native
+      # asset (GTK 3, X11, Xi) and the runner changes.
       - name: linux build (debug)
         if: always()
         run: |
           missing=""
-          for p in clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev; do
+          for p in clang cmake ninja-build pkg-config libgtk-3-dev libx11-dev libxi-dev; do
             dpkg -s "$p" >/dev/null 2>&1 || missing="$missing $p"
           done
           if [ -n "$missing" ]; then

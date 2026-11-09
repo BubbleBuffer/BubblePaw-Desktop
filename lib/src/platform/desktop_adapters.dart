@@ -2,12 +2,17 @@
 // window and an entry that starts it at login. Each is an interface so the
 // logic around them runs headless; the System* classes use the plugins.
 
+// tray_manager 0.8 keeps the 0.5.x API in legacy.dart (marked deprecated) and
+// moves the rest to nativeapi; the adapter stays on the bridge so behaviour
+// does not change.
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
-import 'package:tray_manager/tray_manager.dart';
+import 'package:tray_manager/legacy.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'tray_menu.dart';

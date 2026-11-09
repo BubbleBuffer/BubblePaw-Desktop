@@ -46,7 +46,7 @@ flowchart LR
 
 ## Build
 
-You need Flutter **3.47.7** (stable) and a Rust toolchain (stable, installed with rustup): Core is compiled into the app, so `flutter build` and `flutter run` run `cargo` through Cargokit. The first build fetches and compiles `bubblepaw-sdk` and is slow. On Linux the build also needs `clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev`; on Windows, Visual Studio with the C++ desktop workload. `native/target` and `build/` can be pointed at another disk with a directory junction or symlink.
+You need Flutter **3.47.7** (stable) and a Rust toolchain (stable, installed with rustup): Core is compiled into the app, so `flutter build` and `flutter run` run `cargo` through Cargokit. The first build fetches and compiles `bubblepaw-sdk` and is slow. On Linux the build also needs `clang cmake ninja-build pkg-config libgtk-3-dev libx11-dev libxi-dev`; on Windows, Visual Studio with the C++ desktop workload. `native/target` and `build/` can be pointed at another disk with a directory junction or symlink.
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on GitHub-hosted `ubuntu-latest` and `windows-latest`. Linux: format, analyze, tests, goldens, the crate's fmt, Clippy and tests, the FFI transport test against the built crate, and a debug build. Windows: the crate's tests, the same FFI test and a debug build.
 
