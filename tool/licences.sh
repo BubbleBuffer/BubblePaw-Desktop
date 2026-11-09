@@ -2,7 +2,7 @@
 # Regenerates the Rust crate licences the app lists (assets/licences/*.json)
 # from native/Cargo.lock with cargo-about. CI runs this and fails when the
 # committed files differ. Needs cargo-about 0.9.3:
-#   cargo install cargo-about --version 0.9.3 --locked
+#   cargo install cargo-about --version 0.9.3 --locked --features cli
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p assets/licences
