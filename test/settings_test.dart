@@ -547,10 +547,7 @@ void main() {
           ),
         ]),
       );
-      expect(
-        records.map((r) => r.id),
-        unorderedEquals(['http', 'crate:http']),
-      );
+      expect(records.map((r) => r.id), unorderedEquals(['http', 'crate:http']));
       final crate = records.firstWhere((r) => r.group == coreCratesGroup);
       expect(crate.version, '1.3.1');
       expect(crate.kinds, ['Apache-2.0 OR MIT']);

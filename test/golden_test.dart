@@ -9,8 +9,7 @@ import 'dart:io';
 import 'package:agent_kit_core/agent_kit_core.dart' show KitUnavailable;
 import 'package:agent_kit_core/fake.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
-import 'package:bubblepaw_desktop/src/app_licences.dart'
-    show CrateLicenceEntry;
+import 'package:bubblepaw_desktop/src/app_licences.dart' show CrateLicenceEntry;
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/feedback/feedback_controller.dart';
 import 'package:bubblepaw_desktop/src/feedback/feedback_sheet.dart';
