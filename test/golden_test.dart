@@ -9,6 +9,8 @@ import 'dart:io';
 import 'package:agent_kit_core/agent_kit_core.dart' show KitUnavailable;
 import 'package:agent_kit_core/fake.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
+import 'package:bubblepaw_desktop/src/app_licences.dart'
+    show CrateLicenceEntry;
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/feedback/feedback_controller.dart';
 import 'package:bubblepaw_desktop/src/feedback/feedback_sheet.dart';
@@ -356,6 +358,18 @@ Stream<LicenseEntry> sampleLicences() => Stream.fromIterable([
   LicenseEntryWithLineBreaks([
     'bb_ui',
   ], 'Permission is hereby granted, free of charge, to any person'),
+  const CrateLicenceEntry(
+    name: 'bubblepaw-sdk',
+    version: '0.2.1',
+    expression: 'AGPL-3.0-only',
+    text: 'GNU AFFERO GENERAL PUBLIC LICENSE',
+  ),
+  const CrateLicenceEntry(
+    name: 'serde',
+    version: '1.0.228',
+    expression: 'Apache-2.0 OR MIT',
+    text: 'Apache License',
+  ),
   LicenseEntryWithLineBreaks([
     'Bricolage Grotesque',
   ], 'This Font Software is licensed under the SIL Open Font License'),

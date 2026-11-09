@@ -19,6 +19,7 @@ import 'src/remote/link_scanner.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerFontLicences();
+  registerCrateLicences(asset: phoneCratesAsset);
   installLogHooks();
   final support = await getApplicationSupportDirectory();
   final directory = Directory(support.path);

@@ -1,0 +1,46 @@
+# cargo-about config for the desktop app (the embedded Core and its crates).
+# tool/licences.sh turns the result into assets/licences/core-crates.json,
+# which the Licences page lists. A crate whose licence is not in `accepted`
+# fails the run, so a new licence is a decision, not a surprise.
+# native/about-phone.toml is the same for the phone; keep the two in step.
+
+accepted = [
+    "Apache-2.0",
+    "MIT",
+    "BSD-3-Clause",
+    "BSD-2-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "CC0-1.0",
+    "0BSD",
+    "BSL-1.0",
+    "Unlicense",
+]
+
+# What the desktop builds ship (CI and releases build Linux and Windows).
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+]
+
+# The app's own crate (publish = false) is not a dependency to list.
+private = { ignore = true }
+
+# Dev dependencies are only for tests. Build dependencies stay listed.
+ignore-dev-dependencies = true
+
+# The embedded BubblePaw Core is the same project's own code under the
+# same licence as this app (see LICENSE).
+[bubblepaw-core]
+accepted = ["AGPL-3.0-only"]
+[bubblepaw-mcp]
+accepted = ["AGPL-3.0-only"]
+[bubblepaw-process]
+accepted = ["AGPL-3.0-only"]
+[bubblepaw-runner]
+accepted = ["AGPL-3.0-only"]
+[bubblepaw-sdk]
+accepted = ["AGPL-3.0-only"]
+[bubblepaw-remote]
+accepted = ["AGPL-3.0-only"]
