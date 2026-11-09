@@ -24,14 +24,13 @@ targets = [
     "aarch64-linux-android",
 ]
 
-# The app's own crate (publish = false) is not a dependency to list.
-private = { ignore = true }
-
 # Dev dependencies are only for tests. Build dependencies stay listed.
 ignore-dev-dependencies = true
 
-# The embedded BubblePaw Core is the same project's own code under the
-# same licence as this app (see LICENSE).
+# The embedded BubblePaw Core and the app's own native crate are the same
+# project's own code, under the same licence as this app (see LICENSE).
+[bubblepaw_desktop_native]
+accepted = ["AGPL-3.0-only"]
 [bubblepaw-core]
 accepted = ["AGPL-3.0-only"]
 [bubblepaw-mcp]
