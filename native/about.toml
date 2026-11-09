@@ -16,6 +16,8 @@ accepted = [
     "0BSD",
     "BSL-1.0",
     "Unlicense",
+    "MIT-0",
+    "CDLA-Permissive-2.0",
 ]
 
 # What the desktop builds ship (CI and releases build Linux and Windows).

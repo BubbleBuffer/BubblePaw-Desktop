@@ -15,6 +15,8 @@ accepted = [
     "0BSD",
     "BSL-1.0",
     "Unlicense",
+    "MIT-0",
+    "CDLA-Permissive-2.0",
 ]
 
 # What the phone build ships (arm64 Android).
