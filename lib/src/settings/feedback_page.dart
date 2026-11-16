@@ -66,7 +66,13 @@ class FeedbackPage extends StatelessWidget {
           ),
           const Gap(Space.md),
           if (compact) ...[
-            Row(children: [send, const Gap(Space.sm), open]),
+            // Wraps under itself when the text is large.
+            Wrap(
+              spacing: Space.sm,
+              runSpacing: Space.sm,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [send, open],
+            ),
             const Gap(Space.md),
           ],
           Row(
