@@ -7,6 +7,8 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../app_tokens.dart';
+
 // Lucide glyphs that bb_ui's Ico enum lacks. The kit names its own the same
 // way; they move to Ico when bb_ui gains them.
 const LucideGlyph glyphSliders = (
@@ -36,14 +38,17 @@ const LucideGlyph glyphChevronUp = (
 );
 
 /// [glyph] at [size] in [color], hidden from semantics.
-Widget glyphIcon(LucideGlyph glyph, {double size = 18, required Color color}) =>
-    ExcludeSemantics(
-      child: LucideIcon(
-        lucideWeight(glyph, size, 1.5),
-        size: size,
-        color: color,
-      ),
-    );
+Widget glyphIcon(
+  LucideGlyph glyph, {
+  IconSize size = IconSize.md,
+  required Color color,
+}) => ExcludeSemantics(
+  child: LucideIcon(
+    lucideWeight(glyph, size.px, Stroke.regular),
+    size: size.px,
+    color: color,
+  ),
+);
 
 /// One settings page: a title (a top bar with a back button at compact
 /// width) over [children], scrolling, no wider than 640.
@@ -65,18 +70,18 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compact = SizeClass.of(context).isCompact;
+    final compact = sizeClassOf(context).isCompact;
     final body = SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        compact ? 16 : 32,
-        compact ? 16 : 32,
-        compact ? 16 : 32,
-        32,
+        compact ? Space.lg : Space.xxl,
+        compact ? Space.lg : Space.xxl,
+        compact ? Space.lg : Space.xxl,
+        Space.xxl,
       ),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
+          constraints: const BoxConstraints(maxWidth: SettingsSizes.column),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -112,28 +117,32 @@ class _CompactBar extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: theme.seam)),
       ),
-      child: SizedBox(
-        height: 56,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: SettingsSizes.compactBar),
         child: Row(
           children: [
-            const SizedBox(width: 8),
+            const Gap(Space.sm),
             if (onBack != null)
               IconBtn(
                 Ico.chevronLeft,
                 key: backKey,
-                size: 40,
+                size: ControlSize.xl,
                 semanticLabel: 'Back',
                 onTap: onBack,
               )
             else
-              const SizedBox(width: 40),
-            const SizedBox(width: 8),
+              const Gap(Space.xxxl),
+            const Gap(Space.sm),
             Expanded(
               child: Semantics(
                 header: true,
                 child: Text(
                   title,
-                  style: ts(theme.typeScale.h2, theme.ink, weight: 600),
+                  style: ts(
+                    theme.typeScale.h2,
+                    theme.ink,
+                    weight: Weight.semibold,
+                  ),
                 ),
               ),
             ),
@@ -176,7 +185,7 @@ class SwitchRow extends StatelessWidget {
         toggled: value,
         enabled: enabled,
         child: Opacity(
-          opacity: enabled ? 1 : .5,
+          opacity: enabled ? 1 : Alpha.muted,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -186,15 +195,15 @@ class SwitchRow extends StatelessWidget {
                 onChanged: enabled ? onChanged : null,
               ),
               SizedBox(
-                width: 28,
+                width: SettingsSizes.switchState,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.only(left: Space.sm),
                   child: Text(
                     value ? 'On' : 'Off',
                     style: ts(
                       theme.typeScale.uiSmall,
                       theme.muted,
-                      weight: 600,
+                      weight: Weight.semibold,
                     ),
                   ),
                 ),
@@ -232,11 +241,11 @@ class SegmentedChoice<T> extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: theme.surface2,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(Radii.lg),
         border: Border.all(color: theme.seam),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(2),
+        padding: const EdgeInsets.all(Space.hair),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -254,17 +263,19 @@ class SegmentedChoice<T> extends StatelessWidget {
                   border: option == value
                       ? Border.all(color: theme.thread)
                       : null,
-                  borderRadius: BorderRadius.circular(6),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: SizedBox(
-                    height: 28,
+                  borderRadius: BorderRadius.circular(Radii.md),
+                  padding: const EdgeInsets.symmetric(horizontal: Space.md),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: ControlSize.sm.height,
+                    ),
                     child: Center(
                       child: Text(
                         labelOf(option),
                         style: ts(
                           theme.typeScale.uiSmall,
                           option == value ? theme.ink : theme.muted,
-                          weight: option == value ? 700 : 500,
+                          weight: option == value ? Weight.bold : Weight.medium,
                         ),
                       ),
                     ),
@@ -301,7 +312,7 @@ class ChoiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: Space.sm),
       child: Semantics(
         inMutuallyExclusiveGroup: true,
         checked: selected,
@@ -309,30 +320,34 @@ class ChoiceCard extends StatelessWidget {
         label: '$title. $description',
         excludeSemantics: true,
         child: Opacity(
-          opacity: available ? 1 : .6,
+          opacity: available ? 1 : Alpha.muted,
           child: Hover(
             onTap: available ? onTap : null,
             background: selected ? theme.surface : theme.surface2,
             border: Border.all(
               color: selected ? theme.threadStrong : theme.seam,
             ),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(Radii.lg),
             lift: 0,
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(Space.md),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _RadioMark(selected: selected),
-                const SizedBox(width: 12),
+                const Gap(Space.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
-                        style: ts(theme.typeScale.ui, theme.ink, weight: 600),
+                        style: ts(
+                          theme.typeScale.ui,
+                          theme.ink,
+                          weight: Weight.semibold,
+                        ),
                       ),
-                      const SizedBox(height: 2),
+                      const Gap(Space.hair),
                       Text(
                         description,
                         style: ts(theme.typeScale.uiSmall, theme.muted),
@@ -358,21 +373,21 @@ class _RadioMark extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Container(
-      width: 16,
-      height: 16,
-      margin: const EdgeInsets.only(top: 2),
+      width: SettingsSizes.radioMark,
+      height: SettingsSizes.radioMark,
+      margin: const EdgeInsets.only(top: Space.hair),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
           color: selected ? theme.ink : theme.threadStrong,
-          width: 1.5,
+          width: Stroke.regular,
         ),
       ),
       child: selected
           ? Center(
               child: Container(
-                width: 8,
-                height: 8,
+                width: Sizes.dot,
+                height: Sizes.dot,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: theme.ink,
@@ -404,22 +419,25 @@ class StatePill extends StatelessWidget {
       PillTone.plain => (theme.surface2, theme.muted),
     };
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: fill,
-        borderRadius: BorderRadius.circular(999),
-      ),
+      decoration: BoxDecoration(color: fill, borderRadius: Radii.pill),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.sm,
+          vertical: Space.xxs,
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 6,
-              height: 6,
+              width: SettingsSizes.pillDot,
+              height: SettingsSizes.pillDot,
               decoration: BoxDecoration(color: ink, shape: BoxShape.circle),
             ),
-            const SizedBox(width: 6),
-            Text(label, style: ts(theme.typeScale.uiSmall, ink, weight: 700)),
+            const Gap(Space.xs),
+            Text(
+              label,
+              style: ts(theme.typeScale.uiSmall, ink, weight: Weight.bold),
+            ),
           ],
         ),
       ),
@@ -440,14 +458,14 @@ class GroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: Space.md),
       child: DecoratedBox(
         decoration: BoxDecoration(
           border: Border.all(color: theme.seam),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Radii.lg),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(Radii.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -455,7 +473,7 @@ class GroupCard extends StatelessWidget {
                 ColoredBox(
                   color: theme.surface,
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(Space.md),
                     child: header,
                   ),
                 ),

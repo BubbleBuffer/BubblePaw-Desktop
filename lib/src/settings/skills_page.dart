@@ -7,6 +7,7 @@ import 'package:agent_kit/agent_kit.dart';
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
+import '../app_tokens.dart';
 import '../core/host_settings.dart';
 import 'settings_widgets.dart';
 
@@ -104,11 +105,11 @@ class _SkillsPageState extends State<SkillsPage> {
                   key: const ValueKey('skills-load-error'),
                   style: ts(theme.typeScale.ui, theme.dangerInk),
                 ),
-                const SizedBox(height: 8),
+                const Gap(Space.sm),
                 SecondaryButton(
                   key: const ValueKey('skills-retry'),
                   label: 'Try again',
-                  height: 32,
+                  size: ControlSize.md,
                   onTap: _load,
                 ),
               ],
@@ -139,7 +140,7 @@ class _SkillsPageState extends State<SkillsPage> {
         body,
         if (_restart)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.only(top: Space.md),
             child: Text(
               'Applies after restart.',
               key: const ValueKey('skills-restart'),
@@ -148,7 +149,7 @@ class _SkillsPageState extends State<SkillsPage> {
           ),
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.only(top: Space.md),
             child: Semantics(
               liveRegion: true,
               child: Text(
@@ -194,7 +195,7 @@ class _SkillRow extends StatelessWidget {
     final theme = context.bb;
     final where = skill.source == 'user' ? 'User' : 'Project';
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: Space.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -207,7 +208,7 @@ class _SkillRow extends StatelessWidget {
                   style: ts(
                     theme.typeScale.ui,
                     theme.ink,
-                    weight: 600,
+                    weight: Weight.semibold,
                     mono: true,
                   ),
                 ),
@@ -216,9 +217,9 @@ class _SkillRow extends StatelessWidget {
                     skill.description,
                     style: ts(theme.typeScale.uiSmall, theme.muted),
                   ),
-                const SizedBox(height: 4),
+                const Gap(Space.xxs),
                 Wrap(
-                  spacing: 8,
+                  spacing: Space.sm,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
@@ -228,12 +229,12 @@ class _SkillRow extends StatelessWidget {
                     DecoratedBox(
                       decoration: BoxDecoration(
                         color: theme.surface2,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(Radii.sm),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
+                          horizontal: Space.xs,
+                          vertical: Space.hair,
                         ),
                         child: Text(
                           skillFolder(skill),
@@ -250,7 +251,7 @@ class _SkillRow extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 16),
+          const Gap(Space.lg),
           _SkillSwitch(
             name: skill.name,
             value: skill.enabled,
@@ -281,7 +282,7 @@ class _SkillSwitch extends StatelessWidget {
       toggled: value,
       enabled: onChanged != null,
       child: Opacity(
-        opacity: onChanged == null ? .5 : 1,
+        opacity: onChanged == null ? Alpha.muted : 1,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -291,12 +292,16 @@ class _SkillSwitch extends StatelessWidget {
               onChanged: onChanged,
             ),
             SizedBox(
-              width: 28,
+              width: SettingsSizes.switchState,
               child: Padding(
-                padding: const EdgeInsets.only(left: 8),
+                padding: const EdgeInsets.only(left: Space.sm),
                 child: Text(
                   value ? 'On' : 'Off',
-                  style: ts(theme.typeScale.uiSmall, theme.muted, weight: 600),
+                  style: ts(
+                    theme.typeScale.uiSmall,
+                    theme.muted,
+                    weight: Weight.semibold,
+                  ),
                 ),
               ),
             ),
@@ -321,20 +326,20 @@ class _EmptySkills extends StatelessWidget {
           'No skills found. BubblePaw looks in these folders:',
           style: ts(theme.typeScale.uiSmall, theme.muted),
         ),
-        const SizedBox(height: 8),
+        const Gap(Space.sm),
         for (final dir in const [
           '.agents/skills',
           '.claude/skills',
           '~/.config/bubblepaw/skills',
         ])
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(vertical: Space.xxs),
             child: Text(
               dir,
               style: ts(theme.typeScale.ui, theme.ink, mono: true),
             ),
           ),
-        const SizedBox(height: 8),
+        const Gap(Space.sm),
         Text(
           'A skill you add to one of them appears here.',
           style: ts(theme.typeScale.uiSmall, theme.muted),

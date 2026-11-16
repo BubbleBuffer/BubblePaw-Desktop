@@ -10,11 +10,12 @@ import 'dart:math' as math;
 
 import 'package:agent_kit/agent_kit.dart';
 import 'package:agent_kit_core/agent_kit_core.dart';
-import 'package:bb_ui/bb_ui.dart' show SecondaryButton, ts;
+import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/services.dart'
     show HardwareKeyboard, KeyDownEvent, KeyEvent, LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 
+import '../app_tokens.dart';
 import '../screens/host_open_notice.dart';
 import '../search/chat_search.dart';
 import 'project_groups.dart';
@@ -410,8 +411,8 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
           ),
           if (error != null)
             Positioned(
-              right: 16,
-              bottom: 16,
+              right: Space.lg,
+              bottom: Space.lg,
               child: KeyedSubtree(
                 key: const ValueKey('new-chat-error'),
                 child: HostOpenNotice(
@@ -458,11 +459,12 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
     }
     if (!shown) return sheet;
     final padded = Padding(
-      padding: const EdgeInsets.fromLTRB(0, 12, 12, 12),
+      padding: const EdgeInsets.fromLTRB(0, Space.md, Space.md, Space.md),
       child: workspace,
     );
     if (area.isMedium) {
-      final w = math.min(420.0, math.max(240.0, width * .4));
+      const split = WorkbenchSizes.workspaceMedium;
+      final w = math.min(split.max, math.max(split.min, width * split.share));
       return Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -471,7 +473,8 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
         ],
       );
     }
-    final w = math.min(584.0, math.max(444.0, width * .44));
+    const split = WorkbenchSizes.chatExpanded;
+    final w = math.min(split.max, math.max(split.min, width * split.share));
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -511,7 +514,7 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
     return KeyedSubtree(
       key: _sheetKey,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        padding: const EdgeInsets.fromLTRB(Space.md, Space.md, Space.md, 0),
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: t.surface,
@@ -539,10 +542,10 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
             style: ts(t.typeScale.ui, t.muted),
           ),
           if (_listError != null) ...[
-            const SizedBox(height: 12),
+            const Gap(Space.md),
             SecondaryButton(
               label: 'Retry',
-              height: 36,
+              size: ControlSize.lg,
               onTap: () => unawaited(_refresh()),
             ),
           ],

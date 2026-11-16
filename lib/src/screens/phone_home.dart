@@ -47,7 +47,12 @@ class PhoneHome extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+              padding: const EdgeInsets.fromLTRB(
+                Space.sm,
+                Space.xxs,
+                Space.sm,
+                Space.xxs,
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -65,24 +70,28 @@ class PhoneHome extends StatelessWidget {
                             : () => showHostSheet(context, hosts: menu),
                         borderRadius: theme.radii.ctl,
                         lift: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: SizedBox(
-                          height: 48,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Space.sm,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: ControlSize.xxl.height,
+                          ),
                           child: Row(
                             children: [
                               glyphIcon(
                                 glyphMonitor,
-                                size: 18,
+                                size: IconSize.md,
                                 color: theme.muted,
                               ),
-                              const SizedBox(width: 10),
+                              const Gap(Space.md),
                               Expanded(
                                 child: Text(
                                   hasHosts ? 'No host' : 'Add a host',
                                   style: ts(
                                     theme.typeScale.ui,
                                     theme.ink,
-                                    weight: 700,
+                                    weight: Weight.bold,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -90,7 +99,7 @@ class PhoneHome extends StatelessWidget {
                               ),
                               glyphIcon(
                                 glyphChevronDown,
-                                size: 16,
+                                size: IconSize.sm,
                                 color: theme.muted,
                               ),
                             ],
@@ -109,13 +118,12 @@ class PhoneHome extends StatelessWidget {
                       onTap: onSettings,
                       borderRadius: theme.radii.ctl,
                       lift: 0,
-                      child: SizedBox(
-                        width: 48,
-                        height: 48,
+                      child: SizedBox.square(
+                        dimension: ControlSize.xxl.height,
                         child: Center(
                           child: glyphIcon(
                             glyphSettings,
-                            size: 20,
+                            size: IconSize.lg,
                             color: theme.muted,
                           ),
                         ),
@@ -128,7 +136,7 @@ class PhoneHome extends StatelessWidget {
             Expanded(
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(Space.xl),
                   child: Semantics(
                     liveRegion: true,
                     child: Text(
@@ -142,13 +150,18 @@ class PhoneHome extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              padding: const EdgeInsets.fromLTRB(
+                Space.md,
+                Space.sm,
+                Space.md,
+                Space.md,
+              ),
               child: Opacity(
-                opacity: 0.5,
+                opacity: Alpha.muted,
                 child: PrimaryButton(
                   key: const ValueKey('phone-new-chat'),
                   label: 'New chat',
-                  height: 48,
+                  size: ControlSize.xxl,
                   icon: Ico.compose,
                   onTap: () {},
                 ),

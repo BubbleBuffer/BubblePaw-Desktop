@@ -6,6 +6,7 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../app_tokens.dart';
 import 'settings_widgets.dart';
 
 const LucideGlyph glyphDownload = (
@@ -68,7 +69,7 @@ class ActionButton extends StatelessWidget {
       excludeSemantics: true,
       child: Hover(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(Radii.md),
         background: switch (kind) {
           ActionKind.primary => theme.accent,
           ActionKind.outline => theme.surface,
@@ -79,22 +80,22 @@ class ActionButton extends StatelessWidget {
         border: kind == ActionKind.outline
             ? Border.all(color: theme.thread)
             : null,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: SizedBox(
-          height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: Space.md),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: ControlSize.lg.height),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (glyph != null) ...[
-                glyphIcon(glyph!, size: 16, color: ink),
-                const SizedBox(width: 6),
+                glyphIcon(glyph!, size: IconSize.sm, color: ink),
+                const Gap(Space.xs),
               ],
               Text(
                 label,
                 style: ts(
                   theme.typeScale.ui,
                   kind == ActionKind.quiet ? theme.muted : ink,
-                  weight: primary ? 700 : 600,
+                  weight: primary ? Weight.bold : Weight.semibold,
                 ),
               ),
             ],
@@ -121,9 +122,9 @@ class ProgressLine extends StatelessWidget {
       value: '${(fraction * 100).round()}%',
       child: ExcludeSemantics(
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(Radii.sm),
           child: SizedBox(
-            height: 6,
+            height: SettingsSizes.progressBar,
             child: Stack(
               children: [
                 Positioned.fill(child: ColoredBox(color: theme.surface2)),
@@ -177,25 +178,25 @@ class NoticeBox extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: fill,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(Radii.lg),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(Space.md),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 1),
-              child: glyphIcon(glyph, size: 16, color: ink),
+              padding: const EdgeInsets.only(top: Space.hair),
+              child: glyphIcon(glyph, size: IconSize.sm, color: ink),
             ),
-            const SizedBox(width: 8),
+            const Gap(Space.sm),
             Expanded(
               child: DefaultTextStyle(
                 style: ts(theme.typeScale.ui, ink),
                 child: child,
               ),
             ),
-            if (trailing != null) ...[const SizedBox(width: 12), trailing!],
+            if (trailing != null) ...[const Gap(Space.md), trailing!],
           ],
         ),
       ),
@@ -224,11 +225,14 @@ class SettingsKeyValueRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.md,
+        vertical: Space.sm,
+      ),
       child: Row(
         children: [
           SizedBox(
-            width: 112,
+            width: SettingsSizes.factLabel,
             child: Text(name, style: ts(theme.typeScale.ui, theme.muted)),
           ),
           Expanded(
@@ -238,7 +242,7 @@ class SettingsKeyValueRow extends StatelessWidget {
               style: ts(theme.typeScale.ui, theme.ink, mono: mono),
             ),
           ),
-          if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+          if (trailing != null) ...[const Gap(Space.sm), trailing!],
         ],
       ),
     );
@@ -261,17 +265,21 @@ class LinkButton extends StatelessWidget {
       excludeSemantics: true,
       child: Hover(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        borderRadius: BorderRadius.circular(Radii.sm),
+        padding: const EdgeInsets.symmetric(vertical: Space.xxs),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               label,
-              style: ts(theme.typeScale.ui, theme.accentInk, weight: 600),
+              style: ts(
+                theme.typeScale.ui,
+                theme.accentInk,
+                weight: Weight.semibold,
+              ),
             ),
-            const SizedBox(width: 4),
-            glyphIcon(glyphExternal, size: 13, color: theme.accentInk),
+            const Gap(Space.xxs),
+            glyphIcon(glyphExternal, size: IconSize.xs, color: theme.accentInk),
           ],
         ),
       ),

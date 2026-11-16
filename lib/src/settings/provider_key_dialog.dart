@@ -9,6 +9,7 @@ import 'package:agent_kit/agent_kit.dart';
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
+import '../app_tokens.dart';
 import '../core/host_settings.dart';
 import 'action_widgets.dart';
 import 'remote_dialogs.dart' show DialogFrame, dialogFooter;
@@ -34,8 +35,8 @@ Future<ProviderKeyChange?> showProviderKeyDialog(
       keyEnv: keyEnv,
     ),
   ),
-  width: 460,
-  height: 560,
+  width: Panels.providerKey.width,
+  height: Panels.providerKey.height,
   shrink: true,
 );
 
@@ -155,7 +156,7 @@ class _ProviderKeyDialogState extends State<ProviderKeyDialog> {
             key: const ValueKey('key-dialog-environment'),
             style: ts(theme.typeScale.uiSmall, theme.muted),
           ),
-          const SizedBox(height: 12),
+          const Gap(Space.md),
         ],
         LabeledField(
           label: 'API key',
@@ -171,7 +172,7 @@ class _ProviderKeyDialogState extends State<ProviderKeyDialog> {
           ),
         ),
         if (_stored) ...[
-          const SizedBox(height: 4),
+          const Gap(Space.xxs),
           Text(
             env == null
                 ? 'Removing the stored key leaves this provider without a '
@@ -191,7 +192,7 @@ class _ProviderKeyDialogState extends State<ProviderKeyDialog> {
             onTap: _cancel,
           ),
           Opacity(
-            opacity: ready ? 1 : .5,
+            opacity: ready ? 1 : Alpha.muted,
             child: ActionButton(
               key: const ValueKey('key-save'),
               label: _busy ? 'Saving…' : 'Save key',

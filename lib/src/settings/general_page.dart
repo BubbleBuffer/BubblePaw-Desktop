@@ -75,7 +75,7 @@ class GeneralPage extends StatelessWidget {
           ),
         ),
         if (!phone) ...[
-          const SettingsHeading('Startup', top: 24),
+          const SettingsHeading('Startup', top: Space.xl),
           SwitchRow(
             id: 'open-at-login',
             label: 'Open at login',
@@ -109,12 +109,12 @@ class GeneralPage extends StatelessWidget {
             enabled: tray,
             onChanged: (v) => set(prefs.copyWith(keepInTray: v)),
           ),
-          const SettingsHeading('Storage', top: 24),
+          const SettingsHeading('Storage', top: Space.xl),
           _DataDirectoryRow(controller: controller),
         ],
         if (controller.startupFailed)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: Space.sm),
             child: Semantics(
               liveRegion: true,
               child: Text(
@@ -200,7 +200,7 @@ class _DataDirectoryRowState extends State<_DataDirectoryRow> {
           ),
         ),
         if (_error != null) ...[
-          const SizedBox(height: 8),
+          const Gap(Space.sm),
           Semantics(
             liveRegion: true,
             child: Text(
@@ -211,20 +211,20 @@ class _DataDirectoryRowState extends State<_DataDirectoryRow> {
           ),
         ],
         if (_dirty) ...[
-          const SizedBox(height: 16),
+          const Gap(Space.lg),
           Row(
             children: [
               PrimaryButton(
                 key: const ValueKey('settings-save'),
                 label: 'Save and restart',
-                height: 36,
+                size: ControlSize.lg,
                 onTap: _save,
               ),
-              const SizedBox(width: 8),
+              const Gap(Space.sm),
               SecondaryButton(
                 key: const ValueKey('settings-cancel'),
                 label: 'Cancel',
-                height: 36,
+                size: ControlSize.lg,
                 onTap: _cancel,
               ),
             ],

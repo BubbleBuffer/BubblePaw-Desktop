@@ -8,6 +8,7 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/foundation.dart' show LicenseEntry;
 import 'package:flutter/widgets.dart';
 
+import '../app_tokens.dart';
 import '../core/host_settings.dart';
 import '../feedback/feedback_controller.dart';
 import '../feedback/glyphs.dart';
@@ -356,13 +357,18 @@ class _Nav extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return SizedBox(
-      width: 240,
+      width: Layout.sidebarWidth,
       child: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(right: BorderSide(color: theme.seam)),
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(8, 16, 8, 16),
+          padding: const EdgeInsets.fromLTRB(
+            Space.sm,
+            Space.lg,
+            Space.sm,
+            Space.lg,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -371,13 +377,17 @@ class _Nav extends StatelessWidget {
                   key: const ValueKey('settings-back'),
                   onTap: onClose,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
+                    horizontal: Space.md,
+                    vertical: Space.sm,
                   ),
                   child: Row(
                     children: [
-                      Icon20(Ico.chevronLeft, size: 16, color: theme.muted),
-                      const SizedBox(width: 12),
+                      Icon20(
+                        Ico.chevronLeft,
+                        size: IconSize.sm,
+                        color: theme.muted,
+                      ),
+                      const Gap(Space.md),
                       Text(
                         'Back to chat',
                         style: ts(theme.typeScale.ui, theme.muted),
@@ -386,12 +396,21 @@ class _Nav extends StatelessWidget {
                   ),
                 ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(10, 16, 10, 12),
+                padding: const EdgeInsets.fromLTRB(
+                  Space.md,
+                  Space.lg,
+                  Space.md,
+                  Space.md,
+                ),
                 child: Semantics(
                   header: true,
                   child: Text(
                     'Settings',
-                    style: ts(theme.typeScale.h2, theme.ink, weight: 600),
+                    style: ts(
+                      theme.typeScale.h2,
+                      theme.ink,
+                      weight: Weight.semibold,
+                    ),
                   ),
                 ),
               ),
@@ -438,28 +457,31 @@ class _NavItem extends StatelessWidget {
         selected: selected,
         selectedColor: theme.pressed,
         lift: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.md,
+          vertical: Space.sm,
+        ),
         child: Row(
           children: [
             glyphIcon(glyph, color: selected ? theme.ink : theme.muted),
-            const SizedBox(width: 12),
+            const Gap(Space.md),
             Expanded(
               child: Text(
                 title,
                 style: ts(
                   theme.typeScale.ui,
                   theme.ink,
-                  weight: selected ? 600 : 400,
+                  weight: selected ? Weight.semibold : Weight.regular,
                 ),
               ),
             ),
             if (selected)
               Container(
-                width: 3,
-                height: 18,
+                width: Stroke.seam,
+                height: SettingsSizes.navMark,
                 decoration: BoxDecoration(
                   color: theme.accent,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(Radii.sm),
                 ),
               ),
           ],
@@ -495,18 +517,25 @@ class _ListRow extends StatelessWidget {
       child: Hover(
         onTap: onTap,
         lift: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.xxs,
+          vertical: Space.md,
+        ),
         child: Row(
           children: [
-            glyphIcon(glyph, size: 20, color: theme.muted),
-            const SizedBox(width: 16),
+            glyphIcon(glyph, size: IconSize.lg, color: theme.muted),
+            const Gap(Space.lg),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: ts(theme.typeScale.body, theme.ink, weight: 600),
+                    style: ts(
+                      theme.typeScale.body,
+                      theme.ink,
+                      weight: Weight.semibold,
+                    ),
                   ),
                   if (summary != null && summary!.isNotEmpty)
                     Text(
@@ -516,7 +545,7 @@ class _ListRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon20(Ico.chevronRight, size: 18, color: theme.muted),
+            Icon20(Ico.chevronRight, size: IconSize.md, color: theme.muted),
           ],
         ),
       ),

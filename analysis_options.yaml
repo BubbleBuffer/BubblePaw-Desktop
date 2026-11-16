@@ -7,3 +7,13 @@ analyzer:
     - linux/**
     - rust_builder/**
     - native/**
+
+# bb-ui's token rules (tokens_only, no_raw_colors, no_raw_text_style, use_gap,
+# no_material). Plugin diagnostics show in `dart analyze` at the package root,
+# not in `flutter analyze` and not with lib/test path arguments.
+plugins:
+  bb_lints:
+    git:
+      url: https://github.com/BubbleBuffer/bb-ui
+      ref: b93bdbca27dff32a2060744afd770cec2047203e
+      path: packages/bb_lints

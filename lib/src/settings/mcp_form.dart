@@ -8,6 +8,7 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../app_tokens.dart';
 import '../core/host_settings.dart';
 import 'action_widgets.dart' show ActionButton, ActionKind, glyphTrash;
 import 'mcp_servers.dart';
@@ -41,7 +42,7 @@ Future<McpFormResult?> showServerForm(
 }) => showModalPanel<McpFormResult>(
   context,
   // The panel is pushed above the settings shell, so it needs its own
-  // SizeClassBuilder for the form's SizeClass.of calls.
+  // SizeClassBuilder for the form's sizeClassOf calls.
   (_) => SizeClassBuilder(
     builder: (_, _) => McpServerDialog(
       settings: settings,
@@ -50,8 +51,8 @@ Future<McpFormResult?> showServerForm(
       status: status,
     ),
   ),
-  width: 520,
-  height: 760,
+  width: Panels.mcpServer.width,
+  height: Panels.mcpServer.height,
 );
 
 class McpServerDialog extends StatefulWidget {
@@ -292,7 +293,12 @@ class _McpServerDialogState extends State<McpServerDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
+            padding: const EdgeInsets.fromLTRB(
+              Space.xl,
+              Space.md,
+              Space.md,
+              Space.md,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -300,14 +306,18 @@ class _McpServerDialogState extends State<McpServerDialog> {
                     header: true,
                     child: Text(
                       title,
-                      style: ts(theme.typeScale.h2, theme.ink, weight: 600),
+                      style: ts(
+                        theme.typeScale.h2,
+                        theme.ink,
+                        weight: Weight.semibold,
+                      ),
                     ),
                   ),
                 ),
                 IconBtn(
                   Ico.close,
                   key: const ValueKey('srv-close'),
-                  size: 32,
+                  size: ControlSize.md,
                   semanticLabel: 'Close',
                   onTap: () => Navigator.of(context).maybePop(),
                 ),
@@ -322,7 +332,12 @@ class _McpServerDialogState extends State<McpServerDialog> {
           ),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              padding: const EdgeInsets.fromLTRB(
+                Space.xl,
+                Space.lg,
+                Space.xl,
+                Space.sm,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -375,7 +390,7 @@ class _McpServerDialogState extends State<McpServerDialog> {
                   ),
                   if (_refused['general'] != null)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.only(bottom: Space.sm),
                       child: Semantics(
                         liveRegion: true,
                         child: Text(
@@ -390,7 +405,12 @@ class _McpServerDialogState extends State<McpServerDialog> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+            padding: const EdgeInsets.fromLTRB(
+              Space.xl,
+              Space.sm,
+              Space.xl,
+              Space.lg,
+            ),
             child: _footer(),
           ),
         ],
@@ -400,12 +420,12 @@ class _McpServerDialogState extends State<McpServerDialog> {
 
   Widget _footer() {
     final theme = context.bb;
-    final compact = SizeClass.of(context).isCompact;
+    final compact = sizeClassOf(context).isCompact;
     final remove = OutlineButton(
       key: const ValueKey('srv-remove'),
       label: 'Remove server',
       danger: true,
-      icon: glyphIcon(glyphTrash, size: 15, color: theme.dangerInk),
+      icon: glyphIcon(glyphTrash, size: IconSize.sm, color: theme.dangerInk),
       onTap: _busy ? null : _remove,
     );
     final save = ActionButton(
@@ -425,11 +445,11 @@ class _McpServerDialogState extends State<McpServerDialog> {
     return compact
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [save, const SizedBox(height: 8), cancel],
+            children: [save, const Gap(Space.sm), cancel],
           )
         : Row(
             mainAxisAlignment: MainAxisAlignment.end,
-            children: [cancel, const SizedBox(width: 8), save],
+            children: [cancel, const Gap(Space.sm), save],
           );
   }
 
@@ -551,7 +571,7 @@ class _McpServerDialogState extends State<McpServerDialog> {
             ),
             if (_form.auth == McpAuth.oauth)
               Padding(
-                padding: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.only(top: Space.xs),
                 child: Text(
                   'Sign in from the server’s row.',
                   style: ts(theme.typeScale.uiSmall, theme.muted),
@@ -647,23 +667,27 @@ class _Labeled extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: Space.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             label,
-            style: ts(theme.typeScale.uiSmall, theme.ink, weight: 600),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.ink,
+              weight: Weight.semibold,
+            ),
           ),
           if (hint != null)
             Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.only(top: Space.hair),
               child: Text(
                 hint!,
                 style: ts(theme.typeScale.uiSmall, theme.muted),
               ),
             ),
-          const SizedBox(height: 6),
+          const Gap(Space.xs),
           child,
           if (error.isNotEmpty) _ErrorText(error),
         ],
@@ -681,7 +705,7 @@ class _ErrorText extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.only(top: Space.xs),
       child: Text(text, style: ts(theme.typeScale.uiSmall, theme.dangerInk)),
     );
   }
@@ -730,8 +754,8 @@ class _TextBoxState extends State<_TextBox> {
       behavior: HitTestBehavior.opaque,
       onTap: widget.readOnly ? null : _focus.requestFocus,
       child: FieldFrame(
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        height: ControlSize.lg.height,
+        padding: const EdgeInsets.symmetric(horizontal: Space.md),
         child: Semantics(
           label: widget.label,
           textField: true,
@@ -758,7 +782,7 @@ class _TextBoxState extends State<_TextBox> {
                 style: style,
                 cursorColor: theme.ink,
                 backgroundCursorColor: theme.faint,
-                selectionColor: theme.accent.withValues(alpha: 0.3),
+                selectionColor: theme.accent.withValues(alpha: Alpha.wash),
                 selectionControls: noteSelectionControls,
                 obscureText: widget.obscure,
                 readOnly: widget.readOnly,
@@ -773,13 +797,15 @@ class _TextBoxState extends State<_TextBox> {
         ? DecoratedBox(
             position: DecorationPosition.foreground,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(Radii.md),
               border: Border.all(color: theme.dangerInk),
             ),
             child: field,
           )
         : field;
-    return widget.readOnly ? Opacity(opacity: .6, child: framed) : framed;
+    return widget.readOnly
+        ? Opacity(opacity: Alpha.muted, child: framed)
+        : framed;
   }
 }
 
@@ -816,7 +842,7 @@ class _EntryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    final compact = SizeClass.of(context).isCompact;
+    final compact = sizeClassOf(context).isCompact;
     final byValue = entry.source == EntrySource.value;
     final name = _stack(
       _TextBox(
@@ -848,7 +874,7 @@ class _EntryRow extends StatelessWidget {
     final source = DecoratedBox(
       decoration: BoxDecoration(
         border: Border.all(color: theme.thread),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(Radii.md),
         color: theme.surface2,
       ),
       child: SelectButton<EntrySource>(
@@ -865,23 +891,23 @@ class _EntryRow extends StatelessWidget {
         : IconBtn(
             Ico.close,
             key: ValueKey('$id-remove'),
-            size: 32,
+            size: ControlSize.md,
             semanticLabel: 'Remove $label',
             onTap: onRemove,
           );
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: Space.md),
       child: compact && named
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 name,
-                const SizedBox(height: 6),
+                const Gap(Space.xs),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(child: value),
-                    const SizedBox(width: 8),
+                    const Gap(Space.sm),
                     source,
                     remove,
                   ],
@@ -891,9 +917,9 @@ class _EntryRow extends StatelessWidget {
           : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (named) ...[Expanded(child: name), const SizedBox(width: 8)],
+                if (named) ...[Expanded(child: name), const Gap(Space.sm)],
                 Expanded(child: value),
-                const SizedBox(width: 8),
+                const Gap(Space.sm),
                 source,
                 remove,
               ],

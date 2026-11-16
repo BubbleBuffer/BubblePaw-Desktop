@@ -21,15 +21,33 @@ DesktopIntegration   tray menu, close-to-tray, login entry (lib/src/platform/)
 ## Dependencies
 
 `agent_kit`, `agent_kit_core` and `agent_kit_bubblepaw` come from
-`BubbleBuffer/agent-kit` at a commit hash (currently v0.19.0, `28939d5`). The ref is the commit hash
+`BubbleBuffer/agent-kit` at a commit hash (currently 0.20.0, `88db604`, from agent-kit PR #70 before its
+v0.20.0 tag; re-pin to the tag's commit once it exists). The ref is the commit hash
 because the kit's packages depend on each other by path inside that repository,
 and pub resolves those to the hash; a tag in the app would conflict with it.
 v0.15.2 added `BubblePawBackend.connectionLost` (idle exit detection); v0.15.3
 added "Rewind from here" and hides the empty ledger.
 `flutter_rust_bridge` is pinned to `2.13.0`, the version of the generated bindings, and
 `bubblepaw_desktop_native` is a path dependency on `native/`, built by `rust_builder/`
-(Cargokit). `bb_ui` is pinned to `v0.7.2`, the kit's own pin. The kit's fonts are bundled in
+(Cargokit). `bb_ui` is pinned to the kit's own pin, bb-ui commit `1e3863a` (the 0.8 line, before its
+`v0.8.0` tag); the two must stay equal or pub cannot resolve. The kit's fonts are bundled in
 `assets/fonts` (the kit says hosts do that), with their OFL licences.
+
+## Tokens and density
+
+Widgets write no number for spacing, size, type, stroke, opacity, colour or duration: they use
+bb_tokens' scales (`Space`, `ControlSize`, `IconSize`, `Stroke`, `Alpha`, `Radii`, `Widths`, `Sizes`,
+the `TypeScale` roles through `context.bb.typeScale`). The few values particular to this app (dialog
+sizes, the settings column, the rail's picker, the QR plate) are named in `lib/src/app_tokens.dart`.
+bb-ui's `bb_lints` analyzer plugin enforces this: it is enabled in `analysis_options.yaml` and runs in
+`dart analyze` at the package root (CI runs `dart analyze --fatal-infos`); `flutter analyze` does not
+report plugin diagnostics. Text-bearing rows and buttons take a minimum height, not a fixed one, so
+they grow with the system text size (clamped to double in `BubblePawApp`).
+
+`BubblePawApp(density:)` sets bb-ui's `Density`: pointer on the desktop (the default), touch on the
+phone (`main_phone.dart` passes `Density.forPlatform(defaultTargetPlatform)`). Density sets control
+heights, icon sizes and the type ramp. Layout follows each pane's size class (`sizeClassOf(context)`
+under the kit's `SizeClassBuilder`), never the density.
 
 ## State
 

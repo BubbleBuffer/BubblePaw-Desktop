@@ -13,7 +13,7 @@ class LabeledField extends StatelessWidget {
     required this.child,
     this.hint,
     this.error = '',
-    this.bottom = 16,
+    this.bottom = Space.lg,
   });
 
   final String label;
@@ -32,21 +32,25 @@ class LabeledField extends StatelessWidget {
         children: [
           Text(
             label,
-            style: ts(theme.typeScale.uiSmall, theme.ink, weight: 600),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.ink,
+              weight: Weight.semibold,
+            ),
           ),
           if (hint != null)
             Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.only(top: Space.hair),
               child: Text(
                 hint!,
                 style: ts(theme.typeScale.uiSmall, theme.muted),
               ),
             ),
-          const SizedBox(height: 6),
+          const Gap(Space.xs),
           child,
           if (error.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.only(top: Space.xs),
               child: Text(
                 error,
                 style: ts(theme.typeScale.uiSmall, theme.dangerInk),
@@ -125,8 +129,8 @@ class _TextBoxState extends State<TextBox> {
       behavior: HitTestBehavior.opaque,
       onTap: widget.readOnly ? null : _focus.requestFocus,
       child: FieldFrame(
-        height: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        height: ControlSize.lg.height,
+        padding: const EdgeInsets.symmetric(horizontal: Space.md),
         child: Semantics(
           label: widget.label,
           textField: true,
@@ -156,7 +160,9 @@ class _TextBoxState extends State<TextBox> {
                       style: style,
                       cursorColor: theme.ink,
                       backgroundCursorColor: theme.faint,
-                      selectionColor: theme.accent.withValues(alpha: 0.3),
+                      selectionColor: theme.accent.withValues(
+                        alpha: Alpha.wash,
+                      ),
                       selectionControls: noteSelectionControls,
                       obscureText: widget.obscure,
                       readOnly: widget.readOnly,
@@ -169,7 +175,7 @@ class _TextBoxState extends State<TextBox> {
               ),
               if (widget.suffix != null)
                 Padding(
-                  padding: const EdgeInsets.only(left: 6),
+                  padding: const EdgeInsets.only(left: Space.xs),
                   child: Text(
                     widget.suffix!,
                     style: ts(theme.typeScale.ui, theme.muted, mono: true),
@@ -184,12 +190,14 @@ class _TextBoxState extends State<TextBox> {
         ? DecoratedBox(
             position: DecorationPosition.foreground,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(Radii.md),
               border: Border.all(color: theme.dangerInk),
             ),
             child: field,
           )
         : field;
-    return widget.readOnly ? Opacity(opacity: .6, child: framed) : framed;
+    return widget.readOnly
+        ? Opacity(opacity: Alpha.muted, child: framed)
+        : framed;
   }
 }

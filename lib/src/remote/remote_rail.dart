@@ -5,10 +5,10 @@
 
 import 'package:agent_kit/agent_kit.dart';
 import 'package:agent_kit_core/agent_kit_core.dart' show ChatSummary;
-import 'package:bb_ui/bb_ui.dart'
-    show Hover, Ico, LucideGlyph, PrimaryButton, TypeSpec, ts;
+import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
+import '../app_tokens.dart';
 import '../feedback/glyphs.dart' show glyphCheck, glyphChevronDown;
 import '../search/chat_search.dart' show ChatSearchController;
 import '../search/search_widgets.dart';
@@ -22,13 +22,6 @@ typedef PickableProject = ({String path, String name});
 
 /// The picker's first entry: the host decides the project.
 const hostDefaultName = 'Host default';
-
-// Where the picker's menu hangs: under the New chat row, which sits under
-// the host row (12 + 40 + 6 padding) and is 36 high with 4 of air below.
-// The New chat button's least width (icon, gap, label and padding).
-const double _newChatMin = 112;
-
-const double _pickerTop = 12 + 40 + 6 + 36 + 4;
 
 /// The rail's contents. [groups] and [needsYou] come from the chat list the
 /// workbench holds; [state] says which groups are open.
@@ -147,9 +140,9 @@ class RemoteRail extends StatelessWidget {
       ),
     ),
     Positioned(
-      top: _pickerTop,
-      right: 8,
-      width: 200,
+      top: RailSizes.pickerTop,
+      right: Space.sm,
+      width: RailSizes.pickerWidth,
       child: _PickerMenu(
         projects: projects,
         pickedPath: pickedPath,
@@ -169,13 +162,18 @@ class RemoteRail extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
+          padding: const EdgeInsets.fromLTRB(
+            Space.sm,
+            Space.md,
+            Space.sm,
+            Space.xs,
+          ),
           child: Row(
             children: [
               Expanded(
                 child: _HostButton(name: hostName, onTap: onSwitchHost),
               ),
-              const SizedBox(width: 4),
+              const Gap(Space.xxs),
               _RailIconButton(
                 key: const ValueKey('remote-rail-hide'),
                 glyph: glyphPanelLeftClose,
@@ -188,7 +186,7 @@ class RemoteRail extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+          padding: const EdgeInsets.fromLTRB(Space.sm, 0, Space.sm, Space.xs),
           // The chip gives way before the button does: 112 wide at most.
           child: LayoutBuilder(
             builder: (context, box) => Row(
@@ -198,17 +196,20 @@ class RemoteRail extends StatelessWidget {
                     key: const ValueKey('remote-new-chat'),
                     child: PrimaryButton(
                       label: 'New chat',
-                      height: 36,
+                      size: ControlSize.lg,
                       icon: Ico.compose,
                       onTap: onNewChat ?? () {},
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
+                const Gap(Space.xs),
                 _PickerChip(
                   name: _pickedName(),
                   open: pickerOpen,
-                  width: (box.maxWidth - _newChatMin - 6).clamp(40.0, 112.0),
+                  width: (box.maxWidth - RailSizes.newChatMin - Space.xs).clamp(
+                    RailSizes.chipMin,
+                    RailSizes.chipMax,
+                  ),
                   onTap: onTogglePicker,
                 ),
               ],
@@ -217,7 +218,7 @@ class RemoteRail extends StatelessWidget {
         ),
         if (search != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+            padding: const EdgeInsets.fromLTRB(Space.sm, 0, Space.sm, Space.xs),
             child: ChatSearchBox(search: search!, showKeyHint: showKeyHint),
           ),
         Expanded(
@@ -239,13 +240,13 @@ class RemoteRail extends StatelessWidget {
                 ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+          padding: const EdgeInsets.fromLTRB(Space.sm, 0, Space.sm, Space.md),
           child: DecoratedBox(
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: theme.railLine)),
             ),
             child: Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: Space.sm),
               child: _SettingsLink(onTap: onSettings),
             ),
           ),
@@ -257,7 +258,7 @@ class RemoteRail extends StatelessWidget {
   /// The chats of the open host: Needs you, then the projects.
   Widget _list(DateTime clock, void Function(ChatSummary) select) {
     return ListView(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: Space.sm),
       children: [
         if (needsYou.isNotEmpty) ...[
           RailLabel('Needs you', count: needsYou.length),
@@ -337,7 +338,7 @@ class _PickerChip extends StatelessWidget {
       onTap: onTap,
       child: SizedBox(
         width: width,
-        height: 36,
+        height: ControlSize.lg.height,
         child: Hover(
           key: const ValueKey('project-picker'),
           onTap: onTap,
@@ -352,7 +353,7 @@ class _PickerChip extends StatelessWidget {
               color: open ? theme.railSelected : null,
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: Space.sm),
               child: Row(
                 children: [
                   Expanded(
@@ -360,7 +361,7 @@ class _PickerChip extends StatelessWidget {
                       // "Host default" does not fit the chip.
                       name == hostDefaultName ? 'Default' : name,
                       style: ts(
-                        const TypeSpec(12, 16, 500),
+                        theme.typeScale.uiSmall,
                         theme.railInk,
                         mono: true,
                       ),
@@ -368,8 +369,12 @@ class _PickerChip extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  glyphIcon(glyphChevronDown, size: 14, color: theme.railMuted),
+                  const Gap(Space.xxs),
+                  glyphIcon(
+                    glyphChevronDown,
+                    size: IconSize.xs,
+                    color: theme.railMuted,
+                  ),
                 ],
               ),
             ),
@@ -404,12 +409,14 @@ class _PickerMenu extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.surface,
           border: Border.all(color: theme.seam),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Radii.lg),
         ),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 320),
+          constraints: const BoxConstraints(
+            maxHeight: RailSizes.pickerMaxHeight,
+          ),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(vertical: Space.xxs),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -463,25 +470,21 @@ class _PickerItem extends StatelessWidget {
         hoverBackground: theme.railHover,
         pressedBackground: theme.railSelected,
         lift: 0,
-        padding: const EdgeInsets.fromLTRB(14, 0, 12, 0),
-        child: SizedBox(
-          height: 36,
+        padding: const EdgeInsets.fromLTRB(Space.lg, 0, Space.md, 0),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: ControlSize.lg.height),
           child: Row(
             children: [
               Expanded(
                 child: Text(
                   name,
-                  style: ts(
-                    const TypeSpec(12.5, 16, 500),
-                    theme.railInk,
-                    mono: true,
-                  ),
+                  style: ts(theme.typeScale.uiSmall, theme.railInk, mono: true),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (checked)
-                glyphIcon(glyphCheck, size: 15, color: theme.railInk),
+                glyphIcon(glyphCheck, size: IconSize.sm, color: theme.railInk),
             ],
           ),
         ),
@@ -521,7 +524,7 @@ class _GroupHead extends StatelessWidget {
     final theme = context.bb;
     final meta = _meta();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 0, 4, 0),
+      padding: const EdgeInsets.fromLTRB(Space.sm, 0, Space.xxs, 0),
       child: Row(
         children: [
           Expanded(
@@ -538,9 +541,14 @@ class _GroupHead extends StatelessWidget {
                 hoverBackground: theme.railHover,
                 pressedBackground: theme.railSelected,
                 lift: 0,
-                padding: const EdgeInsets.fromLTRB(8, 4, 6, 4),
+                padding: const EdgeInsets.fromLTRB(
+                  Space.sm,
+                  Space.xxs,
+                  Space.xs,
+                  Space.xxs,
+                ),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 32),
+                  constraints: BoxConstraints(minHeight: ControlSize.md.height),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -549,17 +557,17 @@ class _GroupHead extends StatelessWidget {
                         children: [
                           glyphIcon(
                             open ? glyphChevronDown : glyphChevronRight,
-                            size: 14,
+                            size: IconSize.xs,
                             color: theme.railMuted,
                           ),
-                          const SizedBox(width: 6),
+                          const Gap(Space.xs),
                           Expanded(
                             child: Text(
                               group.name,
                               style: ts(
                                 theme.typeScale.ui,
                                 theme.railInk,
-                                weight: 700,
+                                weight: Weight.bold,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -569,14 +577,15 @@ class _GroupHead extends StatelessWidget {
                       ),
                       if (meta.isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.only(left: 20),
+                          padding: const EdgeInsets.only(left: Space.xl),
                           child: Text(
                             meta,
                             style: ts(
-                              const TypeSpec(11.5, 16, 600),
+                              theme.typeScale.uiSmall,
                               group.active
                                   ? theme.constructiveInk
                                   : theme.railMuted,
+                              weight: Weight.semibold,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -626,11 +635,10 @@ class _RailIconButton extends StatelessWidget {
         hoverBackground: theme.railHover,
         pressedBackground: theme.railSelected,
         lift: 0,
-        child: SizedBox(
-          width: 32,
-          height: 32,
+        child: SizedBox.square(
+          dimension: ControlSize.md.height,
           child: Center(
-            child: glyphIcon(glyph, size: 16, color: theme.railInk),
+            child: glyphIcon(glyph, size: IconSize.sm, color: theme.railInk),
           ),
         ),
       ),
@@ -659,13 +667,13 @@ class _HostButton extends StatelessWidget {
         hoverBackground: theme.railHover,
         pressedBackground: theme.railSelected,
         lift: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: SizedBox(
-          height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: Space.sm),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: RailSizes.hostRow),
           child: Row(
             children: [
-              glyphIcon(glyphMonitor, size: 16, color: theme.railInk),
-              const SizedBox(width: 8),
+              glyphIcon(glyphMonitor, size: IconSize.sm, color: theme.railInk),
+              const Gap(Space.sm),
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -678,29 +686,40 @@ class _HostButton extends StatelessWidget {
                             color: theme.constructiveInk,
                             shape: BoxShape.circle,
                           ),
-                          child: const SizedBox(width: 7, height: 7),
+                          child: const SizedBox.square(
+                            dimension: RailSizes.onlineDot,
+                          ),
                         ),
-                        const SizedBox(width: 5),
+                        const Gap(Space.xs),
                         Text(
                           'Online',
                           style: ts(
-                            const TypeSpec(11.5, 14, 600),
+                            theme.typeScale.uiSmall,
                             theme.constructiveInk,
+                            weight: Weight.semibold,
                           ),
                         ),
                       ],
                     ),
                     Text(
                       name,
-                      style: ts(theme.typeScale.ui, theme.railInk, weight: 700),
+                      style: ts(
+                        theme.typeScale.ui,
+                        theme.railInk,
+                        weight: Weight.bold,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              glyphIcon(glyphChevronDown, size: 14, color: theme.railMuted),
+              const Gap(Space.sm),
+              glyphIcon(
+                glyphChevronDown,
+                size: IconSize.xs,
+                color: theme.railMuted,
+              ),
             ],
           ),
         ),
@@ -729,16 +748,24 @@ class _SettingsLink extends StatelessWidget {
         hoverBackground: theme.railHover,
         pressedBackground: theme.railSelected,
         lift: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: SizedBox(
-          height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: Space.sm),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: ControlSize.sm.height),
           child: Row(
             children: [
-              glyphIcon(glyphSettings, size: 16, color: theme.railMuted),
-              const SizedBox(width: 10),
+              glyphIcon(
+                glyphSettings,
+                size: IconSize.sm,
+                color: theme.railMuted,
+              ),
+              const Gap(Space.md),
               Text(
                 'Settings',
-                style: ts(theme.typeScale.ui, theme.railMuted, weight: 500),
+                style: ts(
+                  theme.typeScale.ui,
+                  theme.railMuted,
+                  weight: Weight.medium,
+                ),
               ),
             ],
           ),

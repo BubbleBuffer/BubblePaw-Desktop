@@ -8,6 +8,7 @@ import 'package:agent_kit/agent_kit.dart';
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
+import '../app_tokens.dart';
 import '../platform/key_files.dart' show KeyFileException;
 import '../platform/releases.dart';
 import '../remote/remote_access.dart';
@@ -41,7 +42,7 @@ class DeviceKeyPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     final key = remote.key;
-    final compact = SizeClass.of(context).isCompact;
+    final compact = sizeClassOf(context).isCompact;
     return SettingsPage(
       title: 'Device key',
       onBack: onBack,
@@ -49,7 +50,7 @@ class DeviceKeyPage extends StatelessWidget {
       children: [
         if (!compact)
           Padding(
-            padding: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.only(bottom: Space.lg),
             child: Align(
               alignment: Alignment.centerLeft,
               child: ActionButton(
@@ -83,8 +84,8 @@ class DeviceKeyPage extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        const SettingsHeading('Key file', top: 12),
+        const Gap(Space.md),
+        const SettingsHeading('Key file', top: Space.md),
         SettingsRow(
           label: 'Export key file',
           description:
@@ -101,8 +102,8 @@ class DeviceKeyPage extends StatelessWidget {
                   builder: (_, _) =>
                       _ExportDialog(remote: remote, services: services),
                 ),
-                width: 460,
-                height: 560,
+                width: Panels.keyExport.width,
+                height: Panels.keyExport.height,
                 shrink: true,
               ),
             ),
@@ -126,27 +127,31 @@ class DeviceKeyPage extends StatelessWidget {
                     hostCount: hostCount,
                   ),
                 ),
-                width: 460,
-                height: 640,
+                width: Panels.keyImport.width,
+                height: Panels.keyImport.height,
                 shrink: true,
               ),
             ),
           ),
         ),
-        const SettingsHeading('Regenerate', top: 12),
+        const SettingsHeading('Regenerate', top: Space.md),
         NoticeBox(
           key: const ValueKey('key-regen-warning'),
           tone: NoticeTone.danger,
           child: Text(_consequence(remote.devices.length, hostCount)),
         ),
-        const SizedBox(height: 12),
+        const Gap(Space.md),
         Align(
           alignment: Alignment.centerLeft,
           child: OutlineButton(
             key: const ValueKey('key-regenerate'),
             label: 'Regenerate device key…',
             danger: true,
-            icon: glyphIcon(glyphTrash, size: 15, color: theme.dangerInk),
+            icon: glyphIcon(
+              glyphTrash,
+              size: IconSize.sm,
+              color: theme.dangerInk,
+            ),
             onTap: () => unawaited(
               showModalPanel<void>(
                 context,
@@ -154,8 +159,8 @@ class DeviceKeyPage extends StatelessWidget {
                   builder: (_, _) =>
                       _RegenerateDialog(remote: remote, hostCount: hostCount),
                 ),
-                width: 460,
-                height: 520,
+                width: Panels.keyRegenerate.width,
+                height: Panels.keyRegenerate.height,
                 shrink: true,
               ),
             ),
@@ -269,7 +274,7 @@ class _ExportDialogState extends State<_ExportDialog> {
               '${widget.services.savesKeyToDownloads ? ' to Downloads' : ''}.',
             ),
           ),
-          const SizedBox(height: 12),
+          const Gap(Space.md),
           Text(
             'The file cannot be opened without its passphrase, and the '
             'passphrase cannot be recovered.',
@@ -294,7 +299,7 @@ class _ExportDialogState extends State<_ExportDialog> {
           'passphrase can act as this device.',
           style: ts(theme.typeScale.ui, theme.ink),
         ),
-        const SizedBox(height: 12),
+        const Gap(Space.md),
         LabeledField(
           label: 'Passphrase',
           hint: 'At least 8 characters.',
@@ -331,7 +336,7 @@ class _ExportDialogState extends State<_ExportDialog> {
           onTap: () => Navigator.of(context).maybePop(),
         ),
         Opacity(
-          opacity: _ready ? 1 : .5,
+          opacity: _ready ? 1 : Alpha.muted,
           child: ActionButton(
             key: const ValueKey('export-save'),
             label: 'Save key file',
@@ -449,7 +454,7 @@ class _ImportDialogState extends State<_ImportDialog> {
             'recognising it and are cleared.',
           ),
         ),
-        const SizedBox(height: 16),
+        const Gap(Space.lg),
         LabeledField(
           label: 'Key file',
           child: Row(
@@ -462,7 +467,7 @@ class _ImportDialogState extends State<_ImportDialog> {
                   style: ts(theme.typeScale.uiSmall, theme.ink, mono: true),
                 ),
               ),
-              const SizedBox(width: 8),
+              const Gap(Space.sm),
               ActionButton(
                 key: const ValueKey('import-choose'),
                 label: 'Choose file…',
@@ -490,7 +495,7 @@ class _ImportDialogState extends State<_ImportDialog> {
           onTap: () => Navigator.of(context).maybePop(),
         ),
         Opacity(
-          opacity: ready ? 1 : .5,
+          opacity: ready ? 1 : Alpha.muted,
           child: OutlineButton(
             key: const ValueKey('import-key'),
             label: 'Import key',
@@ -570,14 +575,14 @@ class _RegenerateDialogState extends State<_RegenerateDialog> {
             _consequence(widget.remote.devices.length, widget.hostCount),
           ),
         ),
-        const SizedBox(height: 12),
+        const Gap(Space.md),
         Text(
           'This cannot be undone. Export the current key file first if you '
           'may want it back.',
           style: ts(theme.typeScale.ui, theme.ink),
         ),
         if (_error != null) ...[
-          const SizedBox(height: 8),
+          const Gap(Space.sm),
           Text(
             _error!,
             key: const ValueKey('regen-error'),
@@ -594,7 +599,11 @@ class _RegenerateDialogState extends State<_RegenerateDialog> {
           key: const ValueKey('regen-confirm'),
           label: 'Regenerate and clear pairings',
           danger: true,
-          icon: glyphIcon(glyphTrash, size: 15, color: theme.dangerInk),
+          icon: glyphIcon(
+            glyphTrash,
+            size: IconSize.sm,
+            color: theme.dangerInk,
+          ),
           onTap: _busy ? null : () => unawaited(_regenerate()),
         ),
       ]),

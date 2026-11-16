@@ -45,9 +45,11 @@ jobs:
       - name: dart format
         if: always()
         run: dart format --output=none --set-exit-if-changed lib test
-      - name: flutter analyze
+      # dart analyze, not flutter analyze: only it reports the bb_lints plugin's
+      # diagnostics, and only at the package root (lib/test arguments skip it).
+      - name: dart analyze
         if: always()
-        run: flutter analyze
+        run: dart analyze --fatal-infos
       - name: flutter test
         if: always()
         run: flutter test --exclude-tags "golden || native"

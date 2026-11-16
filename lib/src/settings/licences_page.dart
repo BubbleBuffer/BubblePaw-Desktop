@@ -168,7 +168,7 @@ class _LicencesPageState extends State<LicencesPage> {
       backKey: const ValueKey('settings-page-back'),
       children: [
         // The compact top bar has its own back button.
-        if (!SizeClass.of(context).isCompact) ...[
+        if (!sizeClassOf(context).isCompact) ...[
           Row(
             children: [
               TextBtn(
@@ -178,7 +178,7 @@ class _LicencesPageState extends State<LicencesPage> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const Gap(Space.sm),
         ],
         SettingsRow(
           label: 'Search',
@@ -220,7 +220,7 @@ class _LicencesPageState extends State<LicencesPage> {
     if (rows.isEmpty) return const [];
     return [
       Padding(
-        padding: const EdgeInsets.only(top: 16),
+        padding: const EdgeInsets.only(top: Space.lg),
         child: Row(children: [Expanded(child: SettingsHeading(group))]),
       ),
       for (final r in rows)
@@ -262,7 +262,10 @@ class _LicenceRow extends StatelessWidget {
           child: Hover(
             onTap: onToggle,
             lift: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+            padding: const EdgeInsets.symmetric(
+              horizontal: Space.xxs,
+              vertical: Space.md,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -288,43 +291,51 @@ class _LicenceRow extends StatelessWidget {
                   DecoratedBox(
                     decoration: BoxDecoration(
                       border: Border.all(color: theme.thread),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(Radii.sm),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
+                        horizontal: Space.xs,
+                        vertical: Space.hair,
                       ),
                       child: Text(
                         kind,
                         style: ts(
                           theme.typeScale.uiSmall,
                           theme.muted,
-                          weight: 600,
+                          weight: Weight.semibold,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const Gap(Space.xs),
                 ],
-                const SizedBox(width: 6),
+                const Gap(Space.xs),
                 open
-                    ? glyphIcon(glyphChevronUp, size: 16, color: theme.muted)
-                    : Icon20(Ico.chevronDown, size: 16, color: theme.muted),
+                    ? glyphIcon(
+                        glyphChevronUp,
+                        size: IconSize.sm,
+                        color: theme.muted,
+                      )
+                    : Icon20(
+                        Ico.chevronDown,
+                        size: IconSize.sm,
+                        color: theme.muted,
+                      ),
               ],
             ),
           ),
         ),
         if (open)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: Space.sm),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: theme.surface2,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(Radii.md),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(Space.md),
                 child: Text(
                   record.texts.join('\n\n'),
                   key: ValueKey('licence-text-${record.id}'),

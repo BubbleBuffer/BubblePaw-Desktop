@@ -33,7 +33,7 @@ class FeedbackPage extends StatelessWidget {
     listenable: feedback,
     builder: (context, _) {
       final theme = context.bb;
-      final compact = SizeClass.of(context).isCompact;
+      final compact = sizeClassOf(context).isCompact;
       final reports = feedback.reports;
       final send = FbButton(
         key: const ValueKey('feedback-page-send'),
@@ -58,16 +58,16 @@ class FeedbackPage extends StatelessWidget {
             'Nothing is uploaded.',
             style: ts(theme.typeScale.ui, theme.muted),
           ),
-          const SizedBox(height: 4),
+          const Gap(Space.xxs),
           Text(
             feedback.location,
             key: const ValueKey('feedback-path'),
             style: ts(theme.typeScale.uiSmall, theme.muted, mono: true),
           ),
-          const SizedBox(height: 12),
+          const Gap(Space.md),
           if (compact) ...[
-            Row(children: [send, const SizedBox(width: 8), open]),
-            const SizedBox(height: 12),
+            Row(children: [send, const Gap(Space.sm), open]),
+            const Gap(Space.md),
           ],
           Row(
             children: [
@@ -78,10 +78,10 @@ class FeedbackPage extends StatelessWidget {
                       : 'Saved on this computer, ${reports.length}',
                 ),
               ),
-              if (!compact) ...[open, const SizedBox(width: 8), send],
+              if (!compact) ...[open, const Gap(Space.sm), send],
             ],
           ),
-          const SizedBox(height: 8),
+          const Gap(Space.sm),
           if (reports.isEmpty)
             _Empty(compact: compact, onSend: onSend)
           else
@@ -116,26 +116,34 @@ class _Empty extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.surface2,
         border: Border.all(color: theme.seam),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(Radii.lg),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(Space.xl),
         child: Column(
           children: [
-            glyphIcon(glyphMessageSquareText, size: 28, color: theme.faint),
-            const SizedBox(height: 8),
+            glyphIcon(
+              glyphMessageSquareText,
+              size: IconSize.xxl,
+              color: theme.faint,
+            ),
+            const Gap(Space.sm),
             Text(
               'No feedback saved',
-              style: ts(theme.typeScale.body, theme.ink, weight: 600),
+              style: ts(
+                theme.typeScale.body,
+                theme.ink,
+                weight: Weight.semibold,
+              ),
             ),
-            const SizedBox(height: 4),
+            const Gap(Space.xxs),
             Text(
               'Send feedback saves a report on this computer: your text, a '
               'screenshot and diagnostics. Press Ctrl+Shift+F in any window.',
               textAlign: TextAlign.center,
               style: ts(theme.typeScale.ui, theme.muted),
             ),
-            const SizedBox(height: 12),
+            const Gap(Space.md),
             FbButton(
               key: const ValueKey('feedback-empty-send'),
               label: 'Send feedback',
@@ -185,12 +193,12 @@ class _ReportRow extends StatelessWidget {
     final theme = context.bb;
     final copied = feedback.copiedId == entry.id;
     Widget indicator(LucideGlyph glyph, String label) => Padding(
-      padding: const EdgeInsets.only(left: 12),
+      padding: const EdgeInsets.only(left: Space.md),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          glyphIcon(glyph, size: 14, color: theme.muted),
-          const SizedBox(width: 4),
+          glyphIcon(glyph, size: IconSize.xs, color: theme.muted),
+          const Gap(Space.xxs),
           Text(label, style: ts(theme.typeScale.uiSmall, theme.muted)),
         ],
       ),
@@ -206,7 +214,7 @@ class _ReportRow extends StatelessWidget {
         if (entry.hasChat) indicator(glyphMessagesSquare, 'Chat'),
         if (copied)
           Padding(
-            padding: const EdgeInsets.only(left: 12),
+            padding: const EdgeInsets.only(left: Space.md),
             child: Semantics(
               liveRegion: true,
               child: Text(
@@ -221,7 +229,7 @@ class _ReportRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         meta,
-        const SizedBox(height: 2),
+        const Gap(Space.hair),
         Text(
           entry.firstLine,
           maxLines: 2,
@@ -275,20 +283,25 @@ class _ReportRow extends StatelessWidget {
             ),
           ];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      padding: const EdgeInsets.fromLTRB(
+        Space.md,
+        Space.sm,
+        Space.sm,
+        Space.sm,
+      ),
       child: compact
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 text,
-                const SizedBox(height: 4),
+                const Gap(Space.xxs),
                 Wrap(children: actions),
               ],
             )
           : Row(
               children: [
                 Expanded(child: text),
-                const SizedBox(width: 8),
+                const Gap(Space.sm),
                 ...actions,
               ],
             ),

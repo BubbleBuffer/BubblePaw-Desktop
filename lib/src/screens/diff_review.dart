@@ -20,7 +20,12 @@ class DiffReview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(
+              Space.lg,
+              Space.md,
+              Space.lg,
+              Space.sm,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -28,15 +33,19 @@ class DiffReview extends StatelessWidget {
                     diff.path,
                     key: const ValueKey('diff-path'),
                     overflow: TextOverflow.ellipsis,
-                    style: ts(theme.typeScale.ui, theme.ink, weight: 600),
+                    style: ts(
+                      theme.typeScale.ui,
+                      theme.ink,
+                      weight: Weight.semibold,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const Gap(Space.sm),
                 Text(
                   '+${diff.added} −${diff.removed}',
                   style: ts(theme.typeScale.uiSmall, theme.muted, mono: true),
                 ),
-                const SizedBox(width: 8),
+                const Gap(Space.sm),
                 TextBtn(
                   'Close',
                   key: const ValueKey('diff-close'),
@@ -48,7 +57,7 @@ class DiffReview extends StatelessWidget {
           HLine(color: theme.seam),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(Space.lg),
               child: DiffView(diff),
             ),
           ),

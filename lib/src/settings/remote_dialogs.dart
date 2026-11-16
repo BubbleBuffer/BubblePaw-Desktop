@@ -8,6 +8,7 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:qr/qr.dart';
 
+import '../app_tokens.dart';
 import '../feedback/glyphs.dart' show glyphCheck;
 import '../remote/pairing_flow.dart';
 import '../remote/remote_access.dart';
@@ -46,7 +47,12 @@ class DialogFrame extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
+            padding: const EdgeInsets.fromLTRB(
+              Space.xl,
+              Space.md,
+              Space.md,
+              Space.md,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -54,13 +60,17 @@ class DialogFrame extends StatelessWidget {
                     header: true,
                     child: Text(
                       title,
-                      style: ts(theme.typeScale.h2, theme.ink, weight: 600),
+                      style: ts(
+                        theme.typeScale.h2,
+                        theme.ink,
+                        weight: Weight.semibold,
+                      ),
                     ),
                   ),
                 ),
                 if (step.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.only(right: Space.sm),
                     child: Text(
                       step,
                       key: const ValueKey('dialog-step'),
@@ -70,7 +80,7 @@ class DialogFrame extends StatelessWidget {
                 IconBtn(
                   Ico.close,
                   key: const ValueKey('dialog-close'),
-                  size: 32,
+                  size: ControlSize.md,
                   semanticLabel: 'Close',
                   onTap: () => Navigator.of(context).maybePop(),
                 ),
@@ -85,7 +95,12 @@ class DialogFrame extends StatelessWidget {
           ),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              padding: const EdgeInsets.fromLTRB(
+                Space.xl,
+                Space.lg,
+                Space.xl,
+                Space.sm,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: body,
@@ -93,7 +108,12 @@ class DialogFrame extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+            padding: const EdgeInsets.fromLTRB(
+              Space.xl,
+              Space.sm,
+              Space.xl,
+              Space.lg,
+            ),
             child: footer,
           ),
         ],
@@ -107,7 +127,7 @@ Widget dialogFooter(List<Widget> actions, {Widget? leading}) => Row(
   children: [
     if (leading != null) Expanded(child: leading) else const Spacer(),
     for (var i = 0; i < actions.length; i++) ...[
-      if (i > 0) const SizedBox(width: 8),
+      if (i > 0) const Gap(Space.sm),
       actions[i],
     ],
   ],
@@ -128,8 +148,8 @@ Future<void> showPairDialog(
         builder: (_, _) =>
             PairDialog(flow: flow, reachLabel: reachLabel, onCopy: onCopy),
       ),
-      width: 480,
-      height: 640,
+      width: Panels.pairDevice.width,
+      height: Panels.pairDevice.height,
       shrink: true,
     );
   } finally {
@@ -192,19 +212,22 @@ class _CheckRow extends StatelessWidget {
       child: Hover(
         onTap: onTap,
         lift: 0,
-        borderRadius: BorderRadius.circular(6),
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+        borderRadius: BorderRadius.circular(Radii.md),
+        padding: const EdgeInsets.symmetric(
+          vertical: Space.xs,
+          horizontal: Space.hair,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 1),
+              padding: const EdgeInsets.only(top: Space.hair),
               child: Container(
-                width: 16,
-                height: 16,
+                width: SettingsSizes.checkBox,
+                height: SettingsSizes.checkBox,
                 decoration: BoxDecoration(
                   color: value ? theme.accent : theme.surface,
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(Radii.sm),
                   border: Border.all(
                     color: value ? theme.accent : theme.threadStrong,
                   ),
@@ -213,14 +236,14 @@ class _CheckRow extends StatelessWidget {
                     ? Center(
                         child: glyphIcon(
                           glyphCheck,
-                          size: 12,
+                          size: IconSize.xs,
                           color: theme.onAccent,
                         ),
                       )
                     : null,
               ),
             ),
-            const SizedBox(width: 10),
+            const Gap(Space.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,7 +297,7 @@ class PairDialog extends StatelessWidget {
           'What the new device may do on this computer.',
           style: ts(theme.typeScale.ui, theme.ink),
         ),
-        const SizedBox(height: 12),
+        const Gap(Space.md),
         for (final (id, title, text) in _profiles)
           ChoiceCard(
             key: ValueKey('profile-$id'),
@@ -283,7 +306,7 @@ class PairDialog extends StatelessWidget {
             selected: flow.profile == id,
             onTap: () => flow.chooseProfile(id),
           ),
-        const SizedBox(height: 4),
+        const Gap(Space.xxs),
         _CheckRow(
           key: const ValueKey('pair-egress'),
           value: flow.egress,
@@ -294,13 +317,13 @@ class PairDialog extends StatelessWidget {
               'Prompts and keys stay on the device.',
           onTap: () => flow.chooseEgress(!flow.egress),
         ),
-        const SizedBox(height: 12),
+        const Gap(Space.md),
         Text(
           'You can revoke the device later in Share this host.',
           style: ts(theme.typeScale.uiSmall, theme.muted),
         ),
         if (flow.error != null) ...[
-          const SizedBox(height: 8),
+          const Gap(Space.sm),
           Text(
             flow.error!,
             key: const ValueKey('pair-error'),
@@ -327,7 +350,7 @@ class PairDialog extends StatelessWidget {
   Widget _codeStep(BuildContext context) {
     final theme = context.bb;
     final offer = flow.offer!;
-    final compact = SizeClass.of(context).isCompact;
+    final compact = sizeClassOf(context).isCompact;
     final code = offer.code.length == 10
         ? '${offer.code.substring(0, 5)}-${offer.code.substring(5)}'
         : offer.code;
@@ -335,17 +358,22 @@ class PairDialog extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Code', style: ts(theme.typeScale.uiSmall, theme.muted)),
-        const SizedBox(height: 4),
+        const Gap(Space.xxs),
         Text(
           code,
           key: const ValueKey('pair-code'),
-          style: ts(theme.typeScale.h2, theme.ink, weight: 600, mono: true),
+          style: ts(
+            theme.typeScale.h2,
+            theme.ink,
+            weight: Weight.semibold,
+            mono: true,
+          ),
         ),
-        const SizedBox(height: 8),
+        const Gap(Space.sm),
         Row(
           children: [
-            glyphIcon(glyphClock, size: 15, color: theme.muted),
-            const SizedBox(width: 6),
+            glyphIcon(glyphClock, size: IconSize.sm, color: theme.muted),
+            const Gap(Space.xs),
             Text(
               flow.expired
                   ? 'Code expired'
@@ -355,7 +383,7 @@ class PairDialog extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const Gap(Space.md),
         Text(
           'Address in the QR code and the code',
           style: ts(theme.typeScale.uiSmall, theme.muted),
@@ -367,7 +395,10 @@ class PairDialog extends StatelessWidget {
         ),
       ],
     );
-    final qr = QrView(data: offer.qrPayload, size: compact ? 160 : 148);
+    final qr = QrView(
+      data: offer.qrPayload,
+      size: compact ? SettingsSizes.qrCompact : SettingsSizes.qr,
+    );
     return DialogFrame(
       title: 'Pair a device',
       step: 'Step 2 of 3',
@@ -375,25 +406,25 @@ class PairDialog extends StatelessWidget {
         if (compact)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [qr, const SizedBox(height: 16), details],
+            children: [qr, const Gap(Space.lg), details],
           )
         else
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               qr,
-              const SizedBox(width: 20),
+              const Gap(Space.xl),
               Expanded(child: details),
             ],
           ),
-        const SizedBox(height: 16),
+        const Gap(Space.lg),
         Text(
           'On the new device, choose Add a host, then scan the QR code or '
           'paste the pairing link. The code works once.',
           style: ts(theme.typeScale.uiSmall, theme.muted),
         ),
         if (onCopy != null) ...[
-          const SizedBox(height: 12),
+          const Gap(Space.md),
           Align(
             alignment: Alignment.centerLeft,
             child: ActionButton(
@@ -410,8 +441,8 @@ class PairDialog extends StatelessWidget {
             ? null
             : Row(
                 children: [
-                  glyphIcon(glyphLoader, size: 15, color: theme.muted),
-                  const SizedBox(width: 6),
+                  glyphIcon(glyphLoader, size: IconSize.sm, color: theme.muted),
+                  const Gap(Space.xs),
                   Flexible(
                     child: Text(
                       'Waiting for the new device',
@@ -454,7 +485,7 @@ class PairDialog extends StatelessWidget {
           style: ts(theme.typeScale.ui, theme.ink),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
+          padding: const EdgeInsets.symmetric(vertical: Space.xl),
           child: Center(
             child: Semantics(
               label: 'Number to compare',
@@ -462,11 +493,11 @@ class PairDialog extends StatelessWidget {
                 shown,
                 key: const ValueKey('pair-number'),
                 style: ts(
-                  theme.typeScale.h2,
+                  theme.typeScale.display,
                   theme.ink,
-                  weight: 600,
+                  weight: Weight.semibold,
                   mono: true,
-                ).copyWith(fontSize: 32, letterSpacing: 2),
+                ),
               ),
             ),
           ),
@@ -476,10 +507,10 @@ class PairDialog extends StatelessWidget {
           "They don't match; the code is cancelled.",
           style: ts(theme.typeScale.uiSmall, theme.muted),
         ),
-        const SizedBox(height: 16),
+        const Gap(Space.lg),
         _DeviceNameField(flow: flow),
         if (flow.error != null) ...[
-          const SizedBox(height: 8),
+          const Gap(Space.sm),
           Text(
             flow.error!,
             key: const ValueKey('pair-error'),
@@ -498,7 +529,7 @@ class PairDialog extends StatelessWidget {
           },
         ),
         Opacity(
-          opacity: flow.canApprove ? 1 : .5,
+          opacity: flow.canApprove ? 1 : Alpha.muted,
           child: ActionButton(
             key: const ValueKey('pair-match'),
             label: 'They match',
@@ -526,7 +557,7 @@ class PairDialog extends StatelessWidget {
             '${profileName(device.profile)} profile.',
           ),
         ),
-        const SizedBox(height: 12),
+        const Gap(Space.md),
         GroupCard(
           children: [
             SettingsKeyValueRow(
@@ -585,7 +616,7 @@ class _DeviceNameFieldState extends State<_DeviceNameField> {
 /// A QR code for [data]: dark modules on a light plate, whatever the theme,
 /// so a camera reads it.
 class QrView extends StatelessWidget {
-  const QrView({super.key, required this.data, this.size = 148});
+  const QrView({super.key, required this.data, this.size = SettingsSizes.qr});
 
   final String data;
   final double size;
@@ -622,11 +653,8 @@ class _QrPainter extends CustomPainter {
     const quiet = 2;
     final count = image.moduleCount + quiet * 2;
     final cell = size.width / count;
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = const Color(0xFFFFFFFF),
-    );
-    final dark = Paint()..color = const Color(0xFF111111);
+    canvas.drawRect(Offset.zero & size, Paint()..color = QrColors.plate);
+    final dark = Paint()..color = QrColors.module;
     for (var y = 0; y < image.moduleCount; y++) {
       for (var x = 0; x < image.moduleCount; x++) {
         if (image.isDark(y, x)) {

@@ -22,21 +22,28 @@ class TrayNotice extends StatelessWidget {
         key: const ValueKey('tray-notice'),
         decoration: BoxDecoration(
           color: theme.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Radii.lg),
           border: Border.all(color: theme.thread),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          padding: const EdgeInsets.fromLTRB(
+            Space.lg,
+            Space.sm,
+            Space.sm,
+            Space.sm,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               glyphIcon(glyphInfo, color: theme.muted),
-              const SizedBox(width: 12),
-              Text(
-                'BubblePaw is still running in the tray',
-                style: ts(theme.typeScale.ui, theme.ink),
+              const Gap(Space.md),
+              Flexible(
+                child: Text(
+                  'BubblePaw is still running in the tray',
+                  style: ts(theme.typeScale.ui, theme.ink),
+                ),
               ),
-              const SizedBox(width: 12),
+              const Gap(Space.md),
               TextBtn(
                 'Dismiss',
                 key: const ValueKey('tray-notice-dismiss'),

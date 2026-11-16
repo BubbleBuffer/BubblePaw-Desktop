@@ -2,9 +2,10 @@
 // popup under the rail header.
 
 import 'package:agent_kit/agent_kit.dart';
-import 'package:bb_ui/bb_ui.dart' show Ico, IconBtn, LucideGlyph, ts;
+import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
+import '../app_tokens.dart';
 import '../config.dart';
 import '../settings/remote_glyphs.dart';
 import '../settings/settings_widgets.dart' show glyphIcon;
@@ -63,7 +64,7 @@ Future<void> showWorkspaceMenu(
   RawDialogRoute<void>(
     barrierDismissible: true,
     barrierLabel: 'Close the workspace menu',
-    barrierColor: const Color(0x00000000),
+    barrierColor: null,
     pageBuilder: (context, animation, secondary) => WorkspaceMenu(
       current: current,
       workspaces: workspaces,
@@ -117,9 +118,17 @@ class WorkspaceMenu extends StatelessWidget {
     return Align(
       alignment: Alignment.topLeft,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 52, 8, 8),
+        padding: const EdgeInsets.fromLTRB(
+          Space.sm,
+          Space.xxxl,
+          Space.sm,
+          Space.sm,
+        ),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 224, maxWidth: 320),
+          constraints: BoxConstraints(
+            minWidth: MenuSizes.workspaceMenu.min,
+            maxWidth: MenuSizes.workspaceMenu.max,
+          ),
           child: Semantics(
             container: true,
             label: menu == null ? 'Workspaces' : 'Hosts and workspaces',
@@ -127,10 +136,10 @@ class WorkspaceMenu extends StatelessWidget {
               decoration: BoxDecoration(
                 color: theme.surface,
                 border: Border.all(color: theme.seam),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(Radii.lg),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: Space.xxs),
                 child: menu == null
                     ? _body(theme, const [])
                     : ListenableBuilder(
@@ -147,8 +156,8 @@ class WorkspaceMenu extends StatelessWidget {
   }
 
   Widget _divider(BbTheme theme) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: ColoredBox(color: theme.seam, child: const SizedBox(height: 1)),
+    padding: const EdgeInsets.symmetric(vertical: Space.xxs),
+    child: HLine(color: theme.seam),
   );
 
   Widget _body(BbTheme theme, List<HostChoice> choices, {HostMenu? menu}) {
@@ -247,19 +256,27 @@ class _RowState extends State<_Row> {
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: ColoredBox(
-            color: _hover ? theme.railHover : const Color(0x00000000),
+            color: _hover
+                ? theme.railHover
+                : theme.railHover.withValues(alpha: 0),
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: widget.tall ? 16 : 12,
-                vertical: widget.tall ? 10 : 6,
+                horizontal: widget.tall ? Space.lg : Space.md,
+                vertical: widget.tall ? Space.md : Space.xs,
               ),
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: widget.tall ? 28 : 0),
+                constraints: BoxConstraints(
+                  minHeight: widget.tall ? ControlSize.sm.height : 0,
+                ),
                 child: Row(
                   children: [
                     if (widget.glyph != null) ...[
-                      glyphIcon(widget.glyph!, size: 15, color: theme.muted),
-                      const SizedBox(width: 8),
+                      glyphIcon(
+                        widget.glyph!,
+                        size: IconSize.sm,
+                        color: theme.muted,
+                      ),
+                      const Gap(Space.sm),
                     ],
                     if (widget.dot != null) ...[
                       DecoratedBox(
@@ -269,9 +286,9 @@ class _RowState extends State<_Row> {
                               : theme.faint,
                           shape: BoxShape.circle,
                         ),
-                        child: const SizedBox(width: 8, height: 8),
+                        child: const SizedBox.square(dimension: Sizes.dot),
                       ),
-                      const SizedBox(width: 10),
+                      const Gap(Space.md),
                     ],
                     Expanded(
                       child: Column(
@@ -285,7 +302,9 @@ class _RowState extends State<_Row> {
                             style: ts(
                               theme.typeScale.ui,
                               theme.ink,
-                              weight: widget.selected ? 700 : 500,
+                              weight: widget.selected
+                                  ? Weight.bold
+                                  : Weight.medium,
                             ),
                           ),
                           if (widget.detail != null)
@@ -321,7 +340,7 @@ Future<void> showHostSheet(BuildContext context, {required HostMenu hosts}) =>
       RawDialogRoute<void>(
         barrierDismissible: true,
         barrierLabel: 'Close the host menu',
-        barrierColor: const Color(0x66000000),
+        barrierColor: context.bb.colors.overlay,
         pageBuilder: (context, animation, secondary) => HostSheet(
           hosts: HostMenu(
             listenable: hosts.listenable,
@@ -366,7 +385,7 @@ class HostSheet extends StatelessWidget {
           ),
           child: Padding(
             padding: EdgeInsets.only(
-              bottom: MediaQuery.paddingOf(context).bottom + 8,
+              bottom: MediaQuery.paddingOf(context).bottom + Space.sm,
             ),
             child: ListenableBuilder(
               listenable: hosts.listenable,
@@ -375,7 +394,12 @@ class HostSheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
+                    padding: const EdgeInsets.fromLTRB(
+                      Space.lg,
+                      Space.sm,
+                      Space.sm,
+                      Space.xxs,
+                    ),
                     child: Row(
                       children: [
                         Expanded(
@@ -386,7 +410,7 @@ class HostSheet extends StatelessWidget {
                               style: ts(
                                 theme.typeScale.h2,
                                 theme.ink,
-                                weight: 600,
+                                weight: Weight.semibold,
                               ),
                             ),
                           ),
@@ -394,7 +418,7 @@ class HostSheet extends StatelessWidget {
                         IconBtn(
                           Ico.close,
                           key: const ValueKey('host-sheet-close'),
-                          size: 40,
+                          size: ControlSize.xl,
                           semanticLabel: 'Close',
                           onTap: () => Navigator.of(context).maybePop(),
                         ),
