@@ -2,6 +2,7 @@
 // 375x812 against fake host links, a scripted backend per host and a fake
 // device key.
 
+import 'package:bb_ui/bb_ui.dart' show Density;
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/preferences.dart';
@@ -61,7 +62,7 @@ Future<(HostController, FakeHostLinks, _Started)> _open(
           },
   );
   addTearDown(controller.close);
-  await pumpApp(tester, controller, size: phone);
+  await pumpApp(tester, controller, size: phone, density: Density.touch);
   // The last host opens after start up; give it time.
   for (var i = 0; i < 4; i++) {
     await settle(tester);
