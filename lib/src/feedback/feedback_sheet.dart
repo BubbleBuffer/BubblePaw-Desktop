@@ -12,6 +12,7 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
+import '../app_tokens.dart';
 import '../settings/settings_widgets.dart' show glyphIcon;
 import 'feedback_controller.dart';
 import 'feedback_widgets.dart';
@@ -63,8 +64,8 @@ Future<void> showFeedbackSheet(
     await showModalPanel<void>(
       context,
       (_) => FeedbackSheet(controller: controller, shot: shot),
-      width: 560,
-      height: 760,
+      width: Panels.feedback.width,
+      height: Panels.feedback.height,
     );
   } finally {
     controller.sheetOpen = false;
@@ -197,16 +198,29 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+            padding: const EdgeInsets.fromLTRB(
+              Space.xl,
+              Space.lg,
+              Space.xl,
+              Space.md,
+            ),
             child: Row(
               children: [
-                glyphIcon(glyphMessageSquareText, size: 22, color: theme.ink),
-                const SizedBox(width: 10),
+                glyphIcon(
+                  glyphMessageSquareText,
+                  size: IconSize.xl,
+                  color: theme.ink,
+                ),
+                const Gap(Space.md),
                 Semantics(
                   header: true,
                   child: Text(
                     'Send feedback',
-                    style: ts(theme.typeScale.h2, theme.ink, weight: 600),
+                    style: ts(
+                      theme.typeScale.h2,
+                      theme.ink,
+                      weight: Weight.strong,
+                    ),
                   ),
                 ),
               ],
@@ -220,22 +234,35 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
           ),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              padding: const EdgeInsets.fromLTRB(
+                Space.xl,
+                Space.lg,
+                Space.xl,
+                Space.xxs,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     'What happened?',
-                    style: ts(theme.typeScale.ui, theme.ink, weight: 600),
+                    style: ts(
+                      theme.typeScale.ui,
+                      theme.ink,
+                      weight: Weight.strong,
+                    ),
                   ),
-                  const SizedBox(height: 2),
+                  const Gap(Space.hair),
                   Text(
                     'Include what you expected instead.',
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const Gap(Space.sm),
                   FieldFrame(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(Space.md),
                     child: Semantics(
                       label: 'What happened?',
                       textField: true,
@@ -248,7 +275,9 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                         style: ts(theme.typeScale.body, theme.ink),
                         cursorColor: theme.ink,
                         backgroundCursorColor: theme.faint,
-                        selectionColor: theme.accent.withValues(alpha: 0.3),
+                        selectionColor: theme.accent.withValues(
+                          alpha: Alpha.wash,
+                        ),
                         selectionControls: noteSelectionControls,
                         keyboardType: TextInputType.multiline,
                         minLines: 5,
@@ -256,9 +285,9 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const Gap(Space.lg),
                   _screenshot(theme, shot),
-                  const SizedBox(height: 16),
+                  const Gap(Space.lg),
                   DisclosureRow(
                     key: const ValueKey('feedback-diag-toggle'),
                     title: 'Diagnostics',
@@ -267,22 +296,26 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                     onTap: () => setState(() => _diagOpen = !_diagOpen),
                   ),
                   if (_diagOpen) ...[
-                    const SizedBox(height: 8),
+                    const Gap(Space.sm),
                     FbCodeBlock(
                       key: const ValueKey('feedback-diag-text'),
                       text: _diagnostics,
                       label: 'Diagnostics text that will be saved',
                     ),
-                    const SizedBox(height: 8),
+                    const Gap(Space.sm),
                     Text(
                       'This is the exact text saved in report.md. Tokens, keys '
                       'and passwords are replaced with [redacted], and your '
                       'home folder shows as ~.',
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                      style: ts(
+                        theme.typeScale.uiSmall,
+                        theme.muted,
+                        weight: Weight.regular,
+                      ),
                     ),
                   ],
                   if (_chatId != null) ...[
-                    const SizedBox(height: 16),
+                    const Gap(Space.lg),
                     _ChatCheck(
                       key: const ValueKey('feedback-chat-check'),
                       value: _attachChat,
@@ -291,7 +324,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                     ),
                     if (_chatError != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: Space.xxs),
                         child: Semantics(
                           liveRegion: true,
                           child: Text(
@@ -302,7 +335,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                         ),
                       ),
                     if (chat != null) ...[
-                      const SizedBox(height: 8),
+                      const Gap(Space.sm),
                       DisclosureRow(
                         key: const ValueKey('feedback-chat-toggle'),
                         title: 'Chat messages',
@@ -313,31 +346,39 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                         onTap: () => setState(() => _chatOpen = !_chatOpen),
                       ),
                       if (_chatOpen) ...[
-                        const SizedBox(height: 8),
+                        const Gap(Space.sm),
                         FbCodeBlock(
                           key: const ValueKey('feedback-chat-text'),
                           text: chatText,
                           label: 'Chat text that will be saved',
                         ),
-                        const SizedBox(height: 8),
+                        const Gap(Space.sm),
                         Text(
                           'This is the exact text saved in chat.md. Tokens, '
                           'keys and passwords are replaced with [redacted], '
                           'and your home folder shows as ~.',
-                          style: ts(theme.typeScale.uiSmall, theme.muted),
+                          style: ts(
+                            theme.typeScale.uiSmall,
+                            theme.muted,
+                            weight: Weight.regular,
+                          ),
                         ),
                       ],
                     ],
                   ],
-                  const SizedBox(height: 16),
+                  const Gap(Space.lg),
                   Text(
                     'Saved on this computer in the feedback folder'
                     '${chat != null ? ', with chat.md' : ''}. Nothing is sent.',
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                   if (_error != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.only(top: Space.sm),
                       child: Semantics(
                         liveRegion: true,
                         child: Text(
@@ -347,7 +388,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                         ),
                       ),
                     ),
-                  const SizedBox(height: 12),
+                  const Gap(Space.md),
                 ],
               ),
             ),
@@ -357,7 +398,12 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
               border: Border(top: BorderSide(color: theme.seam)),
             ),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+              padding: const EdgeInsets.fromLTRB(
+                Space.xl,
+                Space.md,
+                Space.xl,
+                Space.md,
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -366,7 +412,11 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                           ? 'Describe what happened to save.'
                           : '',
                       key: const ValueKey('feedback-need'),
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                      style: ts(
+                        theme.typeScale.uiSmall,
+                        theme.muted,
+                        weight: Weight.regular,
+                      ),
                     ),
                   ),
                   FbButton(
@@ -374,7 +424,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                     label: 'Cancel',
                     onTap: () => Navigator.of(context).maybePop(),
                   ),
-                  const SizedBox(width: 8),
+                  const Gap(Space.sm),
                   FbButton(
                     key: const ValueKey('feedback-save'),
                     label: _saving ? 'Saving…' : 'Save',
@@ -396,54 +446,58 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
       decoration: BoxDecoration(
         color: theme.surface2,
         border: Border.all(color: theme.seam),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(Radii.md),
       ),
       child: Padding(
-        padding: padding ?? const EdgeInsets.all(8),
+        padding: padding ?? const EdgeInsets.all(Space.sm),
         child: Row(children: children),
       ),
     );
     final label = Text(
       'Screenshot',
-      style: ts(theme.typeScale.ui, theme.ink, weight: 600),
+      style: ts(theme.typeScale.ui, theme.ink, weight: Weight.strong),
     );
     if (shot == null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           label,
-          const SizedBox(height: 4),
+          const Gap(Space.xxs),
           row([
             Expanded(
               child: Text(
                 'No screenshot was available for this window, so none will be '
                 'saved.',
                 key: const ValueKey('feedback-shot-none'),
-                style: ts(theme.typeScale.ui, theme.muted),
+                style: ts(
+                  theme.typeScale.ui,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
           ]),
         ],
       );
     }
-    final width = 192.0;
+    const width = FeedbackSizes.shotWidth;
     final height = shot.size.height <= 0
-        ? 120.0
+        ? FeedbackSizes.shotFallbackHeight
         : width * shot.size.height / shot.size.width;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         label,
-        const SizedBox(height: 4),
+        const Gap(Space.xxs),
         if (_shot)
           row([
             DecoratedBox(
               decoration: BoxDecoration(
                 border: Border.all(color: theme.thread),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(Radii.sm),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(3),
+                borderRadius: BorderRadius.circular(Radii.sm),
                 child: ExcludeSemantics(
                   child: Image.memory(
                     shot.png,
@@ -460,20 +514,29 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const Gap(Space.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'screenshot.png',
-                    style: ts(theme.typeScale.ui, theme.ink, mono: true),
+                    style: ts(
+                      theme.typeScale.ui,
+                      theme.ink,
+                      mono: true,
+                      weight: Weight.regular,
+                    ),
                   ),
                   Text(
                     'This window, ${shot.size.width.round()}×'
                     '${shot.size.height.round()}. Taken before this sheet '
                     'opened.',
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ],
               ),
@@ -486,22 +549,34 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
             ),
           ])
         else
-          row([
-            Expanded(
-              child: Text(
-                'No screenshot will be saved.',
-                key: const ValueKey('feedback-shot-removed'),
-                style: ts(theme.typeScale.ui, theme.muted),
+          row(
+            [
+              Expanded(
+                child: Text(
+                  'No screenshot will be saved.',
+                  key: const ValueKey('feedback-shot-removed'),
+                  style: ts(
+                    theme.typeScale.ui,
+                    theme.muted,
+                    weight: Weight.regular,
+                  ),
+                ),
               ),
+              FbButton(
+                key: const ValueKey('feedback-shot-add'),
+                label: 'Add screenshot',
+                glyph: glyphImage,
+                kind: FbButtonKind.quiet,
+                onTap: () => setState(() => _shot = true),
+              ),
+            ],
+            padding: const EdgeInsets.fromLTRB(
+              Space.md,
+              Space.sm,
+              Space.sm,
+              Space.sm,
             ),
-            FbButton(
-              key: const ValueKey('feedback-shot-add'),
-              label: 'Add screenshot',
-              glyph: glyphImage,
-              kind: FbButtonKind.quiet,
-              onTap: () => setState(() => _shot = true),
-            ),
-          ], padding: const EdgeInsets.fromLTRB(12, 8, 8, 8)),
+          ),
       ],
     );
   }
@@ -534,29 +609,32 @@ class _ChatCheck extends StatelessWidget {
       child: Hover(
         onTap: onTap,
         lift: 0,
-        borderRadius: BorderRadius.circular(6),
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+        borderRadius: BorderRadius.circular(Radii.md),
+        padding: const EdgeInsets.symmetric(
+          vertical: Space.xs,
+          horizontal: Space.hair,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 1),
+              padding: const EdgeInsets.only(top: Space.hair),
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: value ? theme.constructiveInk : theme.canvas,
                   border: Border.all(
                     color: value ? theme.constructiveInk : theme.threadStrong,
                   ),
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(Radii.sm),
                 ),
                 child: SizedBox(
-                  width: 18,
-                  height: 18,
+                  width: FeedbackSizes.checkBox,
+                  height: FeedbackSizes.checkBox,
                   child: value
                       ? Center(
                           child: glyphIcon(
                             glyphCheck,
-                            size: 14,
+                            size: IconSize.xs,
                             color: theme.canvas,
                           ),
                         )
@@ -564,7 +642,7 @@ class _ChatCheck extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const Gap(Space.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -573,12 +651,20 @@ class _ChatCheck extends StatelessWidget {
                     busy
                         ? 'Reading the last 20 messages…'
                         : 'Attach the last 20 messages of this chat',
-                    style: ts(theme.typeScale.ui, theme.ink, weight: 600),
+                    style: ts(
+                      theme.typeScale.ui,
+                      theme.ink,
+                      weight: Weight.strong,
+                    ),
                   ),
                   Text(
                     'Saved as chat.md beside report.md. Tool calls show as one '
                     'line each.',
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ],
               ),

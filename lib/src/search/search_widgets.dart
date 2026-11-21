@@ -4,8 +4,7 @@
 
 import 'package:agent_kit/agent_kit.dart';
 import 'package:agent_kit_core/agent_kit_core.dart' show ChatSummary;
-import 'package:bb_ui/bb_ui.dart'
-    show Hover, TypeSpec, noteSelectionControls, ts;
+import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 
@@ -49,7 +48,7 @@ class ChatSearchResults extends StatelessWidget {
     final results = search.results;
     final groups = groupByProject(results, pathOf ?? (_) => null);
     return ListView(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: Space.sm),
       children: [
         if (search.phase == ChatSearchPhase.failed)
           SearchNote(
@@ -111,15 +110,31 @@ class RailLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+      padding: const EdgeInsets.fromLTRB(
+        Space.lg,
+        Space.md,
+        Space.lg,
+        Space.hair,
+      ),
       child: Row(
         children: [
-          Text(text, style: ts(const TypeSpec(12, 16, 700), theme.railMuted)),
+          Text(
+            text,
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.railMuted,
+              weight: Weight.strong,
+            ),
+          ),
           if (count != null) ...[
-            const SizedBox(width: 6),
+            const Gap(Space.xs),
             Text(
               '$count',
-              style: ts(const TypeSpec(12, 16, 700), theme.attentionInk),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.attentionInk,
+                weight: Weight.strong,
+              ),
             ),
           ],
         ],
@@ -164,8 +179,8 @@ class RailChatRow extends StatelessWidget {
   Widget _title(BbTheme theme) {
     final style = ts(
       theme.typeScale.ui,
-      theme.railInk.withValues(alpha: selected ? 1 : .86),
-      weight: selected ? 700 : 500,
+      theme.railInk.withValues(alpha: selected ? 1 : Alpha.strong),
+      weight: selected ? Weight.strong : Weight.regular,
     );
     final typed = highlight;
     if (typed == null) {
@@ -204,7 +219,7 @@ class RailChatRow extends StatelessWidget {
         fit: StackFit.passthrough,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: Space.sm),
             child: Hover(
               onTap: onTap,
               borderRadius: theme.radii.ctl,
@@ -213,17 +228,22 @@ class RailChatRow extends StatelessWidget {
               hoverBackground: theme.railHover,
               pressedBackground: theme.railSelected,
               lift: 0,
-              padding: const EdgeInsets.fromLTRB(10, 6, 8, 6),
+              padding: const EdgeInsets.fromLTRB(
+                Space.md,
+                Space.xs,
+                Space.sm,
+                Space.xs,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _title(theme),
-                  const SizedBox(height: 2),
+                  const Gap(Space.hair),
                   // The project tag goes under the status when both do not fit.
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 2,
+                    spacing: Space.sm,
+                    runSpacing: Space.hair,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       StatusMark(chat.status, label: label, detail: detail),
@@ -234,13 +254,16 @@ class RailChatRow extends StatelessWidget {
                             borderRadius: BorderRadius.circular(theme.radii.sm),
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: Space.xs,
+                            ),
                             child: Text(
                               tag,
                               style: ts(
-                                const TypeSpec(11, 16, 400),
+                                theme.typeScale.caption,
                                 theme.railMuted,
                                 mono: true,
+                                weight: Weight.regular,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -258,12 +281,12 @@ class RailChatRow extends StatelessWidget {
               left: 0,
               top: 0,
               bottom: 0,
-              width: 3,
+              width: Stroke.seam,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: theme.railInk,
                   borderRadius: const BorderRadius.horizontal(
-                    right: Radius.circular(2),
+                    right: Radius.circular(Radii.sm),
                   ),
                 ),
               ),
@@ -311,7 +334,7 @@ class RailMoreRow extends StatelessWidget {
       excludeSemantics: true,
       onTap: enabled ? onTap : null,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+        padding: const EdgeInsets.fromLTRB(Space.sm, Space.xxs, Space.sm, 0),
         child: Hover(
           key: const ValueKey('rail-load-more'),
           onTap: enabled ? onTap : null,
@@ -319,13 +342,16 @@ class RailMoreRow extends StatelessWidget {
           hoverBackground: theme.railHover,
           pressedBackground: theme.railSelected,
           lift: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Space.md,
+            vertical: Space.sm,
+          ),
           child: Text(
             label,
             style: ts(
               theme.typeScale.ui,
               failed ? theme.dangerInk : theme.railMuted,
-              weight: 500,
+              weight: Weight.strong,
             ),
           ),
         ),
@@ -349,7 +375,7 @@ class ChatSearchBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    final style = ts(theme.typeScale.ui, theme.railInk, weight: 500);
+    final style = ts(theme.typeScale.ui, theme.railInk, weight: Weight.strong);
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.escape): () {
@@ -372,13 +398,17 @@ class ChatSearchBox extends StatelessWidget {
                 border: on ? Border.all(color: theme.railLine) : null,
               ),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 32),
+                constraints: BoxConstraints(minHeight: ControlSize.md.height),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: Space.md),
                   child: Row(
                     children: [
-                      glyphIcon(glyphSearch, size: 16, color: theme.railMuted),
-                      const SizedBox(width: 8),
+                      glyphIcon(
+                        glyphSearch,
+                        size: IconSize.sm,
+                        color: theme.railMuted,
+                      ),
+                      const Gap(Space.sm),
                       Expanded(
                         child: Semantics(
                           label: searchPlaceholder,
@@ -405,7 +435,7 @@ class ChatSearchBox extends StatelessWidget {
                                 cursorColor: theme.railInk,
                                 backgroundCursorColor: theme.railMuted,
                                 selectionColor: theme.accent.withValues(
-                                  alpha: .3,
+                                  alpha: Alpha.wash,
                                 ),
                                 selectionControls: noteSelectionControls,
                                 maxLines: 1,
@@ -420,9 +450,10 @@ class ChatSearchBox extends StatelessWidget {
                         Text(
                           'Ctrl K',
                           style: ts(
-                            const TypeSpec(12, 16, 400),
+                            theme.typeScale.codeSmall,
                             theme.railMuted,
                             mono: true,
+                            weight: Weight.regular,
                           ),
                         ),
                     ],
@@ -457,11 +488,14 @@ class _ClearButton extends StatelessWidget {
         hoverBackground: theme.railSelected,
         pressedBackground: theme.railSelected,
         lift: 0,
-        child: SizedBox(
-          width: 28,
-          height: 28,
+        child: SizedBox.square(
+          dimension: ControlSize.sm.height,
           child: Center(
-            child: glyphIcon(glyphClose, size: 14, color: theme.railMuted),
+            child: glyphIcon(
+              glyphClose,
+              size: IconSize.xs,
+              color: theme.railMuted,
+            ),
           ),
         ),
       ),
@@ -495,25 +529,38 @@ class SearchNote extends StatelessWidget {
       container: true,
       liveRegion: true,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
+        padding: const EdgeInsets.fromLTRB(
+          Space.lg,
+          Space.md,
+          Space.lg,
+          Space.sm,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
-              style: ts(theme.typeScale.ui, theme.railInk, weight: 700),
+              style: ts(
+                theme.typeScale.ui,
+                theme.railInk,
+                weight: Weight.strong,
+              ),
             ),
             if (body.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 2),
+                padding: const EdgeInsets.only(top: Space.hair),
                 child: Text(
                   body,
-                  style: ts(theme.typeScale.ui, theme.railMuted),
+                  style: ts(
+                    theme.typeScale.ui,
+                    theme.railMuted,
+                    weight: Weight.regular,
+                  ),
                 ),
               ),
             if (label != null)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.only(top: Space.sm),
                 child: Semantics(
                   button: true,
                   label: label,
@@ -527,12 +574,16 @@ class SearchNote extends StatelessWidget {
                     pressedBackground: theme.railSelected,
                     lift: 0,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+                      horizontal: Space.md,
+                      vertical: Space.xs,
                     ),
                     child: Text(
                       label,
-                      style: ts(theme.typeScale.ui, theme.railInk, weight: 600),
+                      style: ts(
+                        theme.typeScale.ui,
+                        theme.railInk,
+                        weight: Weight.strong,
+                      ),
                     ),
                   ),
                 ),

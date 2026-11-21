@@ -151,7 +151,7 @@ and Ctrl+K has nothing to focus).
 - Ctrl+K (Cmd+K) focuses the box on desktop, showing the rail first when it is
   hidden; Escape or the clear button empties it. The phone has no shortcut hint.
 
-On this computer: the rail is the kit's `SessionRail` (agent_kit 0.19.0), which
+On this computer: the rail is the kit's `SessionRail` (agent_kit 0.21.1), which
 takes the host's own field (`search`) in place of its Search row and a
 `searchResults` builder that may swap the session list for the results.
 `AgentWorkbench` passes them as `railSearch` and `railSearchResults`; with

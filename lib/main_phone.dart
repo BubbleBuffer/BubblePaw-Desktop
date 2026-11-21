@@ -4,6 +4,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:bb_ui/bb_ui.dart' show Density;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -36,5 +38,12 @@ Future<void> main() async {
     log: LogBuffer.instance,
   );
   unawaited(feedback.load());
-  runApp(BubblePawApp(controller: controller, feedback: feedback));
+  runApp(
+    BubblePawApp(
+      controller: controller,
+      feedback: feedback,
+      // Touch sizes and type on a phone or tablet.
+      density: Density.forPlatform(defaultTargetPlatform),
+    ),
+  );
 }

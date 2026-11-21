@@ -49,12 +49,12 @@ class UpdateDialog extends StatelessWidget {
         autofocus: true,
         child: Stack(
           children: [
-            Positioned.fill(child: ColoredBox(color: const Color(0x66000000))),
+            Positioned.fill(child: ColoredBox(color: theme.colors.overlay)),
             Center(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(Space.lg),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
+                  constraints: const BoxConstraints(maxWidth: Widths.sheet),
                   child: Semantics(
                     scopesRoute: true,
                     namesRoute: true,
@@ -64,11 +64,11 @@ class UpdateDialog extends StatelessWidget {
                       key: const ValueKey('update-dialog'),
                       decoration: BoxDecoration(
                         color: theme.surface,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(Radii.sheet),
                         border: Border.all(color: theme.thread),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(Space.xl),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -77,13 +77,15 @@ class UpdateDialog extends StatelessWidget {
                               children: [
                                 Image.asset(
                                   'assets/icon/png/icon-128.png',
-                                  width: 40,
-                                  height: 40,
+                                  width: Sizes.tile,
+                                  height: Sizes.tile,
                                   excludeFromSemantics: true,
                                   errorBuilder: (_, _, _) =>
-                                      const SizedBox(width: 40, height: 40),
+                                      const SizedBox.square(
+                                        dimension: Sizes.tile,
+                                      ),
                                 ),
-                                const SizedBox(width: 12),
+                                const Gap(Space.md),
                                 Expanded(
                                   child: Semantics(
                                     header: true,
@@ -93,16 +95,16 @@ class UpdateDialog extends StatelessWidget {
                                       style: ts(
                                         theme.typeScale.h2,
                                         theme.ink,
-                                        weight: 600,
+                                        weight: Weight.strong,
                                       ),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            const Gap(Space.lg),
                             ...spec.body,
-                            const SizedBox(height: 20),
+                            const Gap(Space.xl),
                             Row(
                               children: [
                                 if (spec.leading != null) spec.leading!,
@@ -112,7 +114,7 @@ class UpdateDialog extends StatelessWidget {
                                   i < spec.actions.length;
                                   i++
                                 ) ...[
-                                  if (i > 0) const SizedBox(width: 8),
+                                  if (i > 0) const Gap(Space.sm),
                                   spec.actions[i],
                                 ],
                               ],
@@ -131,8 +133,11 @@ class UpdateDialog extends StatelessWidget {
     );
   }
 
-  TextStyle _hint(BuildContext context) =>
-      ts(context.bb.typeScale.uiSmall, context.bb.muted);
+  TextStyle _hint(BuildContext context) => ts(
+    context.bb.typeScale.uiSmall,
+    context.bb.muted,
+    weight: Weight.regular,
+  );
 
   _Spec _available(BuildContext context) {
     final theme = context.bb;
@@ -149,7 +154,7 @@ class UpdateDialog extends StatelessWidget {
           style: ts(theme.typeScale.body, theme.ink),
         ),
         if (notes != null) ...[
-          const SizedBox(height: 8),
+          const Gap(Space.sm),
           Align(
             alignment: Alignment.centerLeft,
             child: LinkButton(
@@ -190,7 +195,7 @@ class UpdateDialog extends StatelessWidget {
       title: 'Downloading BubblePaw ${phase.manifest.version}',
       body: [
         ProgressLine(value: phase.fraction, label: 'Download progress'),
-        const SizedBox(height: 6),
+        const Gap(Space.xs),
         Row(
           children: [
             Expanded(
@@ -200,10 +205,17 @@ class UpdateDialog extends StatelessWidget {
                 style: ts(theme.typeScale.ui, theme.ink),
               ),
             ),
-            Text(percent, style: ts(theme.typeScale.ui, theme.muted)),
+            Text(
+              percent,
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 12),
+        const Gap(Space.md),
         Text(
           updates.canInstall
               ? 'The installer runs only after the download finishes and its '
@@ -237,15 +249,20 @@ class UpdateDialog extends StatelessWidget {
             tone: NoticeTone.good,
             child: Text('The file is downloaded and its checksum matches.'),
           ),
-          const SizedBox(height: 12),
+          const Gap(Space.md),
           Text('Saved to', style: _hint(context)),
-          const SizedBox(height: 2),
+          const Gap(Space.hair),
           Text(
             phase.file.path,
             key: const ValueKey('update-path'),
-            style: ts(theme.typeScale.ui, theme.ink, mono: true),
+            style: ts(
+              theme.typeScale.ui,
+              theme.ink,
+              mono: true,
+              weight: Weight.regular,
+            ),
           ),
-          const SizedBox(height: 12),
+          const Gap(Space.md),
           Text(
             'BubblePaw does not replace itself on Linux yet. Extract the '
             'archive over the current installation, then start BubblePaw '
@@ -280,7 +297,7 @@ class UpdateDialog extends StatelessWidget {
             tone: NoticeTone.danger,
             child: Text(error),
           ),
-          const SizedBox(height: 12),
+          const Gap(Space.md),
         ] else ...[
           const NoticeBox(
             tone: NoticeTone.good,
@@ -288,7 +305,7 @@ class UpdateDialog extends StatelessWidget {
               'The installer is downloaded and its checksum matches.',
             ),
           ),
-          const SizedBox(height: 12),
+          const Gap(Space.md),
         ],
         Text(
           'Install and restart runs the installer and quits BubblePaw. It '
@@ -342,7 +359,7 @@ class UpdateDialog extends StatelessWidget {
               'so it was deleted and not installed.',
             ),
           ),
-          const SizedBox(height: 12),
+          const Gap(Space.md),
           GroupCard(
             children: [
               SettingsKeyValueRow('Expected', cut(error.expected)),
@@ -369,11 +386,15 @@ class UpdateDialog extends StatelessWidget {
           tone: NoticeTone.danger,
           child: Text('$stopped${error.message} Nothing was installed.'),
         ),
-        const SizedBox(height: 12),
+        const Gap(Space.md),
         Text(
           'Check the connection, then retry. Retry starts the download '
           'again.',
-          style: ts(theme.typeScale.uiSmall, theme.muted),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
         ),
       ],
       actions: actions,

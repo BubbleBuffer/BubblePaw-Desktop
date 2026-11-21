@@ -23,9 +23,9 @@ class Notice extends StatelessWidget {
       color: theme.canvas,
       child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(Space.xl),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: const BoxConstraints(maxWidth: Widths.sheet),
             child: Semantics(
               liveRegion: true,
               container: true,
@@ -35,17 +35,21 @@ class Notice extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: ts(theme.typeScale.h2, theme.ink, weight: 600),
+                    style: ts(
+                      theme.typeScale.h2,
+                      theme.ink,
+                      weight: Weight.strong,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const Gap(Space.sm),
                   Text(message, style: ts(theme.typeScale.body, theme.muted)),
                   if (actions.isNotEmpty) ...[
-                    const SizedBox(height: 16),
+                    const Gap(Space.lg),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         for (var i = 0; i < actions.length; i++) ...[
-                          if (i > 0) const SizedBox(width: 8),
+                          if (i > 0) const Gap(Space.sm),
                           actions[i],
                         ],
                       ],

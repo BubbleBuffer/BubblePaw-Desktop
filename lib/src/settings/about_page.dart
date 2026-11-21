@@ -10,6 +10,7 @@ import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart'
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
+import '../app_tokens.dart';
 import '../feedback/feedback_controller.dart';
 import '../host_controller.dart';
 import '../platform/releases.dart';
@@ -121,7 +122,7 @@ class _AboutPageState extends State<AboutPage> {
             _Version('Protocol', BubblePawBackend.protocolVersion),
           ],
         ),
-        const SettingsHeading('Licences', top: 24),
+        const SettingsHeading('Licences', top: Space.xl),
         SettingsRow(
           label: 'Open source licences',
           description:
@@ -129,7 +130,7 @@ class _AboutPageState extends State<AboutPage> {
           trailing: OutlineButton(
             key: const ValueKey('about-licences'),
             label: 'View',
-            icon: Icon20(Ico.chevronRight, size: 16, color: theme.ink),
+            icon: Icon20(Ico.chevronRight, size: IconSize.sm, color: theme.ink),
             onTap: widget.onLicences,
           ),
         ),
@@ -177,8 +178,8 @@ class _AboutPageState extends State<AboutPage> {
           label: 'BubblePaw $buildVersion',
           description: status,
           trailing: Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: Space.sm,
+            runSpacing: Space.sm,
             alignment: WrapAlignment.end,
             children: [
               if (available)
@@ -211,7 +212,7 @@ class _AboutPageState extends State<AboutPage> {
           ),
         ),
         if (prefs.updateChannel == UpdateChannel.nightly) ...[
-          const SizedBox(height: 4),
+          const Gap(Space.xxs),
           const NoticeBox(
             key: ValueKey('nightly-notice'),
             tone: NoticeTone.info,
@@ -222,7 +223,7 @@ class _AboutPageState extends State<AboutPage> {
               'downgrade.',
             ),
           ),
-          const SizedBox(height: 8),
+          const Gap(Space.sm),
         ],
         KeyedSubtree(
           key: const ValueKey('update-core'),
@@ -237,8 +238,8 @@ class _AboutPageState extends State<AboutPage> {
           description: lastText,
           trailing: null,
         ),
-        const SizedBox(height: 4),
-        const SettingsHeading('Versions', top: 24),
+        const Gap(Space.xxs),
+        const SettingsHeading('Versions', top: Space.xl),
         GroupCard(
           children: [
             _Version('BubblePaw', buildVersion),
@@ -247,7 +248,7 @@ class _AboutPageState extends State<AboutPage> {
             _Version('Protocol', BubblePawBackend.protocolVersion),
           ],
         ),
-        const SettingsHeading('Help', top: 24),
+        const SettingsHeading('Help', top: Space.xl),
         SettingsRow(
           label: 'Send feedback',
           description:
@@ -256,7 +257,7 @@ class _AboutPageState extends State<AboutPage> {
           trailing: PrimaryButton(
             key: const ValueKey('about-feedback'),
             label: 'Send feedback',
-            height: 36,
+            size: ControlSize.lg,
             onTap: widget.onSendFeedback,
           ),
         ),
@@ -279,7 +280,7 @@ class _AboutPageState extends State<AboutPage> {
             );
           },
         ),
-        const SettingsHeading('Licences', top: 24),
+        const SettingsHeading('Licences', top: Space.xl),
         SettingsRow(
           label: 'Open source licences',
           description:
@@ -287,7 +288,7 @@ class _AboutPageState extends State<AboutPage> {
           trailing: OutlineButton(
             key: const ValueKey('about-licences'),
             label: 'View',
-            icon: Icon20(Ico.chevronRight, size: 16, color: theme.ink),
+            icon: Icon20(Ico.chevronRight, size: IconSize.sm, color: theme.ink),
             onTap: widget.onLicences,
           ),
         ),
@@ -306,18 +307,33 @@ class _Version extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.md,
+        vertical: Space.sm,
+      ),
       child: Row(
         children: [
           SizedBox(
-            width: 120,
-            child: Text(name, style: ts(theme.typeScale.ui, theme.muted)),
+            width: SettingsSizes.versionLabel,
+            child: Text(
+              name,
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
+            ),
           ),
           Expanded(
             child: Text(
               value,
               key: ValueKey('version-$name'),
-              style: ts(theme.typeScale.ui, theme.ink, mono: true),
+              style: ts(
+                theme.typeScale.ui,
+                theme.ink,
+                mono: true,
+                weight: Weight.regular,
+              ),
             ),
           ),
         ],

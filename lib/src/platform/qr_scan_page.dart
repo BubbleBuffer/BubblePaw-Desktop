@@ -55,19 +55,28 @@ class _QrScanPageState extends State<_QrScanPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+              padding: const EdgeInsets.fromLTRB(
+                Space.lg,
+                Space.sm,
+                Space.sm,
+                Space.sm,
+              ),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       'Scan QR code',
-                      style: ts(theme.typeScale.h2, theme.ink, weight: 600),
+                      style: ts(
+                        theme.typeScale.h2,
+                        theme.ink,
+                        weight: Weight.strong,
+                      ),
                     ),
                   ),
                   IconBtn(
                     Ico.close,
                     key: const ValueKey('scan-close'),
-                    size: 40,
+                    size: ControlSize.xl,
                     semanticLabel: 'Close',
                     onTap: () => Navigator.of(context).pop(),
                   ),
@@ -75,28 +84,41 @@ class _QrScanPageState extends State<_QrScanPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              padding: const EdgeInsets.fromLTRB(
+                Space.lg,
+                0,
+                Space.lg,
+                Space.md,
+              ),
               child: Text(
                 'Point the camera at the code shown by the host.',
-                style: ts(theme.typeScale.ui, theme.muted),
+                style: ts(
+                  theme.typeScale.ui,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(Space.lg),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(Radii.sheet),
                   child: MobileScanner(
                     controller: _controller,
                     onDetect: _detected,
                     errorBuilder: (context, error) => Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(Space.xl),
                         child: Text(
                           'The camera is not available. Paste the pairing '
                           'link instead.',
                           textAlign: TextAlign.center,
-                          style: ts(theme.typeScale.ui, theme.muted),
+                          style: ts(
+                            theme.typeScale.ui,
+                            theme.muted,
+                            weight: Weight.regular,
+                          ),
                         ),
                       ),
                     ),

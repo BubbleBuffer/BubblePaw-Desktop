@@ -341,11 +341,11 @@ class _ModelsPageState extends State<ModelsPage> {
                   key: const ValueKey('provider-load-error'),
                   style: ts(theme.typeScale.ui, theme.dangerInk),
                 ),
-                const SizedBox(height: 8),
+                const Gap(Space.sm),
                 SecondaryButton(
                   key: const ValueKey('provider-retry'),
                   label: 'Try again',
-                  height: 32,
+                  size: ControlSize.md,
                   onTap: _load,
                 ),
               ],
@@ -392,7 +392,10 @@ class _Note extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    return Text(text, style: ts(theme.typeScale.ui, theme.muted));
+    return Text(
+      text,
+      style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
+    );
   }
 }
 
@@ -482,9 +485,13 @@ class _Providers extends StatelessWidget {
                     'New runs keep using this model until the host reloads.'
               : 'New runs in every chat use this model. A run in progress '
                     'keeps its own.',
-          style: ts(theme.typeScale.uiSmall, theme.muted),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
         ),
-        const SizedBox(height: 6),
+        const Gap(Space.xs),
         Text(
           current ?? 'None set',
           key: const ValueKey('provider-default'),
@@ -496,38 +503,50 @@ class _Providers extends StatelessWidget {
         ),
         if (restartModel != null)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.only(top: Space.xs),
             child: Text(
               'Saved as $restartModel. Applies after restart.',
               key: const ValueKey('provider-restart'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         if (pending)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.only(top: Space.xs),
             child: Text(
               'Saved as ${setup.main}.',
               key: const ValueKey('provider-saved'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
-        const SettingsHeading('Providers', top: 24),
+        const SettingsHeading('Providers', top: Space.xl),
         if (setup.providers.isEmpty)
           Text(
             'No providers are configured on this host. Add one to the host '
             'configuration, then reload it.',
             key: const ValueKey('provider-empty'),
-            style: ts(theme.typeScale.ui, theme.muted),
+            style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
           ),
         if (keysUnsupported && setup.providers.any((p) => p.keyEnv != null))
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: Space.sm),
             child: Text(
               'This host does not manage provider keys. Update BubblePaw '
               'Core to v0.13.0 or later to add them here.',
               key: const ValueKey('provider-keys-unsupported'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         for (final provider in setup.providers)
@@ -591,7 +610,7 @@ class _ProviderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    final compact = SizeClass.of(context).isCompact;
+    final compact = sizeClassOf(context).isCompact;
     final needsKey = provider.keyEnv != null;
     final controls = needsKey ? keys : null;
     final status = controls?.status[provider.name];
@@ -613,7 +632,7 @@ class _ProviderCard extends StatelessWidget {
             child: SecondaryButton(
               key: ValueKey('key-button-${provider.name}'),
               label: keySet ? 'Edit key' : 'Add key',
-              height: 28,
+              size: ControlSize.sm,
               onTap: blocked == null ? () => controls.onEdit(provider) : null,
             ),
           );
@@ -626,12 +645,16 @@ class _ProviderCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Wrap(
-                  spacing: 8,
+                  spacing: Space.sm,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       provider.name,
-                      style: ts(theme.typeScale.ui, theme.ink, weight: 700),
+                      style: ts(
+                        theme.typeScale.ui,
+                        theme.ink,
+                        weight: Weight.strong,
+                      ),
                     ),
                     Text(
                       provider.kind,
@@ -639,6 +662,7 @@ class _ProviderCard extends StatelessWidget {
                         theme.typeScale.uiSmall,
                         theme.faint,
                         mono: true,
+                        weight: Weight.regular,
                       ),
                     ),
                   ],
@@ -646,7 +670,12 @@ class _ProviderCard extends StatelessWidget {
                 if (provider.baseUrl != null)
                   Text(
                     provider.baseUrl!,
-                    style: ts(theme.typeScale.uiSmall, theme.faint, mono: true),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.faint,
+                      mono: true,
+                      weight: Weight.regular,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -679,28 +708,32 @@ class _ProviderCard extends StatelessWidget {
                   ),
                 if (provider.models.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: Space.xxs),
                     child: Text(
                       'This provider lists no models.',
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                      style: ts(
+                        theme.typeScale.uiSmall,
+                        theme.muted,
+                        weight: Weight.regular,
+                      ),
                     ),
                   ),
               ],
             ),
           ),
           if (needsKey) ...[
-            const SizedBox(width: 12),
+            const Gap(Space.md),
             if (button == null)
               pill
             else if (compact)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
-                children: [pill, const SizedBox(height: 8), button],
+                children: [pill, const Gap(Space.sm), button],
               )
             else
               Row(
                 mainAxisSize: MainAxisSize.min,
-                children: [pill, const SizedBox(width: 8), button],
+                children: [pill, const Gap(Space.sm), button],
               ),
           ],
         ],
@@ -733,8 +766,11 @@ class _Hint extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Text(text, style: ts(theme.typeScale.uiSmall, theme.muted)),
+      padding: const EdgeInsets.only(top: Space.xxs),
+      child: Text(
+        text,
+        style: ts(theme.typeScale.uiSmall, theme.muted, weight: Weight.regular),
+      ),
     );
   }
 }
@@ -769,7 +805,7 @@ class _ViaPicker extends StatelessWidget {
     if (!hosts.loaded) {
       body = Text(
         'Loading hosts…',
-        style: ts(theme.typeScale.uiSmall, theme.muted),
+        style: ts(theme.typeScale.uiSmall, theme.muted, weight: Weight.regular),
       );
     } else if (hosts.error != null) {
       body = Text(
@@ -820,15 +856,24 @@ class _ViaPicker extends StatelessWidget {
       );
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      padding: const EdgeInsets.fromLTRB(
+        Space.md,
+        Space.md,
+        Space.md,
+        Space.xxs,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: Space.sm),
             child: Text(
               'Send model traffic through…',
-              style: ts(theme.typeScale.uiSmall, theme.muted, weight: 600),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.strong,
+              ),
             ),
           ),
           body,
@@ -836,7 +881,7 @@ class _ViaPicker extends StatelessWidget {
             Semantics(
               liveRegion: true,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: Space.sm),
                 child: Text(
                   error!,
                   key: ValueKey('$key-error'),
@@ -884,7 +929,7 @@ class _ModelRowState extends State<_ModelRow> {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    final compact = SizeClass.of(context).isCompact;
+    final compact = sizeClassOf(context).isCompact;
     final make = widget.onMakeDefault;
     final shown = compact || _hover || _focus || widget.making;
     final Widget? trailing = widget.isDefault
@@ -900,7 +945,7 @@ class _ModelRowState extends State<_ModelRow> {
               child: SecondaryButton(
                 key: ValueKey('make-default-${widget.id}'),
                 label: widget.making ? 'Making default…' : 'Make default',
-                height: 28,
+                size: ControlSize.sm,
                 onTap: !widget.usable || widget.busy
                     ? null
                     : () => make(widget.id),
@@ -915,18 +960,26 @@ class _ModelRowState extends State<_ModelRow> {
         skipTraversal: true,
         onFocusChange: (value) => setState(() => _focus = value),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Space.md,
+            vertical: Space.sm,
+          ),
           child: Row(
             children: [
               Expanded(
                 child: Text(
                   widget.label,
-                  style: ts(theme.typeScale.ui, theme.ink, mono: true),
+                  style: ts(
+                    theme.typeScale.ui,
+                    theme.ink,
+                    mono: true,
+                    weight: Weight.regular,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (trailing != null) ...[const SizedBox(width: 12), trailing],
+              if (trailing != null) ...[const Gap(Space.md), trailing],
             ],
           ),
         ),

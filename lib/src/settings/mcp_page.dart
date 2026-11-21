@@ -12,6 +12,7 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../app_tokens.dart';
 import '../core/host_settings.dart';
 import '../platform/releases.dart';
 import 'action_widgets.dart';
@@ -245,11 +246,18 @@ class _McpPageState extends State<McpPage> {
       body = Text(
         'The host is not running. Start it in Core to see its MCP servers.',
         key: const ValueKey('mcp-no-host'),
-        style: ts(theme.typeScale.ui, theme.muted),
+        style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
       );
     } else if (servers == null) {
       body = _loadError == null
-          ? Text('Loading servers…', style: ts(theme.typeScale.ui, theme.muted))
+          ? Text(
+              'Loading servers…',
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
+            )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -258,11 +266,11 @@ class _McpPageState extends State<McpPage> {
                   key: const ValueKey('mcp-load-error'),
                   style: ts(theme.typeScale.ui, theme.dangerInk),
                 ),
-                const SizedBox(height: 8),
+                const Gap(Space.sm),
                 SecondaryButton(
                   key: const ValueKey('mcp-retry'),
                   label: 'Try again',
-                  height: 32,
+                  size: ControlSize.md,
                   onTap: _load,
                 ),
               ],
@@ -284,7 +292,11 @@ class _McpPageState extends State<McpPage> {
             Text(
               'No servers yet.',
               key: const ValueKey('mcp-empty'),
-              style: ts(theme.typeScale.ui, theme.muted),
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           for (final server in servers)
             _ServerCard(
@@ -314,16 +326,20 @@ class _McpPageState extends State<McpPage> {
         body,
         if (_restart)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.only(top: Space.md),
             child: Text(
               'Applies after restart.',
               key: const ValueKey('mcp-restart'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.only(top: Space.md),
             child: Semantics(
               liveRegion: true,
               child: Text(
@@ -427,12 +443,12 @@ class _ServerCard extends StatelessWidget {
         onChanged: busy ? null : onEnabled,
       ),
     ];
-    final compact = SizeClass.of(context).isCompact;
+    final compact = sizeClassOf(context).isCompact;
     final title = Hover(
       key: ValueKey('server-open-$name'),
       onTap: onOpen,
-      borderRadius: BorderRadius.circular(6),
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      borderRadius: BorderRadius.circular(Radii.md),
+      padding: const EdgeInsets.symmetric(vertical: Space.xxs),
       child: Semantics(
         button: true,
         expanded: open,
@@ -442,10 +458,10 @@ class _ServerCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 3, right: 8),
+              padding: const EdgeInsets.only(top: Space.xxs, right: Space.sm),
               child: glyphIcon(
                 open ? _glyphChevronDown : _glyphChevronRight,
-                size: 16,
+                size: IconSize.sm,
                 color: theme.muted,
               ),
             ),
@@ -455,7 +471,11 @@ class _ServerCard extends StatelessWidget {
                 children: [
                   Text(
                     name,
-                    style: ts(theme.typeScale.ui, theme.ink, weight: 600),
+                    style: ts(
+                      theme.typeScale.ui,
+                      theme.ink,
+                      weight: Weight.strong,
+                    ),
                   ),
                   if (line.isNotEmpty)
                     Text(
@@ -464,6 +484,7 @@ class _ServerCard extends StatelessWidget {
                         theme.typeScale.uiSmall,
                         theme.muted,
                         mono: true,
+                        weight: Weight.regular,
                       ),
                     ),
                 ],
@@ -474,13 +495,18 @@ class _ServerCard extends StatelessWidget {
       ),
     );
     final header = Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+      padding: const EdgeInsets.fromLTRB(
+        Space.sm,
+        Space.sm,
+        Space.md,
+        Space.sm,
+      ),
       child: compact
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 title,
-                const SizedBox(height: 4),
+                const Gap(Space.xxs),
                 Row(
                   children: [
                     actions.first,
@@ -488,7 +514,7 @@ class _ServerCard extends StatelessWidget {
                     ...[
                       for (final w in actions.skip(1)) ...[
                         w,
-                        const SizedBox(width: 8),
+                        const Gap(Space.sm),
                       ],
                     ]..removeLast(),
                   ],
@@ -499,8 +525,8 @@ class _ServerCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(child: title),
-                const SizedBox(width: 12),
-                for (final w in actions) ...[w, const SizedBox(width: 8)],
+                const Gap(Space.md),
+                for (final w in actions) ...[w, const Gap(Space.sm)],
               ]..removeLast(),
             ),
     );
@@ -518,7 +544,7 @@ class _ServerCard extends StatelessWidget {
         _Band(
           tone: _BandTone.quiet,
           glyph: null,
-          leading: const Spinner(size: 15),
+          leading: const Spinner(size: IconSize.sm),
           trailing: ActionButton(
             key: ValueKey('cancel-sign-in-$name'),
             label: 'Cancel',
@@ -570,14 +596,14 @@ class _ServerCard extends StatelessWidget {
       }
     }
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: Space.md),
       child: DecoratedBox(
         decoration: BoxDecoration(
           border: Border.all(color: theme.seam),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Radii.lg),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(Radii.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -624,13 +650,16 @@ class _Band extends StatelessWidget {
     return ColoredBox(
       color: danger ? theme.danger : theme.surface2,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.md,
+          vertical: Space.sm,
+        ),
         child: Row(
           children: [
-            if (leading != null) ...[leading!, const SizedBox(width: 8)],
+            if (leading != null) ...[leading!, const Gap(Space.sm)],
             if (glyph != null && leading == null) ...[
-              glyphIcon(glyph!, size: 15, color: ink),
-              const SizedBox(width: 8),
+              glyphIcon(glyph!, size: IconSize.sm, color: ink),
+              const Gap(Space.sm),
             ],
             Expanded(
               child: DefaultTextStyle(
@@ -638,7 +667,7 @@ class _Band extends StatelessWidget {
                 child: child,
               ),
             ),
-            if (trailing != null) ...[const SizedBox(width: 12), trailing!],
+            if (trailing != null) ...[const Gap(Space.md), trailing!],
           ],
         ),
       ),
@@ -657,8 +686,18 @@ class _Note extends StatelessWidget {
     return ColoredBox(
       color: theme.surface2,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Text(text, style: ts(theme.typeScale.uiSmall, theme.muted)),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.md,
+          vertical: Space.md,
+        ),
+        child: Text(
+          text,
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
+        ),
       ),
     );
   }
@@ -681,13 +720,21 @@ class _ToolRow extends StatelessWidget {
     return ColoredBox(
       color: theme.surface2,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.md,
+          vertical: Space.sm,
+        ),
         child: Row(
           children: [
             Expanded(
               child: Text(
                 tool.name,
-                style: ts(theme.typeScale.ui, theme.ink, mono: true),
+                style: ts(
+                  theme.typeScale.ui,
+                  theme.ink,
+                  mono: true,
+                  weight: Weight.regular,
+                ),
               ),
             ),
             _Switch(
@@ -725,7 +772,7 @@ class _Switch extends StatelessWidget {
       toggled: value,
       enabled: onChanged != null,
       child: Opacity(
-        opacity: onChanged == null ? .5 : 1,
+        opacity: onChanged == null ? Alpha.muted : 1,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -735,12 +782,16 @@ class _Switch extends StatelessWidget {
               onChanged: onChanged,
             ),
             SizedBox(
-              width: 28,
+              width: SettingsSizes.switchState,
               child: Padding(
-                padding: const EdgeInsets.only(left: 8),
+                padding: const EdgeInsets.only(left: Space.sm),
                 child: Text(
                   value ? 'On' : 'Off',
-                  style: ts(theme.typeScale.uiSmall, theme.muted, weight: 600),
+                  style: ts(
+                    theme.typeScale.uiSmall,
+                    theme.muted,
+                    weight: Weight.strong,
+                  ),
                 ),
               ),
             ),

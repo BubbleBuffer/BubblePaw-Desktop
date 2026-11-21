@@ -1,10 +1,12 @@
 @Tags(['golden'])
 library;
 
-// The phone states at 375x812, light and dark. New goldens come from the
-// workflow_dispatch run of the CI workflow (fix.patch), like the others.
+// The phone states at 375x812, light and dark, at touch density as the
+// phone build runs. New goldens come from the workflow_dispatch run of the
+// CI workflow (fix.patch), like the others.
 
 import 'package:agent_kit_core/agent_kit_core.dart';
+import 'package:bb_ui/bb_ui.dart' show Density;
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
 import 'package:bubblepaw_desktop/src/app.dart';
@@ -220,6 +222,7 @@ void main() {
           controller,
           size: _phone,
           brightness: theme.value,
+          density: Density.touch,
         );
         for (var i = 0; i < 4; i++) {
           await settle(tester);
@@ -258,6 +261,7 @@ void main() {
           controller,
           size: _phone,
           brightness: theme.value,
+          density: Density.touch,
         );
         for (var i = 0; i < 4; i++) {
           await settle(tester);
