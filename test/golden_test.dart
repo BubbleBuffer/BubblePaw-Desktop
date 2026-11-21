@@ -8,7 +8,6 @@ import 'dart:io';
 
 import 'package:agent_kit_core/agent_kit_core.dart' show KitUnavailable;
 import 'package:agent_kit_core/fake.dart';
-import 'package:bb_ui/bb_ui.dart' show SheetItem;
 import 'package:bubblepaw_desktop/src/app.dart';
 import 'package:bubblepaw_desktop/src/app_licences.dart' show CrateLicenceEntry;
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
@@ -880,9 +879,7 @@ void main() {
           '1TEAM',
         );
         await tapVisible(tester, 'hdr-1-source');
-        // The dialog lays out by its own width, which is compact, so
-        // bb_ui's select lists its options in a sheet, not a popover.
-        await tester.tap(find.widgetWithText(SheetItem, 'From env var'));
+        await tester.tap(find.byKey(const ValueKey('option-From env var')));
         await settle(tester);
         await tester.enterText(
           find.byKey(const ValueKey('hdr-1-value')),
