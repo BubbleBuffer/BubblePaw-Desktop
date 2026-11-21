@@ -6,6 +6,7 @@ import 'package:agent_kit/agent_kit.dart';
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
+import '../app_tokens.dart';
 import '../settings/settings_widgets.dart' show glyphChevronUp, glyphIcon;
 import 'glyphs.dart';
 import 'redact.dart';
@@ -47,7 +48,7 @@ class FbButton extends StatelessWidget {
       excludeSemantics: true,
       child: Hover(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(Radii.md),
         background: primary
             ? (enabled ? theme.accent : theme.surface2)
             : kind == FbButtonKind.quiet
@@ -61,20 +62,20 @@ class FbButton extends StatelessWidget {
                     ? theme.danger
                     : theme.thread,
               ),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: SizedBox(
-          height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: Space.md),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: ControlSize.lg.height),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (glyph != null) ...[
-                glyphIcon(glyph!, size: 16, color: ink),
-                const SizedBox(width: 8),
+                glyphIcon(glyph!, size: IconSize.sm, color: ink),
+                const Gap(Space.sm),
               ],
               Text(
                 label,
-                style: ts(theme.typeScale.ui, ink, weight: primary ? 700 : 600),
+                style: ts(theme.typeScale.ui, ink, weight: Weight.strong),
               ),
             ],
           ),
@@ -108,14 +109,13 @@ class FbIconButton extends StatelessWidget {
       excludeSemantics: true,
       child: Hover(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: SizedBox(
-          width: 36,
-          height: 36,
+        borderRadius: BorderRadius.circular(Radii.md),
+        child: SizedBox.square(
+          dimension: ControlSize.lg.height,
           child: Center(
             child: glyphIcon(
               glyph,
-              size: 18,
+              size: IconSize.md,
               color: danger ? theme.dangerInk : theme.muted,
             ),
           ),
@@ -152,30 +152,34 @@ class DisclosureRow extends StatelessWidget {
       child: Hover(
         onTap: onTap,
         lift: 0,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(Radii.md),
         background: theme.surface2,
         border: Border.all(color: theme.seam),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: SizedBox(
-          height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: Space.md),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: ControlSize.xl.height),
           child: Row(
             children: [
               glyphIcon(
                 expanded ? glyphChevronUp : glyphChevronDown,
-                size: 16,
+                size: IconSize.sm,
                 color: theme.muted,
               ),
-              const SizedBox(width: 8),
+              const Gap(Space.sm),
               Text(
                 title,
-                style: ts(theme.typeScale.ui, theme.ink, weight: 600),
+                style: ts(theme.typeScale.ui, theme.ink, weight: Weight.strong),
               ),
               const Spacer(),
               Flexible(
                 child: Text(
                   summary,
                   overflow: TextOverflow.ellipsis,
-                  style: ts(theme.typeScale.uiSmall, theme.muted),
+                  style: ts(
+                    theme.typeScale.uiSmall,
+                    theme.muted,
+                    weight: Weight.regular,
+                  ),
                 ),
               ),
             ],
@@ -192,7 +196,7 @@ class FbCodeBlock extends StatelessWidget {
     super.key,
     required this.text,
     required this.label,
-    this.height = 220,
+    this.height = FeedbackSizes.codeBlock,
   });
 
   final String text;
@@ -202,7 +206,12 @@ class FbCodeBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    final base = ts(theme.typeScale.uiSmall, theme.codeInk, mono: true);
+    final base = ts(
+      theme.typeScale.uiSmall,
+      theme.codeInk,
+      mono: true,
+      weight: Weight.regular,
+    );
     final mark = base.copyWith(
       backgroundColor: theme.attention,
       color: theme.attentionInk,
@@ -224,12 +233,12 @@ class FbCodeBlock extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.codeBackground,
           border: Border.all(color: theme.seam),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(Radii.md),
         ),
         child: SizedBox(
           height: height,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(Space.md),
             child: Text.rich(TextSpan(style: base, children: spans)),
           ),
         ),

@@ -31,25 +31,32 @@ class SavedNotice extends StatelessWidget {
         key: const ValueKey('feedback-saved'),
         decoration: BoxDecoration(
           color: theme.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Radii.lg),
           border: Border.all(color: theme.thread),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          padding: const EdgeInsets.fromLTRB(
+            Space.lg,
+            Space.sm,
+            Space.sm,
+            Space.sm,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               glyphIcon(
                 glyphCircleCheck,
-                size: 16,
+                size: IconSize.sm,
                 color: theme.constructiveInk,
               ),
-              const SizedBox(width: 12),
-              Text(
-                'Saved to feedback/$id',
-                style: ts(theme.typeScale.ui, theme.ink),
+              const Gap(Space.md),
+              Flexible(
+                child: Text(
+                  'Saved to feedback/$id',
+                  style: ts(theme.typeScale.ui, theme.ink),
+                ),
               ),
-              const SizedBox(width: 12),
+              const Gap(Space.md),
               TextBtn(
                 'Open folder',
                 key: const ValueKey('feedback-saved-open'),

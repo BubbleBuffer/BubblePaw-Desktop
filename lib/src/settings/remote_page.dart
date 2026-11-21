@@ -8,6 +8,7 @@ import 'package:agent_kit/agent_kit.dart';
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
+import '../app_tokens.dart';
 import '../platform/releases.dart';
 import '../remote/hosts_controller.dart';
 import '../remote/remote_access.dart';
@@ -165,11 +166,15 @@ class _RemotePageState extends State<RemotePage> {
         Row(
           key: const ValueKey('remote-loading'),
           children: [
-            glyphIcon(glyphLoader, size: 15, color: context.bb.muted),
-            const SizedBox(width: 8),
+            glyphIcon(glyphLoader, size: IconSize.sm, color: context.bb.muted),
+            const Gap(Space.sm),
             Text(
               'Loading remote access…',
-              style: ts(context.bb.typeScale.ui, context.bb.muted),
+              style: ts(
+                context.bb.typeScale.ui,
+                context.bb.muted,
+                weight: Weight.regular,
+              ),
             ),
           ],
         ),
@@ -178,7 +183,7 @@ class _RemotePageState extends State<RemotePage> {
     return _frame([
       if (r.error != null)
         Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.only(bottom: Space.lg),
           child: NoticeBox(
             key: const ValueKey('remote-error'),
             tone: NoticeTone.danger,
@@ -188,7 +193,7 @@ class _RemotePageState extends State<RemotePage> {
       _deviceSection(r),
       if (widget.hosts != null && !widget.phone)
         Padding(
-          padding: const EdgeInsets.only(bottom: 20),
+          padding: const EdgeInsets.only(bottom: Space.xl),
           child: Align(
             alignment: Alignment.centerLeft,
             child: SegmentedChoice<bool>(
@@ -239,11 +244,11 @@ class _RemotePageState extends State<RemotePage> {
       child: GroupCard(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            padding: const EdgeInsets.fromLTRB(Space.md, Space.md, Space.md, 0),
             child: LabeledField(
               label: 'Name',
               hint: 'Shown to devices you pair.',
-              bottom: 12,
+              bottom: Space.md,
               child: TextBox(
                 controller: _name,
                 fieldKey: const ValueKey('remote-name'),
@@ -295,7 +300,7 @@ class _RemotePageState extends State<RemotePage> {
             onChanged: (v) => unawaited(r.setEnabled(v)),
           ),
           if (r.sharedElsewhere) ...[
-            const SizedBox(height: 8),
+            const Gap(Space.sm),
             NoticeBox(
               key: const ValueKey('remote-other'),
               tone: NoticeTone.info,
@@ -368,12 +373,16 @@ class _RemotePageState extends State<RemotePage> {
               ),
             ),
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.only(top: Space.md),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                glyphIcon(glyphShieldCheck, size: 16, color: theme.muted),
-                const SizedBox(width: 8),
+                glyphIcon(
+                  glyphShieldCheck,
+                  size: IconSize.sm,
+                  color: theme.muted,
+                ),
+                const Gap(Space.sm),
                 Expanded(
                   child: Text(
                     mode == ShareMode.relay
@@ -382,13 +391,17 @@ class _RemotePageState extends State<RemotePage> {
                         : 'Traffic is end-to-end encrypted between paired '
                               'devices. Cloudflare sees only encrypted data.',
                     key: const ValueKey('remote-consequence'),
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const Gap(Space.md),
           SwitchRow(
             id: 'share-at-start',
             label: 'Share automatically when the host starts',
@@ -401,7 +414,7 @@ class _RemotePageState extends State<RemotePage> {
             enabled: !quick,
             onChanged: (v) => unawaited(r.setShareAtStart(v)),
           ),
-          const SizedBox(height: 12),
+          const Gap(Space.md),
           _status(r),
         ],
       ),
@@ -417,12 +430,16 @@ class _RemotePageState extends State<RemotePage> {
         child: Row(
           key: const ValueKey('cf-waiting'),
           children: [
-            glyphIcon(glyphLoader, size: 15, color: theme.muted),
-            const SizedBox(width: 8),
+            glyphIcon(glyphLoader, size: IconSize.sm, color: theme.muted),
+            const Gap(Space.sm),
             Expanded(
               child: Text(
                 'Waiting for you to finish signing in in the browser.',
-                style: ts(theme.typeScale.uiSmall, theme.muted),
+                style: ts(
+                  theme.typeScale.uiSmall,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
             ActionButton(
@@ -461,11 +478,11 @@ class _RemotePageState extends State<RemotePage> {
                   ),
               ],
             ),
-            const SizedBox(height: 12),
+            const Gap(Space.md),
             if (zones.isNotEmpty)
               LabeledField(
                 label: 'Zone',
-                bottom: 12,
+                bottom: Space.md,
                 child: SegmentedChoice<String>(
                   idPrefix: 'zone',
                   options: zones,
@@ -521,7 +538,7 @@ class _RemotePageState extends State<RemotePage> {
             Row(
               children: [
                 Opacity(
-                  opacity: ready ? 1 : .5,
+                  opacity: ready ? 1 : Alpha.muted,
                   child: ActionButton(
                     key: const ValueKey('cf-token-save'),
                     label: 'Save token',
@@ -534,7 +551,7 @@ class _RemotePageState extends State<RemotePage> {
                         : () {},
                   ),
                 ),
-                const SizedBox(width: 8),
+                const Gap(Space.sm),
                 ActionButton(
                   key: const ValueKey('cf-token-cancel'),
                   label: 'Cancel',
@@ -557,12 +574,16 @@ class _RemotePageState extends State<RemotePage> {
             'Not signed in to Cloudflare. The tunnel cannot start until you '
             'sign in.',
             key: const ValueKey('cf-signed-out'),
-            style: ts(theme.typeScale.uiSmall, theme.muted),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.muted,
+              weight: Weight.regular,
+            ),
           ),
-          const SizedBox(height: 8),
+          const Gap(Space.sm),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: Space.sm,
+            runSpacing: Space.sm,
             children: [
               ActionButton(
                 key: const ValueKey('cf-sign-in'),
@@ -580,10 +601,14 @@ class _RemotePageState extends State<RemotePage> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const Gap(Space.xs),
           Text(
             'Sign in opens your browser.',
-            style: ts(theme.typeScale.uiSmall, theme.muted),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.muted,
+              weight: Weight.regular,
+            ),
           ),
         ],
       ),
@@ -630,17 +655,24 @@ class _RemotePageState extends State<RemotePage> {
       key: const ValueKey('remote-status'),
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Space.md,
+            vertical: Space.sm,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: 112,
+                width: SettingsSizes.factLabel,
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 3),
+                  padding: const EdgeInsets.only(top: Space.xxs),
                   child: Text(
                     relay ? 'Relay' : 'Tunnel',
-                    style: ts(theme.typeScale.ui, theme.muted),
+                    style: ts(
+                      theme.typeScale.ui,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ),
               ),
@@ -655,18 +687,22 @@ class _RemotePageState extends State<RemotePage> {
                     ),
                     if (why.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: Space.xxs),
                         child: Text(
                           why,
                           key: const ValueKey('remote-why'),
-                          style: ts(theme.typeScale.uiSmall, theme.muted),
+                          style: ts(
+                            theme.typeScale.uiSmall,
+                            theme.muted,
+                            weight: Weight.regular,
+                          ),
                         ),
                       ),
                   ],
                 ),
               ),
               if (canRetry) ...[
-                const SizedBox(width: 8),
+                const Gap(Space.sm),
                 ActionButton(
                   key: const ValueKey('remote-start-again'),
                   label: 'Start again',
@@ -733,10 +769,14 @@ class _RemotePageState extends State<RemotePage> {
           intro: Text(
             "Download comes from Cloudflare's GitHub releases and is "
             'checked against its published checksum.',
-            style: ts(theme.typeScale.uiSmall, theme.muted),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.muted,
+              weight: Weight.regular,
+            ),
           ),
           download: Opacity(
-            opacity: r.installing ? .5 : 1,
+            opacity: r.installing ? Alpha.muted : 1,
             child: ActionButton(
               key: const ValueKey('cloudflared-download'),
               label: 'Download cloudflared',
@@ -765,7 +805,7 @@ class _RemotePageState extends State<RemotePage> {
         mono: false,
         trailing: managed
             ? Opacity(
-                opacity: r.updating || !info.updateAvailable ? .5 : 1,
+                opacity: r.updating || !info.updateAvailable ? Alpha.muted : 1,
                 child: ActionButton(
                   key: const ValueKey('cloudflared-update'),
                   label: r.updating
@@ -806,7 +846,7 @@ class _RemotePageState extends State<RemotePage> {
       // a choice already made.
       if (canChoose && (chosen || download != null))
         Opacity(
-          opacity: r.choosing ? .5 : 1,
+          opacity: r.choosing ? Alpha.muted : 1,
           child: ActionButton(
             key: const ValueKey('cloudflared-choose'),
             label: chosen ? 'Choose another file…' : 'Choose file…',
@@ -816,7 +856,7 @@ class _RemotePageState extends State<RemotePage> {
         ),
       if (canChoose && chosen)
         Opacity(
-          opacity: r.choosing ? .5 : 1,
+          opacity: r.choosing ? Alpha.muted : 1,
           child: ActionButton(
             key: const ValueKey('cloudflared-use-managed'),
             label: 'Use managed copy',
@@ -827,7 +867,12 @@ class _RemotePageState extends State<RemotePage> {
         ),
     ];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(124, 0, 12, 12),
+      padding: const EdgeInsets.fromLTRB(
+        SettingsSizes.factLabel + Space.md,
+        0,
+        Space.md,
+        Space.md,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -835,8 +880,8 @@ class _RemotePageState extends State<RemotePage> {
           if (error != null)
             Padding(
               padding: EdgeInsets.only(
-                top: intro == null ? 0 : 4,
-                bottom: buttons.isEmpty ? 0 : 8,
+                top: intro == null ? 0 : Space.xxs,
+                bottom: buttons.isEmpty ? 0 : Space.sm,
               ),
               child: Text(
                 error,
@@ -847,18 +892,22 @@ class _RemotePageState extends State<RemotePage> {
           if (r.restartForCloudflared && canChoose)
             Padding(
               padding: EdgeInsets.only(
-                top: intro == null ? 0 : 4,
-                bottom: buttons.isEmpty ? 0 : 8,
+                top: intro == null ? 0 : Space.xxs,
+                bottom: buttons.isEmpty ? 0 : Space.sm,
               ),
               child: Text(
                 'Restart sharing to run the new cloudflared.',
                 key: const ValueKey('cloudflared-restart'),
-                style: ts(theme.typeScale.uiSmall, theme.muted),
+                style: ts(
+                  theme.typeScale.uiSmall,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
-          if (intro != null && buttons.isNotEmpty) const SizedBox(height: 8),
+          if (intro != null && buttons.isNotEmpty) const Gap(Space.sm),
           if (buttons.isNotEmpty)
-            Wrap(spacing: 8, runSpacing: 8, children: buttons),
+            Wrap(spacing: Space.sm, runSpacing: Space.sm, children: buttons),
         ],
       ),
     );
@@ -878,7 +927,7 @@ class _RemotePageState extends State<RemotePage> {
     return _Section(
       title: 'Paired devices',
       action: Opacity(
-        opacity: r.wantOn ? 1 : .5,
+        opacity: r.wantOn ? 1 : Alpha.muted,
         child: ActionButton(
           key: const ValueKey('remote-pair'),
           label: 'Pair a device',
@@ -903,7 +952,11 @@ class _RemotePageState extends State<RemotePage> {
               'No paired devices. Pair a device to open this computer from a '
               'phone or laptop.',
               key: const ValueKey('remote-no-devices'),
-              style: ts(theme.typeScale.ui, theme.muted),
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -911,15 +964,15 @@ class _RemotePageState extends State<RemotePage> {
                 for (final d in devices)
                   Padding(
                     key: ValueKey('device-${d.id}'),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: Space.sm),
                     child: Row(
                       children: [
                         glyphIcon(
                           _kindGlyph(d.kind),
-                          size: 18,
+                          size: IconSize.md,
                           color: theme.muted,
                         ),
-                        const SizedBox(width: 12),
+                        const Gap(Space.md),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -930,7 +983,11 @@ class _RemotePageState extends State<RemotePage> {
                               ),
                               Text(
                                 lastSeenText(now, d.lastSeen),
-                                style: ts(theme.typeScale.uiSmall, theme.muted),
+                                style: ts(
+                                  theme.typeScale.uiSmall,
+                                  theme.muted,
+                                  weight: Weight.regular,
+                                ),
                               ),
                               if (d.egress)
                                 Text(
@@ -939,14 +996,15 @@ class _RemotePageState extends State<RemotePage> {
                                   style: ts(
                                     theme.typeScale.uiSmall,
                                     theme.muted,
+                                    weight: Weight.regular,
                                   ),
                                 ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const Gap(Space.sm),
                         _Tag(profileName(d.profile)),
-                        const SizedBox(width: 4),
+                        const Gap(Space.xxs),
                         ActionButton(
                           key: ValueKey('revoke-${d.id}'),
                           label: 'Revoke',
@@ -987,7 +1045,7 @@ class _Section extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.only(bottom: Space.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -998,14 +1056,18 @@ class _Section extends StatelessWidget {
                   header: true,
                   child: Text(
                     title,
-                    style: ts(theme.typeScale.h2, theme.ink, weight: 600),
+                    style: ts(
+                      theme.typeScale.h2,
+                      theme.ink,
+                      weight: Weight.strong,
+                    ),
                   ),
                 ),
               ),
               ?action,
             ],
           ),
-          const SizedBox(height: 12),
+          const Gap(Space.md),
           child,
         ],
       ),
@@ -1022,13 +1084,13 @@ class _SubPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Padding(
-      padding: const EdgeInsets.only(left: 12, bottom: 8),
+      padding: const EdgeInsets.only(left: Space.md, bottom: Space.sm),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: theme.surface2,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Radii.lg),
         ),
-        child: Padding(padding: const EdgeInsets.all(12), child: child),
+        child: Padding(padding: const EdgeInsets.all(Space.md), child: child),
       ),
     );
   }
@@ -1045,11 +1107,21 @@ class _Tag extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: theme.surface2,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(Radii.sm),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        child: Text(text, style: ts(theme.typeScale.uiSmall, theme.muted)),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.xs,
+          vertical: Space.hair,
+        ),
+        child: Text(
+          text,
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
+        ),
       ),
     );
   }

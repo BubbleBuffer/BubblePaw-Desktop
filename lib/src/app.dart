@@ -7,8 +7,7 @@ import 'dart:ui' show AppExitResponse;
 import 'package:agent_kit/agent_kit.dart';
 import 'package:agent_kit_core/agent_kit_core.dart'
     show ChatSummary, FileDiff, KitCapability;
-import 'package:bb_ui/bb_ui.dart'
-    show AppColors, Ico, PrimaryButton, SecondaryButton;
+import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/foundation.dart' show LicenseEntry;
 import 'package:flutter/services.dart'
     show HardwareKeyboard, KeyDownEvent, KeyEvent, LogicalKeyboardKey;
@@ -47,6 +46,7 @@ class BubblePawApp extends StatefulWidget {
     required this.controller,
     required this.feedback,
     this.brightness,
+    this.density = Density.pointer,
     this.pickFolder = picker.pickFolder,
     this.services = const PlatformServices(),
     this.licenceSource = LicencesPage.defaultSource,
@@ -68,6 +68,11 @@ class BubblePawApp extends StatefulWidget {
 
   /// Forces light or dark; follows the platform when null.
   final Brightness? brightness;
+
+  /// How the user points: control heights, icon sizes and the type ramp.
+  /// Pointer on the desktop; the phone passes touch. Layout follows the
+  /// size class of each pane, not this.
+  final Density density;
 
   @override
   State<BubblePawApp> createState() => _BubblePawAppState();
@@ -106,15 +111,20 @@ class _BubblePawAppState extends State<BubblePawApp> {
     // menus) read it too.
     builder: (context, child) => ListenableBuilder(
       listenable: widget.controller,
-      builder: (context, _) => BbThemeScope(
-        brightness:
-            widget.brightness ??
-            switch (widget.controller.prefs.theme) {
-              ThemeSetting.light => Brightness.light,
-              ThemeSetting.dark => Brightness.dark,
-              ThemeSetting.system => MediaQuery.platformBrightnessOf(context),
-            },
-        child: child!,
+      // Follows the system text size up to double.
+      builder: (context, _) => MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 2,
+        child: BbThemeScope(
+          brightness:
+              widget.brightness ??
+              switch (widget.controller.prefs.theme) {
+                ThemeSetting.light => Brightness.light,
+                ThemeSetting.dark => Brightness.dark,
+                ThemeSetting.system => MediaQuery.platformBrightnessOf(context),
+              },
+          density: widget.density,
+          child: child!,
+        ),
       ),
     ),
     home: AppShell(
@@ -198,49 +208,41 @@ class _AppShellState extends State<AppShell> {
       builder: (context, _) => Stack(
         children: [
           Positioned.fill(child: _screen(context)),
-          if (controller.trayNoticePending)
+          // The notices stack up from the bottom right, newest kind on top,
+          // each as tall as its text needs. Bounded on both sides, so a long
+          // message wraps on a phone.
+          if (controller.trayNoticePending ||
+              controller.needsSetupPending ||
+              feedback.savedId != null ||
+              controller.openError != null)
             Positioned(
-              right: 16,
-              bottom: 16,
-              child: TrayNotice(onDismiss: controller.dismissTrayNotice),
-            ),
-          if (controller.needsSetupPending)
-            Positioned(
-              right: 16,
-              bottom: controller.trayNoticePending ? 72 : 16,
-              child: NeedsSetupNotice(
-                onOpenModels: controller.openModelsFromNotice,
-                onDismiss: controller.dismissNeedsSetup,
-              ),
-            ),
-          if (feedback.savedId != null)
-            Positioned(
-              right: 16,
-              bottom:
-                  (controller.trayNoticePending ? 72 : 16) +
-                  (controller.needsSetupPending ? 56 : 0),
-              child: SavedNotice(
-                id: feedback.savedId!,
-                onOpen: () => unawaited(feedback.open(feedback.savedId)),
-                onDismiss: feedback.dismissSaved,
-              ),
-            ),
-          if (controller.openError != null)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom:
-                  (controller.trayNoticePending ? 72 : 16) +
-                  (controller.needsSetupPending ? 56 : 0) +
-                  (feedback.savedId != null ? 56 : 0),
-              // Bounded on both sides, so a long message wraps on a phone.
-              child: Align(
-                alignment: Alignment.bottomRight,
-                heightFactor: 1,
-                child: HostOpenNotice(
-                  message: controller.openError!,
-                  onDismiss: controller.dismissOpenError,
-                ),
+              left: Space.lg,
+              right: Space.lg,
+              bottom: Space.lg,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                spacing: Space.sm,
+                children: [
+                  if (controller.openError != null)
+                    HostOpenNotice(
+                      message: controller.openError!,
+                      onDismiss: controller.dismissOpenError,
+                    ),
+                  if (feedback.savedId != null)
+                    SavedNotice(
+                      id: feedback.savedId!,
+                      onOpen: () => unawaited(feedback.open(feedback.savedId)),
+                      onDismiss: feedback.dismissSaved,
+                    ),
+                  if (controller.needsSetupPending)
+                    NeedsSetupNotice(
+                      onOpenModels: controller.openModelsFromNotice,
+                      onDismiss: controller.dismissNeedsSetup,
+                    ),
+                  if (controller.trayNoticePending)
+                    TrayNotice(onDismiss: controller.dismissTrayNotice),
+                ],
               ),
             ),
           if (controller.updates.dialogOpen)
@@ -335,14 +337,14 @@ class _AppShellState extends State<AppShell> {
           PrimaryButton(
             key: const ValueKey('notice-start'),
             label: 'Start the host',
-            height: 36,
+            size: ControlSize.lg,
             icon: Ico.turnInto,
             onTap: () => unawaited(controller.restart()),
           ),
           SecondaryButton(
             key: const ValueKey('notice-settings'),
             label: 'Settings',
-            height: 36,
+            size: ControlSize.lg,
             onTap: () => controller.openSettings(),
           ),
         ],
@@ -360,14 +362,14 @@ class _AppShellState extends State<AppShell> {
           PrimaryButton(
             key: const ValueKey('notice-restart'),
             label: 'Restart',
-            height: 36,
+            size: ControlSize.lg,
             icon: Ico.turnInto,
             onTap: () => unawaited(controller.restart()),
           ),
           SecondaryButton(
             key: const ValueKey('notice-settings'),
             label: 'Settings',
-            height: 36,
+            size: ControlSize.lg,
             onTap: () => controller.openSettings(),
           ),
         ],
@@ -635,7 +637,7 @@ class _WorkbenchState extends State<Workbench> {
                 railSearch: _search == null
                     ? null
                     : Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.only(bottom: Space.xs),
                         child: ChatSearchBox(
                           search: _search,
                           showKeyHint: true,

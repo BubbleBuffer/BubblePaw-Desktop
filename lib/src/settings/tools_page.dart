@@ -11,6 +11,7 @@ import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../app_tokens.dart';
 import '../core/host_settings.dart';
 import '../feedback/glyphs.dart';
 import 'action_widgets.dart' show ActionButton, ActionKind;
@@ -313,11 +314,18 @@ class _ToolsPageState extends State<ToolsPage> {
       body = Text(
         'The host is not running. Start it in Core to see its tools.',
         key: const ValueKey('tools-no-host'),
-        style: ts(theme.typeScale.ui, theme.muted),
+        style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
       );
     } else if (_tools == null) {
       body = _loadError == null
-          ? Text('Loading tools…', style: ts(theme.typeScale.ui, theme.muted))
+          ? Text(
+              'Loading tools…',
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
+            )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -326,11 +334,11 @@ class _ToolsPageState extends State<ToolsPage> {
                   key: const ValueKey('tools-load-error'),
                   style: ts(theme.typeScale.ui, theme.dangerInk),
                 ),
-                const SizedBox(height: 8),
+                const Gap(Space.sm),
                 SecondaryButton(
                   key: const ValueKey('tools-retry'),
                   label: 'Try again',
-                  height: 32,
+                  size: ControlSize.md,
                   onTap: _load,
                 ),
               ],
@@ -340,7 +348,7 @@ class _ToolsPageState extends State<ToolsPage> {
     } else {
       body = _overview();
     }
-    final compact = SizeClass.of(context).isCompact;
+    final compact = sizeClassOf(context).isCompact;
     return SettingsPage(
       title: editing == null ? 'Tools' : 'Toolset',
       onBack: editing == null ? widget.onBack : _closeEditor,
@@ -348,7 +356,7 @@ class _ToolsPageState extends State<ToolsPage> {
       children: [
         if (editing != null && !compact && _tools != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 16, top: 16),
+            padding: const EdgeInsets.only(bottom: Space.lg, top: Space.lg),
             child: Align(
               alignment: Alignment.centerLeft,
               child: ActionButton(
@@ -363,16 +371,20 @@ class _ToolsPageState extends State<ToolsPage> {
         body,
         if (_restart)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.only(top: Space.md),
             child: Text(
               'Applies after restart.',
               key: const ValueKey('tools-restart'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.only(top: Space.md),
             child: Semantics(
               liveRegion: true,
               child: Text(
@@ -404,11 +416,15 @@ class _ToolsPageState extends State<ToolsPage> {
         ),
         if (widget.onBack != null)
           Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 6),
+            padding: const EdgeInsets.only(top: Space.xxs, bottom: Space.xs),
             child: Text(
               'The parent agent picks a toolset when it starts a subagent.',
               key: const ValueKey('toolsets-hint'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         for (final name in _setNames)
@@ -420,7 +436,7 @@ class _ToolsPageState extends State<ToolsPage> {
             builtin: builtinToolsets.contains(name),
             onTap: () => _openToolset(name),
           ),
-        const SettingsHeading('Main chat uses', top: 24),
+        const SettingsHeading('Main chat uses', top: Space.xl),
         if (widget.onBack != null)
           _FullWidthSelect(
             key: const ValueKey('main-toolset'),
@@ -440,11 +456,11 @@ class _ToolsPageState extends State<ToolsPage> {
               onChanged: _busy ? null : _chooseMain,
             ),
           ),
-        const SettingsHeading('Approvals', top: 24),
+        const SettingsHeading('Approvals', top: Space.xl),
         if (categories.isEmpty)
           Text(
             'The host lists no tools.',
-            style: ts(theme.typeScale.ui, theme.muted),
+            style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
           ),
         for (final category in categories) _approvalGroup(category),
       ],
@@ -462,7 +478,12 @@ class _ToolsPageState extends State<ToolsPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 6, 8, 6),
+            padding: const EdgeInsets.fromLTRB(
+              Space.xxs,
+              Space.xs,
+              Space.sm,
+              Space.xs,
+            ),
             child: Row(
               children: [
                 _Chevron(
@@ -478,10 +499,14 @@ class _ToolsPageState extends State<ToolsPage> {
                 Expanded(child: _CategoryName(category)),
                 if (mixed)
                   Padding(
-                    padding: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.only(right: Space.sm),
                     child: Text(
                       'Mixed',
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                      style: ts(
+                        theme.typeScale.uiSmall,
+                        theme.muted,
+                        weight: Weight.regular,
+                      ),
                     ),
                   ),
                 _ApprovalChoice(
@@ -498,13 +523,23 @@ class _ToolsPageState extends State<ToolsPage> {
           if (open)
             for (final tool in category.tools)
               Padding(
-                padding: const EdgeInsets.fromLTRB(44, 4, 8, 4),
+                padding: const EdgeInsets.fromLTRB(
+                  Space.xxxl,
+                  Space.xxs,
+                  Space.sm,
+                  Space.xxs,
+                ),
                 child: Row(
                   children: [
                     Expanded(
                       child: Text(
                         toolLabel(tool),
-                        style: ts(theme.typeScale.ui, theme.ink, mono: true),
+                        style: ts(
+                          theme.typeScale.ui,
+                          theme.ink,
+                          mono: true,
+                          weight: Weight.regular,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -534,20 +569,24 @@ class _ToolsPageState extends State<ToolsPage> {
       children: [
         Text(
           'Name',
-          style: ts(theme.typeScale.uiSmall, theme.ink, weight: 600),
+          style: ts(theme.typeScale.uiSmall, theme.ink, weight: Weight.strong),
         ),
         if (builtin)
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.only(top: Space.hair),
             child: Text(
               'Built-in toolsets can’t be renamed or deleted.',
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
-        const SizedBox(height: 6),
+        const Gap(Space.xs),
         if (builtin)
           Opacity(
-            opacity: .6,
+            opacity: Alpha.muted,
             child: Text(
               name,
               key: const ValueKey('toolset-name-fixed'),
@@ -562,18 +601,18 @@ class _ToolsPageState extends State<ToolsPage> {
           ),
         if (_nameError != null)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.only(top: Space.xs),
             child: Text(
               _nameError!,
               key: const ValueKey('toolset-name-error'),
               style: ts(theme.typeScale.uiSmall, theme.dangerInk),
             ),
           ),
-        const SettingsHeading('Tools', top: 20),
+        const SettingsHeading('Tools', top: Space.xl),
         for (final category in _categories)
           _editorCategory(name, category, selected, builtin),
         if (!builtin) ...[
-          const SizedBox(height: 8),
+          const Gap(Space.sm),
           Align(
             alignment: Alignment.centerLeft,
             child: Row(
@@ -583,17 +622,25 @@ class _ToolsPageState extends State<ToolsPage> {
                   key: const ValueKey('delete-toolset'),
                   label: 'Delete toolset',
                   danger: true,
-                  icon: glyphIcon(glyphTrash, size: 15, color: theme.dangerInk),
+                  icon: glyphIcon(
+                    glyphTrash,
+                    size: IconSize.sm,
+                    color: theme.dangerInk,
+                  ),
                   onTap: isMain ? null : () => _deleteToolset(name),
                 ),
                 if (isMain)
                   Flexible(
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 12),
+                      padding: const EdgeInsets.only(left: Space.md),
                       child: Text(
                         'Main chat uses this toolset. Choose another one '
                         'first.',
-                        style: ts(theme.typeScale.uiSmall, theme.muted),
+                        style: ts(
+                          theme.typeScale.uiSmall,
+                          theme.muted,
+                          weight: Weight.regular,
+                        ),
                       ),
                     ),
                   ),
@@ -625,7 +672,12 @@ class _ToolsPageState extends State<ToolsPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
+            padding: const EdgeInsets.fromLTRB(
+              Space.xxs,
+              Space.xs,
+              Space.md,
+              Space.xs,
+            ),
             child: Row(
               children: [
                 _Chevron(
@@ -651,7 +703,12 @@ class _ToolsPageState extends State<ToolsPage> {
                 ),
                 Text(
                   '$count of ${category.tools.length}',
-                  style: ts(theme.typeScale.uiSmall, theme.muted, mono: true),
+                  style: ts(
+                    theme.typeScale.uiSmall,
+                    theme.muted,
+                    mono: true,
+                    weight: Weight.regular,
+                  ),
                 ),
               ],
             ),
@@ -659,7 +716,12 @@ class _ToolsPageState extends State<ToolsPage> {
           if (open)
             for (final tool in category.tools)
               Padding(
-                padding: const EdgeInsets.fromLTRB(44, 2, 12, 2),
+                padding: const EdgeInsets.fromLTRB(
+                  Space.xxxl,
+                  Space.hair,
+                  Space.md,
+                  Space.hair,
+                ),
                 child: _CheckRow(
                   key: ValueKey('check-${tool.name}'),
                   state: selected.contains(tool.name)
@@ -667,13 +729,18 @@ class _ToolsPageState extends State<ToolsPage> {
                       : _CheckState.off,
                   label: Text(
                     toolLabel(tool),
-                    style: ts(theme.typeScale.ui, theme.ink, mono: true),
+                    style: ts(
+                      theme.typeScale.ui,
+                      theme.ink,
+                      mono: true,
+                      weight: Weight.regular,
+                    ),
                   ),
                   semantic: toolLabel(tool),
                   onTap: builtin || _busy ? null : () => _toggleTool(set, tool),
                 ),
               ),
-          if (open) const SizedBox(height: 4),
+          if (open) const Gap(Space.xxs),
         ],
       ),
     );
@@ -725,8 +792,11 @@ class _ToolsetRow extends StatelessWidget {
       excludeSemantics: true,
       child: Hover(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+        borderRadius: BorderRadius.circular(Radii.md),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.xxs,
+          vertical: Space.md,
+        ),
         child: Row(
           children: [
             Expanded(
@@ -735,17 +805,29 @@ class _ToolsetRow extends StatelessWidget {
                 children: [
                   Text(
                     name,
-                    style: ts(theme.typeScale.ui, theme.ink, weight: 600),
+                    style: ts(
+                      theme.typeScale.ui,
+                      theme.ink,
+                      weight: Weight.strong,
+                    ),
                   ),
                   Text(
                     '$count of $total tools',
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ],
               ),
             ),
-            if (builtin) ...[const _BuiltInTag(), const SizedBox(width: 8)],
-            glyphIcon(_glyphChevronRight, size: 18, color: theme.muted),
+            if (builtin) ...[const _BuiltInTag(), const Gap(Space.sm)],
+            glyphIcon(
+              _glyphChevronRight,
+              size: IconSize.md,
+              color: theme.muted,
+            ),
           ],
         ),
       ),
@@ -763,11 +845,11 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: Space.sm),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: theme.surface2,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Radii.lg),
         ),
         child: child,
       ),
@@ -784,17 +866,22 @@ class _CategoryName extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.bb;
     return Wrap(
-      spacing: 8,
+      spacing: Space.sm,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(
           category.title,
-          style: ts(theme.typeScale.ui, theme.ink, weight: 600),
+          style: ts(theme.typeScale.ui, theme.ink, weight: Weight.strong),
         ),
         if (category.mcp)
           Text(
             'MCP',
-            style: ts(theme.typeScale.uiSmall, theme.faint, mono: true),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.faint,
+              mono: true,
+              weight: Weight.regular,
+            ),
           ),
       ],
     );
@@ -825,11 +912,11 @@ class _Chevron extends StatelessWidget {
       child: Hover(
         key: idKey,
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        padding: const EdgeInsets.all(6),
+        borderRadius: BorderRadius.circular(Radii.md),
+        padding: const EdgeInsets.all(Space.xs),
         child: glyphIcon(
           open ? _glyphChevronDown : _glyphChevronRight,
-          size: 16,
+          size: IconSize.sm,
           color: theme.muted,
         ),
       ),
@@ -865,19 +952,19 @@ class _CheckRow extends StatelessWidget {
       enabled: onTap != null,
       excludeSemantics: true,
       child: Opacity(
-        opacity: onTap == null ? .7 : 1,
+        opacity: onTap == null ? Alpha.muted : 1,
         child: Hover(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(4),
-          padding: const EdgeInsets.symmetric(vertical: 5),
+          borderRadius: BorderRadius.circular(Radii.sm),
+          padding: const EdgeInsets.symmetric(vertical: Space.xs),
           child: Row(
             children: [
               Container(
-                width: 16,
-                height: 16,
+                width: SettingsSizes.checkBox,
+                height: SettingsSizes.checkBox,
                 decoration: BoxDecoration(
                   color: filled ? theme.accent : theme.surface,
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(Radii.sm),
                   border: Border.all(
                     color: filled ? theme.accent : theme.threadStrong,
                   ),
@@ -886,13 +973,13 @@ class _CheckRow extends StatelessWidget {
                     ? Center(
                         child: glyphIcon(
                           state == _CheckState.on ? glyphCheck : glyphMinus,
-                          size: 12,
+                          size: IconSize.xs,
                           color: theme.onAccent,
                         ),
                       )
                     : null,
               ),
-              const SizedBox(width: 10),
+              const Gap(Space.md),
               Flexible(child: label),
             ],
           ),
@@ -945,13 +1032,21 @@ class _BuiltInTag extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: theme.surface2,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(Radii.sm),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.xs,
+          vertical: Space.hair,
+        ),
         child: Text(
           'Built-in',
-          style: ts(theme.typeScale.uiSmall, theme.muted, mono: true),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            mono: true,
+            weight: Weight.regular,
+          ),
         ),
       ),
     );
@@ -995,17 +1090,17 @@ class _FullWidthSelectState extends State<_FullWidthSelect> {
           child: Hover(
             key: const ValueKey('main-toolset-field'),
             onTap: enabled ? () => setState(() => _open = !_open) : null,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(Radii.lg),
             padding: EdgeInsets.zero,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 border: border,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(Radii.lg),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+                  horizontal: Space.md,
+                  vertical: Space.md,
                 ),
                 child: Row(
                   children: [
@@ -1015,10 +1110,15 @@ class _FullWidthSelectState extends State<_FullWidthSelect> {
                         style: ts(
                           theme.typeScale.ui,
                           enabled ? theme.ink : theme.muted,
+                          weight: Weight.regular,
                         ),
                       ),
                     ),
-                    glyphIcon(glyphChevronDown, size: 16, color: theme.muted),
+                    glyphIcon(
+                      glyphChevronDown,
+                      size: IconSize.sm,
+                      color: theme.muted,
+                    ),
                   ],
                 ),
               ),
@@ -1033,8 +1133,11 @@ class _FullWidthSelectState extends State<_FullWidthSelect> {
                 setState(() => _open = false);
                 if (o != widget.value) widget.onChanged?.call(o);
               },
-              borderRadius: BorderRadius.circular(6),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              borderRadius: BorderRadius.circular(Radii.md),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Space.lg,
+                vertical: Space.md,
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -1043,12 +1146,14 @@ class _FullWidthSelectState extends State<_FullWidthSelect> {
                       style: ts(
                         theme.typeScale.ui,
                         theme.ink,
-                        weight: o == widget.value ? 600 : 400,
+                        weight: o == widget.value
+                            ? Weight.strong
+                            : Weight.regular,
                       ),
                     ),
                   ),
                   if (o == widget.value)
-                    glyphIcon(glyphCheck, size: 16, color: theme.ink),
+                    glyphIcon(glyphCheck, size: IconSize.sm, color: theme.ink),
                 ],
               ),
             ),

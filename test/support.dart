@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:agent_kit_bubblepaw/agent_kit_bubblepaw.dart';
 import 'package:agent_kit_core/agent_kit_core.dart';
+import 'package:bb_ui/bb_ui.dart' show Density;
 import 'package:bubblepaw_desktop/src/app.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/feedback/feedback_controller.dart';
@@ -117,6 +118,7 @@ Future<void> pumpApp(
   HostController controller, {
   Size size = wide,
   Brightness brightness = Brightness.light,
+  Density density = Density.pointer,
   bool init = true,
   Future<String?> Function()? pickFolder,
   PlatformServices services = const PlatformServices(),
@@ -131,6 +133,7 @@ Future<void> pumpApp(
       controller: controller,
       feedback: feedback ?? TestFeedback(controller),
       brightness: brightness,
+      density: density,
       pickFolder: pickFolder ?? (() async => null),
       services: services,
       licenceSource: licenceSource ?? (() => const Stream.empty()),

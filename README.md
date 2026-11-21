@@ -38,24 +38,24 @@ flowchart LR
 | Package | Path | What it does |
 | --- | --- | --- |
 | `bubblepaw_desktop` | [`lib/`](lib) | The desktop app shell for BubblePaw on the agent kit: the host's lifetime, settings, tray, feedback, updates |
-| `agent_kit` | [`packages/agent_kit`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit) | Flutter widgets for the agent kit: theme, status, transcript, composer, chrome, workspace |
+| `agent_kit` | [`packages/agent_kit`](https://github.com/BubbleBuffer/agent-kit/tree/bee0480d7552dbf850253164232bf31f4afbb373/packages/agent_kit) | Flutter widgets for the agent kit: theme, status, transcript, composer, chrome, workspace |
 | `bubblepaw_desktop_native` | [`native/`](native) | Rust crate on `bubblepaw-sdk` (Core `v0.13.0`): open, call, notifications and close, as JSON-RPC text. [`rust_builder/`](rust_builder) is the Cargokit glue that builds it with the app |
-| `agent_kit_core` | [`packages/agent_kit_core`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit_core) | Pure Dart agent UI core: view models, the `AgentBackend` port, the event reducer and a scripted fake backend |
-| `agent_kit_bubblepaw` | [`packages/agent_kit_bubblepaw`](https://github.com/BubbleBuffer/agent-kit/tree/d5a9871bce7fcbd91df119667db1585f24527ba1/packages/agent_kit_bubblepaw) | Pure Dart BubblePaw stdio JSON-RPC backend for the agent kit |
-| `bb_ui` | [`packages/bb_ui`](https://github.com/BubbleBuffer/bb-ui/tree/v0.7.2/packages/bb_ui) | BubbleBuffer UI primitives for Flutter without Material |
+| `agent_kit_core` | [`packages/agent_kit_core`](https://github.com/BubbleBuffer/agent-kit/tree/bee0480d7552dbf850253164232bf31f4afbb373/packages/agent_kit_core) | Pure Dart agent UI core: view models, the `AgentBackend` port, the event reducer and a scripted fake backend |
+| `agent_kit_bubblepaw` | [`packages/agent_kit_bubblepaw`](https://github.com/BubbleBuffer/agent-kit/tree/bee0480d7552dbf850253164232bf31f4afbb373/packages/agent_kit_bubblepaw) | Pure Dart BubblePaw stdio JSON-RPC backend for the agent kit |
+| `bb_ui` | [`packages/bb_ui`](https://github.com/BubbleBuffer/bb-ui/tree/012d9f283b8378fb7197c6238e7068dfd3205c30/packages/bb_ui) | BubbleBuffer UI primitives for Flutter without Material |
 
 ## Build
 
 You need Flutter **3.47.7** (stable) and a Rust toolchain (stable, installed with rustup): Core is compiled into the app, so `flutter build` and `flutter run` run `cargo` through Cargokit. The first build fetches and compiles `bubblepaw-sdk` and is slow. On Linux the build also needs `clang cmake ninja-build pkg-config libgtk-3-dev libx11-dev libxi-dev`; on Windows, Visual Studio with the C++ desktop workload. `native/target` and `build/` can be pointed at another disk with a directory junction or symlink.
 
-CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on GitHub-hosted `ubuntu-latest` and `windows-latest`. Linux: format, analyze, tests, goldens, the crate's fmt, Clippy and tests, the FFI transport test against the built crate, and a debug build. Windows: the crate's tests, the same FFI test and a debug build.
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on GitHub-hosted `ubuntu-latest` and `windows-latest`. Linux: format, analyze (`dart analyze`, with bb-ui's token rules), tests, goldens, the crate's fmt, Clippy and tests, the FFI transport test against the built crate, and a debug build. Windows: the crate's tests, the same FFI test and a debug build.
 
 The embedded Core is `bubblepaw-sdk` at tag `v0.13.0` (`native/Cargo.toml`; `CORE_VERSION` in `native/src/lib.rs` must match, and a test checks it). The Dart bindings in `lib/src/rust/` and `native/src/frb_generated.rs` are generated and committed: after changing `native/src/api/`, run `flutter_rust_bridge_codegen generate` (version 2.13.0, the same as the `flutter_rust_bridge` package), or run the CI workflow by hand and apply its `fix.patch`, which regenerates them.
 
 ```sh
 flutter pub get
 dart format --output=none --set-exit-if-changed lib test
-flutter analyze
+dart analyze --fatal-infos                       # with bb-ui's token rules (not flutter analyze)
 flutter test --exclude-tags "golden || native"   # unit and widget tests, scripted backend
 flutter test --tags golden                       # compares test/goldens/*.png (rendered on Linux)
 cargo test --manifest-path native/Cargo.toml     # the crate: session.list, attach, errors

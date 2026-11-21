@@ -28,23 +28,28 @@ class NeedsSetupNotice extends StatelessWidget {
         key: const ValueKey('needs-setup-notice'),
         decoration: BoxDecoration(
           color: theme.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Radii.lg),
           border: Border.all(color: theme.thread),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          padding: const EdgeInsets.fromLTRB(
+            Space.lg,
+            Space.sm,
+            Space.sm,
+            Space.sm,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               glyphIcon(glyphInfo, color: theme.muted),
-              const SizedBox(width: 12),
+              const Gap(Space.md),
               Flexible(
                 child: Text(
                   'No model provider is set up. Add one in Settings > Models.',
                   style: ts(theme.typeScale.ui, theme.ink),
                 ),
               ),
-              const SizedBox(width: 12),
+              const Gap(Space.md),
               TextBtn(
                 'Open Models',
                 key: const ValueKey('needs-setup-open'),

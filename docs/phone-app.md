@@ -2,7 +2,7 @@
 
 BubblePaw on Android is a remote client. It pairs with a host (a Desktop or a Core on another machine), opens it, and every page works against that host. The phone has no Core of its own, so nothing is started, shared or kept in a tray.
 
-Entry point: `lib/main_phone.dart`. It builds the same `BubblePawApp` as Desktop with `HostController(localHost: false)`, a data directory from `path_provider`, and the camera scanner set (`linkScanner`). There is no tray, window, login entry or app update check.
+Entry point: `lib/main_phone.dart`. It builds the same `BubblePawApp` as Desktop with `HostController(localHost: false)`, a data directory from `path_provider`, the camera scanner set (`linkScanner`), and bb-ui's touch density (`Density.forPlatform`), which sets larger type and control sizes; layout still follows each pane's size class. There is no tray, window, login entry or app update check.
 
 ## What it leaves out
 
@@ -37,7 +37,7 @@ The Android project is generated in CI (`flutter create --platforms=android`, th
 
 ## Tests
 
-`test/phone_test.dart` covers the phone states (no host, saved hosts, a host that cannot be opened, the host menu, Settings, adding a host by link and by scan) with fake host links. `test/phone_golden_test.dart` has the 375x812 goldens, light and dark.
+`test/phone_test.dart` covers the phone states (no host, saved hosts, a host that cannot be opened, the host menu, Settings, adding a host by link and by scan) with fake host links. `test/phone_golden_test.dart` has the 375x812 goldens, light and dark, rendered at touch density like the phone build; `test/phone_test.dart` runs at touch density too.
 
 ## States not built
 

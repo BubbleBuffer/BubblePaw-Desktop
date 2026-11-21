@@ -8,6 +8,7 @@ import 'package:agent_kit/agent_kit.dart';
 import 'package:bb_ui/bb_ui.dart';
 import 'package:flutter/widgets.dart';
 
+import '../app_tokens.dart';
 import '../remote/host_links.dart';
 import '../remote/hosts_controller.dart';
 import '../remote/link_scanner.dart';
@@ -118,7 +119,11 @@ class _HostsSectionState extends State<HostsSection> {
                 header: true,
                 child: Text(
                   'Hosts you can open',
-                  style: ts(theme.typeScale.h2, theme.ink, weight: 600),
+                  style: ts(
+                    theme.typeScale.h2,
+                    theme.ink,
+                    weight: Weight.strong,
+                  ),
                 ),
               ),
             ),
@@ -130,7 +135,7 @@ class _HostsSectionState extends State<HostsSection> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const Gap(Space.md),
         if (hosts.error != null)
           NoticeBox(
             key: const ValueKey('hosts-error'),
@@ -147,23 +152,27 @@ class _HostsSectionState extends State<HostsSection> {
           Text(
             'Loading hosts…',
             key: const ValueKey('hosts-loading'),
-            style: ts(theme.typeScale.ui, theme.muted),
+            style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
           )
         else if (hosts.hosts.isEmpty)
           Text(
             'No hosts yet. Add a host to open its chats from this device.',
             key: const ValueKey('hosts-empty'),
-            style: ts(theme.typeScale.ui, theme.muted),
+            style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
           )
         else
           for (final h in hosts.hosts)
             Padding(
               key: ValueKey('host-${h.id}'),
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: Space.sm),
               child: Row(
                 children: [
-                  glyphIcon(glyphMonitor, size: 18, color: theme.muted),
-                  const SizedBox(width: 12),
+                  glyphIcon(
+                    glyphMonitor,
+                    size: IconSize.md,
+                    color: theme.muted,
+                  ),
+                  const Gap(Space.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,7 +180,11 @@ class _HostsSectionState extends State<HostsSection> {
                         Text(h.label, style: ts(theme.typeScale.ui, theme.ink)),
                         Text.rich(
                           TextSpan(
-                            style: ts(theme.typeScale.uiSmall, theme.muted),
+                            style: ts(
+                              theme.typeScale.uiSmall,
+                              theme.muted,
+                              weight: Weight.regular,
+                            ),
                             children: [
                               TextSpan(
                                 text: h.id,
@@ -179,6 +192,7 @@ class _HostsSectionState extends State<HostsSection> {
                                   theme.typeScale.uiSmall,
                                   theme.muted,
                                   mono: true,
+                                  weight: Weight.regular,
                                 ),
                               ),
                               TextSpan(
@@ -199,9 +213,9 @@ class _HostsSectionState extends State<HostsSection> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const Gap(Space.sm),
                   _presence(hosts.presenceOf(h.id)),
-                  const SizedBox(width: 4),
+                  const Gap(Space.xxs),
                   ActionButton(
                     key: ValueKey('host-remove-${h.id}'),
                     label: 'Remove',
@@ -211,11 +225,15 @@ class _HostsSectionState extends State<HostsSection> {
                 ],
               ),
             ),
-        const SizedBox(height: 12),
+        const Gap(Space.md),
         Text(
           'Removing a host deletes its pairing from this device. The host '
           'keeps your device in its list until it is revoked there.',
-          style: ts(theme.typeScale.uiSmall, theme.muted),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
         ),
       ],
     );
@@ -254,8 +272,8 @@ Future<void> showAddHostDialog(
     await showModalPanel<void>(
       context,
       (_) => SizeClassBuilder(builder: (_, _) => AddHostDialog(flow: flow)),
-      width: 480,
-      height: 560,
+      width: Panels.addHost.width,
+      height: Panels.addHost.height,
       shrink: true,
     );
   } finally {
@@ -325,17 +343,21 @@ class _AddHostDialogState extends State<AddHostDialog> {
             onTap: _flow.busy ? () {} : () => unawaited(_scan()),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(vertical: Space.md),
             child: Center(
               child: Text(
                 'or paste the pairing link',
-                style: ts(theme.typeScale.uiSmall, theme.muted),
+                style: ts(
+                  theme.typeScale.uiSmall,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
           ),
         ] else
           Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: Space.md),
             child: Text(
               'Paste the pairing link shown by the host.',
               style: ts(theme.typeScale.ui, theme.ink),
@@ -363,11 +385,15 @@ class _AddHostDialogState extends State<AddHostDialog> {
         leading: _flow.busy
             ? Row(
                 children: [
-                  glyphIcon(glyphLoader, size: 15, color: theme.muted),
-                  const SizedBox(width: 6),
+                  glyphIcon(glyphLoader, size: IconSize.sm, color: theme.muted),
+                  const Gap(Space.xs),
                   Text(
                     'Connecting to the host',
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ],
               )
@@ -401,7 +427,7 @@ class _AddHostDialogState extends State<AddHostDialog> {
           style: ts(theme.typeScale.ui, theme.ink),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
+          padding: const EdgeInsets.symmetric(vertical: Space.xl),
           child: Center(
             child: Semantics(
               label: 'Number to compare',
@@ -409,22 +435,26 @@ class _AddHostDialogState extends State<AddHostDialog> {
                 _spaced(_flow.comparison),
                 key: const ValueKey('add-host-number'),
                 style: ts(
-                  theme.typeScale.h2,
+                  theme.typeScale.display,
                   theme.ink,
-                  weight: 600,
+                  weight: Weight.strong,
                   mono: true,
-                ).copyWith(fontSize: 32, letterSpacing: 2),
+                ),
               ),
             ),
           ),
         ),
         Row(
           children: [
-            glyphIcon(glyphLoader, size: 15, color: theme.muted),
-            const SizedBox(width: 8),
+            glyphIcon(glyphLoader, size: IconSize.sm, color: theme.muted),
+            const Gap(Space.sm),
             Text(
               'Waiting for the host to confirm.',
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ],
         ),
@@ -451,7 +481,7 @@ class _AddHostDialogState extends State<AddHostDialog> {
             '${host.label} was added. You can open its chats from the menu.',
           ),
         ),
-        const SizedBox(height: 12),
+        const Gap(Space.md),
         GroupCard(
           children: [
             SettingsKeyValueRow('Host', host.label, mono: false),
