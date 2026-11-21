@@ -12,23 +12,23 @@ dependencies:
   agent_kit:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: 3aaaf5106b19195d2e8a6d035aee8549212c3634 # v0.20.0 (agent-kit main)
+      ref: f6d0c374f2092d5c679395ed5be1a3bc91405eb7 # v0.21.0
       path: packages/agent_kit
   agent_kit_core:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: 3aaaf5106b19195d2e8a6d035aee8549212c3634 # v0.20.0 (agent-kit main)
+      ref: f6d0c374f2092d5c679395ed5be1a3bc91405eb7 # v0.21.0
       path: packages/agent_kit_core
   agent_kit_bubblepaw:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: 3aaaf5106b19195d2e8a6d035aee8549212c3634 # v0.20.0 (agent-kit main)
+      ref: f6d0c374f2092d5c679395ed5be1a3bc91405eb7 # v0.21.0
       path: packages/agent_kit_bubblepaw
   # Same pin as the kit's own, so the primitives come from one place.
   bb_ui:
     git:
       url: https://github.com/BubbleBuffer/bb-ui
-      ref: 7c92a358a57656271ff8174ecef41d4a49dc0794 # v0.8.0 (bb-ui main)
+      ref: 012d9f283b8378fb7197c6238e7068dfd3205c30 # v0.9.1
       path: packages/bb_ui
   # SHA256 of downloaded app updates (dart:io has no hash).
   crypto: ^3.0.6

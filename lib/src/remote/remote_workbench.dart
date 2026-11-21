@@ -530,7 +530,10 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
   Widget _empty(BbTheme t) {
     if (!_listed) {
       return Center(
-        child: Text('Loading…', style: ts(t.typeScale.ui, t.faint)),
+        child: Text(
+          'Loading…',
+          style: ts(t.typeScale.ui, t.faint, weight: Weight.regular),
+        ),
       );
     }
     return Center(
@@ -539,7 +542,7 @@ class _RemoteWorkbenchState extends State<RemoteWorkbench> {
         children: [
           Text(
             _listError ?? 'No chats yet',
-            style: ts(t.typeScale.ui, t.muted),
+            style: ts(t.typeScale.ui, t.muted, weight: Weight.regular),
           ),
           if (_listError != null) ...[
             const Gap(Space.md),

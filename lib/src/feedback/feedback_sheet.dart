@@ -219,7 +219,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                     style: ts(
                       theme.typeScale.h2,
                       theme.ink,
-                      weight: Weight.semibold,
+                      weight: Weight.strong,
                     ),
                   ),
                 ),
@@ -248,13 +248,17 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                     style: ts(
                       theme.typeScale.ui,
                       theme.ink,
-                      weight: Weight.semibold,
+                      weight: Weight.strong,
                     ),
                   ),
                   const Gap(Space.hair),
                   Text(
                     'Include what you expected instead.',
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                   const Gap(Space.sm),
                   FieldFrame(
@@ -303,7 +307,11 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                       'This is the exact text saved in report.md. Tokens, keys '
                       'and passwords are replaced with [redacted], and your '
                       'home folder shows as ~.',
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                      style: ts(
+                        theme.typeScale.uiSmall,
+                        theme.muted,
+                        weight: Weight.regular,
+                      ),
                     ),
                   ],
                   if (_chatId != null) ...[
@@ -349,7 +357,11 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                           'This is the exact text saved in chat.md. Tokens, '
                           'keys and passwords are replaced with [redacted], '
                           'and your home folder shows as ~.',
-                          style: ts(theme.typeScale.uiSmall, theme.muted),
+                          style: ts(
+                            theme.typeScale.uiSmall,
+                            theme.muted,
+                            weight: Weight.regular,
+                          ),
                         ),
                       ],
                     ],
@@ -358,7 +370,11 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                   Text(
                     'Saved on this computer in the feedback folder'
                     '${chat != null ? ', with chat.md' : ''}. Nothing is sent.',
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                   if (_error != null)
                     Padding(
@@ -396,7 +412,11 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                           ? 'Describe what happened to save.'
                           : '',
                       key: const ValueKey('feedback-need'),
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                      style: ts(
+                        theme.typeScale.uiSmall,
+                        theme.muted,
+                        weight: Weight.regular,
+                      ),
                     ),
                   ),
                   FbButton(
@@ -435,7 +455,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
     );
     final label = Text(
       'Screenshot',
-      style: ts(theme.typeScale.ui, theme.ink, weight: Weight.semibold),
+      style: ts(theme.typeScale.ui, theme.ink, weight: Weight.strong),
     );
     if (shot == null) {
       return Column(
@@ -449,7 +469,11 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                 'No screenshot was available for this window, so none will be '
                 'saved.',
                 key: const ValueKey('feedback-shot-none'),
-                style: ts(theme.typeScale.ui, theme.muted),
+                style: ts(
+                  theme.typeScale.ui,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
           ]),
@@ -497,13 +521,22 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                 children: [
                   Text(
                     'screenshot.png',
-                    style: ts(theme.typeScale.ui, theme.ink, mono: true),
+                    style: ts(
+                      theme.typeScale.ui,
+                      theme.ink,
+                      mono: true,
+                      weight: Weight.regular,
+                    ),
                   ),
                   Text(
                     'This window, ${shot.size.width.round()}×'
                     '${shot.size.height.round()}. Taken before this sheet '
                     'opened.',
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ],
               ),
@@ -522,7 +555,11 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                 child: Text(
                   'No screenshot will be saved.',
                   key: const ValueKey('feedback-shot-removed'),
-                  style: ts(theme.typeScale.ui, theme.muted),
+                  style: ts(
+                    theme.typeScale.ui,
+                    theme.muted,
+                    weight: Weight.regular,
+                  ),
                 ),
               ),
               FbButton(
@@ -617,13 +654,17 @@ class _ChatCheck extends StatelessWidget {
                     style: ts(
                       theme.typeScale.ui,
                       theme.ink,
-                      weight: Weight.semibold,
+                      weight: Weight.strong,
                     ),
                   ),
                   Text(
                     'Saved as chat.md beside report.md. Tool calls show as one '
                     'line each.',
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ],
               ),

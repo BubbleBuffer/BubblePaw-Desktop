@@ -122,7 +122,7 @@ class _HostsSectionState extends State<HostsSection> {
                   style: ts(
                     theme.typeScale.h2,
                     theme.ink,
-                    weight: Weight.semibold,
+                    weight: Weight.strong,
                   ),
                 ),
               ),
@@ -152,13 +152,13 @@ class _HostsSectionState extends State<HostsSection> {
           Text(
             'Loading hosts…',
             key: const ValueKey('hosts-loading'),
-            style: ts(theme.typeScale.ui, theme.muted),
+            style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
           )
         else if (hosts.hosts.isEmpty)
           Text(
             'No hosts yet. Add a host to open its chats from this device.',
             key: const ValueKey('hosts-empty'),
-            style: ts(theme.typeScale.ui, theme.muted),
+            style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
           )
         else
           for (final h in hosts.hosts)
@@ -180,7 +180,11 @@ class _HostsSectionState extends State<HostsSection> {
                         Text(h.label, style: ts(theme.typeScale.ui, theme.ink)),
                         Text.rich(
                           TextSpan(
-                            style: ts(theme.typeScale.uiSmall, theme.muted),
+                            style: ts(
+                              theme.typeScale.uiSmall,
+                              theme.muted,
+                              weight: Weight.regular,
+                            ),
                             children: [
                               TextSpan(
                                 text: h.id,
@@ -188,6 +192,7 @@ class _HostsSectionState extends State<HostsSection> {
                                   theme.typeScale.uiSmall,
                                   theme.muted,
                                   mono: true,
+                                  weight: Weight.regular,
                                 ),
                               ),
                               TextSpan(
@@ -224,7 +229,11 @@ class _HostsSectionState extends State<HostsSection> {
         Text(
           'Removing a host deletes its pairing from this device. The host '
           'keeps your device in its list until it is revoked there.',
-          style: ts(theme.typeScale.uiSmall, theme.muted),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
         ),
       ],
     );
@@ -338,7 +347,11 @@ class _AddHostDialogState extends State<AddHostDialog> {
             child: Center(
               child: Text(
                 'or paste the pairing link',
-                style: ts(theme.typeScale.uiSmall, theme.muted),
+                style: ts(
+                  theme.typeScale.uiSmall,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
           ),
@@ -376,7 +389,11 @@ class _AddHostDialogState extends State<AddHostDialog> {
                   const Gap(Space.xs),
                   Text(
                     'Connecting to the host',
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ],
               )
@@ -420,7 +437,7 @@ class _AddHostDialogState extends State<AddHostDialog> {
                 style: ts(
                   theme.typeScale.display,
                   theme.ink,
-                  weight: Weight.semibold,
+                  weight: Weight.strong,
                   mono: true,
                 ),
               ),
@@ -433,7 +450,11 @@ class _AddHostDialogState extends State<AddHostDialog> {
             const Gap(Space.sm),
             Text(
               'Waiting for the host to confirm.',
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ],
         ),

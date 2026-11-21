@@ -92,11 +92,18 @@ class _SkillsPageState extends State<SkillsPage> {
       body = Text(
         'The host is not running. Start it in Core to see its skills.',
         key: const ValueKey('skills-no-host'),
-        style: ts(theme.typeScale.ui, theme.muted),
+        style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
       );
     } else if (skills == null) {
       body = _loadError == null
-          ? Text('Loading skills…', style: ts(theme.typeScale.ui, theme.muted))
+          ? Text(
+              'Loading skills…',
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
+            )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -144,7 +151,11 @@ class _SkillsPageState extends State<SkillsPage> {
             child: Text(
               'Applies after restart.',
               key: const ValueKey('skills-restart'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         if (_error != null)
@@ -208,14 +219,18 @@ class _SkillRow extends StatelessWidget {
                   style: ts(
                     theme.typeScale.ui,
                     theme.ink,
-                    weight: Weight.semibold,
+                    weight: Weight.strong,
                     mono: true,
                   ),
                 ),
                 if (skill.description.isNotEmpty)
                   Text(
                     skill.description,
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 const Gap(Space.xxs),
                 Wrap(
@@ -224,7 +239,11 @@ class _SkillRow extends StatelessWidget {
                   children: [
                     Text(
                       where,
-                      style: ts(theme.typeScale.uiSmall, theme.faint),
+                      style: ts(
+                        theme.typeScale.uiSmall,
+                        theme.faint,
+                        weight: Weight.regular,
+                      ),
                     ),
                     DecoratedBox(
                       decoration: BoxDecoration(
@@ -242,6 +261,7 @@ class _SkillRow extends StatelessWidget {
                             theme.typeScale.uiSmall,
                             theme.muted,
                             mono: true,
+                            weight: Weight.regular,
                           ),
                         ),
                       ),
@@ -300,7 +320,7 @@ class _SkillSwitch extends StatelessWidget {
                   style: ts(
                     theme.typeScale.uiSmall,
                     theme.muted,
-                    weight: Weight.semibold,
+                    weight: Weight.strong,
                   ),
                 ),
               ),
@@ -324,7 +344,11 @@ class _EmptySkills extends StatelessWidget {
       children: [
         Text(
           'No skills found. BubblePaw looks in these folders:',
-          style: ts(theme.typeScale.uiSmall, theme.muted),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
         ),
         const Gap(Space.sm),
         for (final dir in const [
@@ -336,13 +360,22 @@ class _EmptySkills extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: Space.xxs),
             child: Text(
               dir,
-              style: ts(theme.typeScale.ui, theme.ink, mono: true),
+              style: ts(
+                theme.typeScale.ui,
+                theme.ink,
+                mono: true,
+                weight: Weight.regular,
+              ),
             ),
           ),
         const Gap(Space.sm),
         Text(
           'A skill you add to one of them appears here.',
-          style: ts(theme.typeScale.uiSmall, theme.muted),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
         ),
       ],
     );

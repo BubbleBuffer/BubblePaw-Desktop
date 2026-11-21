@@ -246,11 +246,18 @@ class _McpPageState extends State<McpPage> {
       body = Text(
         'The host is not running. Start it in Core to see its MCP servers.',
         key: const ValueKey('mcp-no-host'),
-        style: ts(theme.typeScale.ui, theme.muted),
+        style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
       );
     } else if (servers == null) {
       body = _loadError == null
-          ? Text('Loading servers…', style: ts(theme.typeScale.ui, theme.muted))
+          ? Text(
+              'Loading servers…',
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
+            )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -285,7 +292,11 @@ class _McpPageState extends State<McpPage> {
             Text(
               'No servers yet.',
               key: const ValueKey('mcp-empty'),
-              style: ts(theme.typeScale.ui, theme.muted),
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           for (final server in servers)
             _ServerCard(
@@ -319,7 +330,11 @@ class _McpPageState extends State<McpPage> {
             child: Text(
               'Applies after restart.',
               key: const ValueKey('mcp-restart'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         if (_error != null)
@@ -459,7 +474,7 @@ class _ServerCard extends StatelessWidget {
                     style: ts(
                       theme.typeScale.ui,
                       theme.ink,
-                      weight: Weight.semibold,
+                      weight: Weight.strong,
                     ),
                   ),
                   if (line.isNotEmpty)
@@ -469,6 +484,7 @@ class _ServerCard extends StatelessWidget {
                         theme.typeScale.uiSmall,
                         theme.muted,
                         mono: true,
+                        weight: Weight.regular,
                       ),
                     ),
                 ],
@@ -674,7 +690,14 @@ class _Note extends StatelessWidget {
           horizontal: Space.md,
           vertical: Space.md,
         ),
-        child: Text(text, style: ts(theme.typeScale.uiSmall, theme.muted)),
+        child: Text(
+          text,
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
+        ),
       ),
     );
   }
@@ -706,7 +729,12 @@ class _ToolRow extends StatelessWidget {
             Expanded(
               child: Text(
                 tool.name,
-                style: ts(theme.typeScale.ui, theme.ink, mono: true),
+                style: ts(
+                  theme.typeScale.ui,
+                  theme.ink,
+                  mono: true,
+                  weight: Weight.regular,
+                ),
               ),
             ),
             _Switch(
@@ -762,7 +790,7 @@ class _Switch extends StatelessWidget {
                   style: ts(
                     theme.typeScale.uiSmall,
                     theme.muted,
-                    weight: Weight.semibold,
+                    weight: Weight.strong,
                   ),
                 ),
               ),

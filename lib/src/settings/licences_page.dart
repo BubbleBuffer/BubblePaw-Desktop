@@ -196,12 +196,15 @@ class _LicencesPageState extends State<LicencesPage> {
             style: ts(theme.typeScale.ui, theme.dangerInk),
           )
         else if (records == null)
-          Text('Loading licences…', style: ts(theme.typeScale.ui, theme.muted))
+          Text(
+            'Loading licences…',
+            style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
+          )
         else if (shown.isEmpty)
           Text(
             'Nothing matches “${_search.text.trim()}”.',
             key: const ValueKey('licences-empty'),
-            style: ts(theme.typeScale.ui, theme.muted),
+            style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
           ),
         for (final group in _groupOrder)
           ..._groupRows(context, group, [
@@ -281,6 +284,7 @@ class _LicenceRow extends StatelessWidget {
                               theme.typeScale.uiSmall,
                               theme.muted,
                               mono: true,
+                              weight: Weight.regular,
                             ),
                           ),
                       ],
@@ -303,7 +307,7 @@ class _LicenceRow extends StatelessWidget {
                         style: ts(
                           theme.typeScale.uiSmall,
                           theme.muted,
-                          weight: Weight.semibold,
+                          weight: Weight.strong,
                         ),
                       ),
                     ),
@@ -339,7 +343,12 @@ class _LicenceRow extends StatelessWidget {
                 child: Text(
                   record.texts.join('\n\n'),
                   key: ValueKey('licence-text-${record.id}'),
-                  style: ts(theme.typeScale.uiSmall, theme.ink, mono: true),
+                  style: ts(
+                    theme.typeScale.uiSmall,
+                    theme.ink,
+                    mono: true,
+                    weight: Weight.regular,
+                  ),
                 ),
               ),
             ),

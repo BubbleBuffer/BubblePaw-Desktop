@@ -91,7 +91,7 @@ class PhoneHome extends StatelessWidget {
                                   style: ts(
                                     theme.typeScale.ui,
                                     theme.ink,
-                                    weight: Weight.bold,
+                                    weight: Weight.strong,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -143,7 +143,11 @@ class PhoneHome extends StatelessWidget {
                       message,
                       key: const ValueKey('phone-home-message'),
                       textAlign: TextAlign.center,
-                      style: ts(theme.typeScale.ui, theme.muted),
+                      style: ts(
+                        theme.typeScale.ui,
+                        theme.muted,
+                        weight: Weight.regular,
+                      ),
                     ),
                   ),
                 ),

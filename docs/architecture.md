@@ -21,16 +21,15 @@ DesktopIntegration   tray menu, close-to-tray, login entry (lib/src/platform/)
 ## Dependencies
 
 `agent_kit`, `agent_kit_core` and `agent_kit_bubblepaw` come from
-`BubbleBuffer/agent-kit` at a commit hash (currently 0.20.0, `88db604`, from agent-kit PR #70 before its
-v0.20.0 tag; re-pin to the tag's commit once it exists). The ref is the commit hash
+`BubbleBuffer/agent-kit` at a commit hash (currently 0.21.0, `f6d0c37`). The ref is the commit hash
 because the kit's packages depend on each other by path inside that repository,
 and pub resolves those to the hash; a tag in the app would conflict with it.
 v0.15.2 added `BubblePawBackend.connectionLost` (idle exit detection); v0.15.3
 added "Rewind from here" and hides the empty ledger.
 `flutter_rust_bridge` is pinned to `2.13.0`, the version of the generated bindings, and
 `bubblepaw_desktop_native` is a path dependency on `native/`, built by `rust_builder/`
-(Cargokit). `bb_ui` is pinned to the kit's own pin, bb-ui commit `1e3863a` (the 0.8 line, before its
-`v0.8.0` tag); the two must stay equal or pub cannot resolve. The kit's fonts are bundled in
+(Cargokit). `bb_ui` is pinned to the kit's own pin, bb-ui 0.9.1 (commit `012d9f2`); the two must stay
+equal or pub cannot resolve. The `bb_lints` plugin in `analysis_options.yaml` uses the same commit. The kit's fonts are bundled in
 `assets/fonts` (the kit says hosts do that), with their OFL licences.
 
 ## Tokens and density

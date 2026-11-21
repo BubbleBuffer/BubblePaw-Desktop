@@ -303,8 +303,8 @@ class _RowState extends State<_Row> {
                               theme.typeScale.ui,
                               theme.ink,
                               weight: widget.selected
-                                  ? Weight.bold
-                                  : Weight.medium,
+                                  ? Weight.strong
+                                  : Weight.regular,
                             ),
                           ),
                           if (widget.detail != null)
@@ -312,7 +312,11 @@ class _RowState extends State<_Row> {
                               widget.detail!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: ts(theme.typeScale.uiSmall, theme.faint),
+                              style: ts(
+                                theme.typeScale.uiSmall,
+                                theme.faint,
+                                weight: Weight.regular,
+                              ),
                             ),
                         ],
                       ),
@@ -320,7 +324,11 @@ class _RowState extends State<_Row> {
                     if (widget.selected)
                       Text(
                         'Open',
-                        style: ts(theme.typeScale.uiSmall, theme.muted),
+                        style: ts(
+                          theme.typeScale.uiSmall,
+                          theme.muted,
+                          weight: Weight.regular,
+                        ),
                       ),
                   ],
                 ),
@@ -410,7 +418,7 @@ class HostSheet extends StatelessWidget {
                               style: ts(
                                 theme.typeScale.h2,
                                 theme.ink,
-                                weight: Weight.semibold,
+                                weight: Weight.strong,
                               ),
                             ),
                           ),

@@ -141,7 +141,7 @@ class _CompactBar extends StatelessWidget {
                   style: ts(
                     theme.typeScale.h2,
                     theme.ink,
-                    weight: Weight.semibold,
+                    weight: Weight.strong,
                   ),
                 ),
               ),
@@ -203,7 +203,7 @@ class SwitchRow extends StatelessWidget {
                     style: ts(
                       theme.typeScale.uiSmall,
                       theme.muted,
-                      weight: Weight.semibold,
+                      weight: Weight.strong,
                     ),
                   ),
                 ),
@@ -275,7 +275,9 @@ class SegmentedChoice<T> extends StatelessWidget {
                         style: ts(
                           theme.typeScale.uiSmall,
                           option == value ? theme.ink : theme.muted,
-                          weight: option == value ? Weight.bold : Weight.medium,
+                          weight: option == value
+                              ? Weight.strong
+                              : Weight.regular,
                         ),
                       ),
                     ),
@@ -344,13 +346,17 @@ class ChoiceCard extends StatelessWidget {
                         style: ts(
                           theme.typeScale.ui,
                           theme.ink,
-                          weight: Weight.semibold,
+                          weight: Weight.strong,
                         ),
                       ),
                       const Gap(Space.hair),
                       Text(
                         description,
-                        style: ts(theme.typeScale.uiSmall, theme.muted),
+                        style: ts(
+                          theme.typeScale.uiSmall,
+                          theme.muted,
+                          weight: Weight.regular,
+                        ),
                       ),
                     ],
                   ),
@@ -436,7 +442,7 @@ class StatePill extends StatelessWidget {
             const Gap(Space.xs),
             Text(
               label,
-              style: ts(theme.typeScale.uiSmall, ink, weight: Weight.bold),
+              style: ts(theme.typeScale.uiSmall, ink, weight: Weight.strong),
             ),
           ],
         ),

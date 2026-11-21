@@ -390,7 +390,11 @@ class _Nav extends StatelessWidget {
                       const Gap(Space.md),
                       Text(
                         'Back to chat',
-                        style: ts(theme.typeScale.ui, theme.muted),
+                        style: ts(
+                          theme.typeScale.ui,
+                          theme.muted,
+                          weight: Weight.regular,
+                        ),
                       ),
                     ],
                   ),
@@ -409,7 +413,7 @@ class _Nav extends StatelessWidget {
                     style: ts(
                       theme.typeScale.h2,
                       theme.ink,
-                      weight: Weight.semibold,
+                      weight: Weight.strong,
                     ),
                   ),
                 ),
@@ -471,7 +475,7 @@ class _NavItem extends StatelessWidget {
                 style: ts(
                   theme.typeScale.ui,
                   theme.ink,
-                  weight: selected ? Weight.semibold : Weight.regular,
+                  weight: selected ? Weight.strong : Weight.regular,
                 ),
               ),
             ),
@@ -534,13 +538,17 @@ class _ListRow extends StatelessWidget {
                     style: ts(
                       theme.typeScale.body,
                       theme.ink,
-                      weight: Weight.semibold,
+                      weight: Weight.strong,
                     ),
                   ),
                   if (summary != null && summary!.isNotEmpty)
                     Text(
                       summary!,
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                      style: ts(
+                        theme.typeScale.uiSmall,
+                        theme.muted,
+                        weight: Weight.regular,
+                      ),
                     ),
                 ],
               ),

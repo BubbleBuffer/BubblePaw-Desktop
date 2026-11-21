@@ -314,11 +314,18 @@ class _ToolsPageState extends State<ToolsPage> {
       body = Text(
         'The host is not running. Start it in Core to see its tools.',
         key: const ValueKey('tools-no-host'),
-        style: ts(theme.typeScale.ui, theme.muted),
+        style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
       );
     } else if (_tools == null) {
       body = _loadError == null
-          ? Text('Loading tools…', style: ts(theme.typeScale.ui, theme.muted))
+          ? Text(
+              'Loading tools…',
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
+            )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -368,7 +375,11 @@ class _ToolsPageState extends State<ToolsPage> {
             child: Text(
               'Applies after restart.',
               key: const ValueKey('tools-restart'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         if (_error != null)
@@ -409,7 +420,11 @@ class _ToolsPageState extends State<ToolsPage> {
             child: Text(
               'The parent agent picks a toolset when it starts a subagent.',
               key: const ValueKey('toolsets-hint'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         for (final name in _setNames)
@@ -445,7 +460,7 @@ class _ToolsPageState extends State<ToolsPage> {
         if (categories.isEmpty)
           Text(
             'The host lists no tools.',
-            style: ts(theme.typeScale.ui, theme.muted),
+            style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
           ),
         for (final category in categories) _approvalGroup(category),
       ],
@@ -487,7 +502,11 @@ class _ToolsPageState extends State<ToolsPage> {
                     padding: const EdgeInsets.only(right: Space.sm),
                     child: Text(
                       'Mixed',
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                      style: ts(
+                        theme.typeScale.uiSmall,
+                        theme.muted,
+                        weight: Weight.regular,
+                      ),
                     ),
                   ),
                 _ApprovalChoice(
@@ -515,7 +534,12 @@ class _ToolsPageState extends State<ToolsPage> {
                     Expanded(
                       child: Text(
                         toolLabel(tool),
-                        style: ts(theme.typeScale.ui, theme.ink, mono: true),
+                        style: ts(
+                          theme.typeScale.ui,
+                          theme.ink,
+                          mono: true,
+                          weight: Weight.regular,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -545,18 +569,18 @@ class _ToolsPageState extends State<ToolsPage> {
       children: [
         Text(
           'Name',
-          style: ts(
-            theme.typeScale.uiSmall,
-            theme.ink,
-            weight: Weight.semibold,
-          ),
+          style: ts(theme.typeScale.uiSmall, theme.ink, weight: Weight.strong),
         ),
         if (builtin)
           Padding(
             padding: const EdgeInsets.only(top: Space.hair),
             child: Text(
               'Built-in toolsets can’t be renamed or deleted.',
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         const Gap(Space.xs),
@@ -612,7 +636,11 @@ class _ToolsPageState extends State<ToolsPage> {
                       child: Text(
                         'Main chat uses this toolset. Choose another one '
                         'first.',
-                        style: ts(theme.typeScale.uiSmall, theme.muted),
+                        style: ts(
+                          theme.typeScale.uiSmall,
+                          theme.muted,
+                          weight: Weight.regular,
+                        ),
                       ),
                     ),
                   ),
@@ -675,7 +703,12 @@ class _ToolsPageState extends State<ToolsPage> {
                 ),
                 Text(
                   '$count of ${category.tools.length}',
-                  style: ts(theme.typeScale.uiSmall, theme.muted, mono: true),
+                  style: ts(
+                    theme.typeScale.uiSmall,
+                    theme.muted,
+                    mono: true,
+                    weight: Weight.regular,
+                  ),
                 ),
               ],
             ),
@@ -696,7 +729,12 @@ class _ToolsPageState extends State<ToolsPage> {
                       : _CheckState.off,
                   label: Text(
                     toolLabel(tool),
-                    style: ts(theme.typeScale.ui, theme.ink, mono: true),
+                    style: ts(
+                      theme.typeScale.ui,
+                      theme.ink,
+                      mono: true,
+                      weight: Weight.regular,
+                    ),
                   ),
                   semantic: toolLabel(tool),
                   onTap: builtin || _busy ? null : () => _toggleTool(set, tool),
@@ -770,12 +808,16 @@ class _ToolsetRow extends StatelessWidget {
                     style: ts(
                       theme.typeScale.ui,
                       theme.ink,
-                      weight: Weight.semibold,
+                      weight: Weight.strong,
                     ),
                   ),
                   Text(
                     '$count of $total tools',
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ],
               ),
@@ -829,12 +871,17 @@ class _CategoryName extends StatelessWidget {
       children: [
         Text(
           category.title,
-          style: ts(theme.typeScale.ui, theme.ink, weight: Weight.semibold),
+          style: ts(theme.typeScale.ui, theme.ink, weight: Weight.strong),
         ),
         if (category.mcp)
           Text(
             'MCP',
-            style: ts(theme.typeScale.uiSmall, theme.faint, mono: true),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.faint,
+              mono: true,
+              weight: Weight.regular,
+            ),
           ),
       ],
     );
@@ -994,7 +1041,12 @@ class _BuiltInTag extends StatelessWidget {
         ),
         child: Text(
           'Built-in',
-          style: ts(theme.typeScale.uiSmall, theme.muted, mono: true),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            mono: true,
+            weight: Weight.regular,
+          ),
         ),
       ),
     );
@@ -1058,6 +1110,7 @@ class _FullWidthSelectState extends State<_FullWidthSelect> {
                         style: ts(
                           theme.typeScale.ui,
                           enabled ? theme.ink : theme.muted,
+                          weight: Weight.regular,
                         ),
                       ),
                     ),
@@ -1094,7 +1147,7 @@ class _FullWidthSelectState extends State<_FullWidthSelect> {
                         theme.typeScale.ui,
                         theme.ink,
                         weight: o == widget.value
-                            ? Weight.semibold
+                            ? Weight.strong
                             : Weight.regular,
                       ),
                     ),

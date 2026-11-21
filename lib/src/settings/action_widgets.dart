@@ -95,7 +95,7 @@ class ActionButton extends StatelessWidget {
                 style: ts(
                   theme.typeScale.ui,
                   kind == ActionKind.quiet ? theme.muted : ink,
-                  weight: primary ? Weight.bold : Weight.semibold,
+                  weight: Weight.strong,
                 ),
               ),
             ],
@@ -233,13 +233,25 @@ class SettingsKeyValueRow extends StatelessWidget {
         children: [
           SizedBox(
             width: SettingsSizes.factLabel,
-            child: Text(name, style: ts(theme.typeScale.ui, theme.muted)),
+            child: Text(
+              name,
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
+            ),
           ),
           Expanded(
             child: Text(
               value,
               key: valueKey,
-              style: ts(theme.typeScale.ui, theme.ink, mono: mono),
+              style: ts(
+                theme.typeScale.ui,
+                theme.ink,
+                mono: mono,
+                weight: mono ? Weight.regular : null,
+              ),
             ),
           ),
           if (trailing != null) ...[const Gap(Space.sm), trailing!],
@@ -275,7 +287,7 @@ class LinkButton extends StatelessWidget {
               style: ts(
                 theme.typeScale.ui,
                 theme.accentInk,
-                weight: Weight.semibold,
+                weight: Weight.strong,
               ),
             ),
             const Gap(Space.xxs),

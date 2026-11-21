@@ -315,13 +315,25 @@ class _Version extends StatelessWidget {
         children: [
           SizedBox(
             width: SettingsSizes.versionLabel,
-            child: Text(name, style: ts(theme.typeScale.ui, theme.muted)),
+            child: Text(
+              name,
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
+            ),
           ),
           Expanded(
             child: Text(
               value,
               key: ValueKey('version-$name'),
-              style: ts(theme.typeScale.ui, theme.ink, mono: true),
+              style: ts(
+                theme.typeScale.ui,
+                theme.ink,
+                mono: true,
+                weight: Weight.regular,
+              ),
             ),
           ),
         ],

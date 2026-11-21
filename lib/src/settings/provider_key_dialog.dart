@@ -154,7 +154,11 @@ class _ProviderKeyDialogState extends State<ProviderKeyDialog> {
             'The host now uses the key in its environment variable $env. A '
             'stored key replaces it.',
             key: const ValueKey('key-dialog-environment'),
-            style: ts(theme.typeScale.uiSmall, theme.muted),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.muted,
+              weight: Weight.regular,
+            ),
           ),
           const Gap(Space.md),
         ],
@@ -180,7 +184,11 @@ class _ProviderKeyDialogState extends State<ProviderKeyDialog> {
                 : 'Removing the stored key makes the host fall back to the '
                       'environment variable $env when it is set.',
             key: const ValueKey('key-remove-note'),
-            style: ts(theme.typeScale.uiSmall, theme.muted),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.muted,
+              weight: Weight.regular,
+            ),
           ),
         ],
       ],

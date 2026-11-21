@@ -63,7 +63,7 @@ class DialogFrame extends StatelessWidget {
                       style: ts(
                         theme.typeScale.h2,
                         theme.ink,
-                        weight: Weight.semibold,
+                        weight: Weight.strong,
                       ),
                     ),
                   ),
@@ -74,7 +74,11 @@ class DialogFrame extends StatelessWidget {
                     child: Text(
                       step,
                       key: const ValueKey('dialog-step'),
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                      style: ts(
+                        theme.typeScale.uiSmall,
+                        theme.muted,
+                        weight: Weight.regular,
+                      ),
                     ),
                   ),
                 IconBtn(
@@ -249,7 +253,14 @@ class _CheckRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label, style: ts(theme.typeScale.ui, theme.ink)),
-                  Text(detail, style: ts(theme.typeScale.uiSmall, theme.muted)),
+                  Text(
+                    detail,
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -320,7 +331,11 @@ class PairDialog extends StatelessWidget {
         const Gap(Space.md),
         Text(
           'You can revoke the device later in Share this host.',
-          style: ts(theme.typeScale.uiSmall, theme.muted),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
         ),
         if (flow.error != null) ...[
           const Gap(Space.sm),
@@ -357,7 +372,14 @@ class PairDialog extends StatelessWidget {
     final details = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Code', style: ts(theme.typeScale.uiSmall, theme.muted)),
+        Text(
+          'Code',
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
+        ),
         const Gap(Space.xxs),
         Text(
           code,
@@ -365,7 +387,7 @@ class PairDialog extends StatelessWidget {
           style: ts(
             theme.typeScale.h2,
             theme.ink,
-            weight: Weight.semibold,
+            weight: Weight.strong,
             mono: true,
           ),
         ),
@@ -379,19 +401,32 @@ class PairDialog extends StatelessWidget {
                   ? 'Code expired'
                   : 'Expires in ${countdownText(flow.secondsLeft)}',
               key: const ValueKey('pair-countdown'),
-              style: ts(theme.typeScale.ui, theme.muted),
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ],
         ),
         const Gap(Space.md),
         Text(
           'Address in the QR code and the code',
-          style: ts(theme.typeScale.uiSmall, theme.muted),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
         ),
         Text(
           offer.address,
           key: const ValueKey('pair-address'),
-          style: ts(theme.typeScale.uiSmall, theme.ink, mono: true),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.ink,
+            mono: true,
+            weight: Weight.regular,
+          ),
         ),
       ],
     );
@@ -421,7 +456,11 @@ class PairDialog extends StatelessWidget {
         Text(
           'On the new device, choose Add a host, then scan the QR code or '
           'paste the pairing link. The code works once.',
-          style: ts(theme.typeScale.uiSmall, theme.muted),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
         ),
         if (onCopy != null) ...[
           const Gap(Space.md),
@@ -446,7 +485,11 @@ class PairDialog extends StatelessWidget {
                   Flexible(
                     child: Text(
                       'Waiting for the new device',
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                      style: ts(
+                        theme.typeScale.uiSmall,
+                        theme.muted,
+                        weight: Weight.regular,
+                      ),
                     ),
                   ),
                 ],
@@ -495,7 +538,7 @@ class PairDialog extends StatelessWidget {
                 style: ts(
                   theme.typeScale.display,
                   theme.ink,
-                  weight: Weight.semibold,
+                  weight: Weight.strong,
                   mono: true,
                 ),
               ),
@@ -505,7 +548,11 @@ class PairDialog extends StatelessWidget {
         Text(
           "If the numbers differ, someone else may be using the code. Choose "
           "They don't match; the code is cancelled.",
-          style: ts(theme.typeScale.uiSmall, theme.muted),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
         ),
         const Gap(Space.lg),
         _DeviceNameField(flow: flow),

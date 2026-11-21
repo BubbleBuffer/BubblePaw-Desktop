@@ -309,7 +309,7 @@ class _McpServerDialogState extends State<McpServerDialog> {
                       style: ts(
                         theme.typeScale.h2,
                         theme.ink,
-                        weight: Weight.semibold,
+                        weight: Weight.strong,
                       ),
                     ),
                   ),
@@ -574,7 +574,11 @@ class _McpServerDialogState extends State<McpServerDialog> {
                 padding: const EdgeInsets.only(top: Space.xs),
                 child: Text(
                   'Sign in from the server’s row.',
-                  style: ts(theme.typeScale.uiSmall, theme.muted),
+                  style: ts(
+                    theme.typeScale.uiSmall,
+                    theme.muted,
+                    weight: Weight.regular,
+                  ),
                 ),
               ),
           ],
@@ -676,7 +680,7 @@ class _Labeled extends StatelessWidget {
             style: ts(
               theme.typeScale.uiSmall,
               theme.ink,
-              weight: Weight.semibold,
+              weight: Weight.strong,
             ),
           ),
           if (hint != null)
@@ -684,7 +688,11 @@ class _Labeled extends StatelessWidget {
               padding: const EdgeInsets.only(top: Space.hair),
               child: Text(
                 hint!,
-                style: ts(theme.typeScale.uiSmall, theme.muted),
+                style: ts(
+                  theme.typeScale.uiSmall,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
           const Gap(Space.xs),
@@ -749,7 +757,12 @@ class _TextBoxState extends State<_TextBox> {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    final style = ts(theme.typeScale.ui, theme.ink, mono: widget.mono);
+    final style = ts(
+      theme.typeScale.ui,
+      theme.ink,
+      mono: widget.mono,
+      weight: widget.mono ? Weight.regular : null,
+    );
     final field = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.readOnly ? null : _focus.requestFocus,

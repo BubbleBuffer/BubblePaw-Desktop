@@ -35,7 +35,7 @@ class LabeledField extends StatelessWidget {
             style: ts(
               theme.typeScale.uiSmall,
               theme.ink,
-              weight: Weight.semibold,
+              weight: Weight.strong,
             ),
           ),
           if (hint != null)
@@ -43,7 +43,11 @@ class LabeledField extends StatelessWidget {
               padding: const EdgeInsets.only(top: Space.hair),
               child: Text(
                 hint!,
-                style: ts(theme.typeScale.uiSmall, theme.muted),
+                style: ts(
+                  theme.typeScale.uiSmall,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
           const Gap(Space.xs),
@@ -124,7 +128,12 @@ class _TextBoxState extends State<TextBox> {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    final style = ts(theme.typeScale.ui, theme.ink, mono: widget.mono);
+    final style = ts(
+      theme.typeScale.ui,
+      theme.ink,
+      mono: widget.mono,
+      weight: widget.mono ? Weight.regular : null,
+    );
     final field = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.readOnly ? null : _focus.requestFocus,
@@ -178,7 +187,12 @@ class _TextBoxState extends State<TextBox> {
                   padding: const EdgeInsets.only(left: Space.xs),
                   child: Text(
                     widget.suffix!,
-                    style: ts(theme.typeScale.ui, theme.muted, mono: true),
+                    style: ts(
+                      theme.typeScale.ui,
+                      theme.muted,
+                      mono: true,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ),
             ],

@@ -36,14 +36,19 @@ class DiffReview extends StatelessWidget {
                     style: ts(
                       theme.typeScale.ui,
                       theme.ink,
-                      weight: Weight.semibold,
+                      weight: Weight.strong,
                     ),
                   ),
                 ),
                 const Gap(Space.sm),
                 Text(
                   '+${diff.added} −${diff.removed}',
-                  style: ts(theme.typeScale.uiSmall, theme.muted, mono: true),
+                  style: ts(
+                    theme.typeScale.uiSmall,
+                    theme.muted,
+                    mono: true,
+                    weight: Weight.regular,
+                  ),
                 ),
                 const Gap(Space.sm),
                 TextBtn(

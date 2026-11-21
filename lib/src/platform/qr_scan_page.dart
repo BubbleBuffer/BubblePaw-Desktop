@@ -69,7 +69,7 @@ class _QrScanPageState extends State<_QrScanPage> {
                       style: ts(
                         theme.typeScale.h2,
                         theme.ink,
-                        weight: Weight.semibold,
+                        weight: Weight.strong,
                       ),
                     ),
                   ),
@@ -92,7 +92,11 @@ class _QrScanPageState extends State<_QrScanPage> {
               ),
               child: Text(
                 'Point the camera at the code shown by the host.',
-                style: ts(theme.typeScale.ui, theme.muted),
+                style: ts(
+                  theme.typeScale.ui,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
             Expanded(
@@ -110,7 +114,11 @@ class _QrScanPageState extends State<_QrScanPage> {
                           'The camera is not available. Paste the pairing '
                           'link instead.',
                           textAlign: TextAlign.center,
-                          style: ts(theme.typeScale.ui, theme.muted),
+                          style: ts(
+                            theme.typeScale.ui,
+                            theme.muted,
+                            weight: Weight.regular,
+                          ),
                         ),
                       ),
                     ),

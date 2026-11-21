@@ -75,11 +75,7 @@ class FbButton extends StatelessWidget {
               ],
               Text(
                 label,
-                style: ts(
-                  theme.typeScale.ui,
-                  ink,
-                  weight: primary ? Weight.bold : Weight.semibold,
-                ),
+                style: ts(theme.typeScale.ui, ink, weight: Weight.strong),
               ),
             ],
           ),
@@ -172,18 +168,18 @@ class DisclosureRow extends StatelessWidget {
               const Gap(Space.sm),
               Text(
                 title,
-                style: ts(
-                  theme.typeScale.ui,
-                  theme.ink,
-                  weight: Weight.semibold,
-                ),
+                style: ts(theme.typeScale.ui, theme.ink, weight: Weight.strong),
               ),
               const Spacer(),
               Flexible(
                 child: Text(
                   summary,
                   overflow: TextOverflow.ellipsis,
-                  style: ts(theme.typeScale.uiSmall, theme.muted),
+                  style: ts(
+                    theme.typeScale.uiSmall,
+                    theme.muted,
+                    weight: Weight.regular,
+                  ),
                 ),
               ),
             ],
@@ -210,7 +206,12 @@ class FbCodeBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    final base = ts(theme.typeScale.uiSmall, theme.codeInk, mono: true);
+    final base = ts(
+      theme.typeScale.uiSmall,
+      theme.codeInk,
+      mono: true,
+      weight: Weight.regular,
+    );
     final mark = base.copyWith(
       backgroundColor: theme.attention,
       color: theme.attentionInk,

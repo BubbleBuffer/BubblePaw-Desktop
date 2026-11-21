@@ -123,7 +123,7 @@ class RailLabel extends StatelessWidget {
             style: ts(
               theme.typeScale.uiSmall,
               theme.railMuted,
-              weight: Weight.bold,
+              weight: Weight.strong,
             ),
           ),
           if (count != null) ...[
@@ -133,7 +133,7 @@ class RailLabel extends StatelessWidget {
               style: ts(
                 theme.typeScale.uiSmall,
                 theme.attentionInk,
-                weight: Weight.bold,
+                weight: Weight.strong,
               ),
             ),
           ],
@@ -180,7 +180,7 @@ class RailChatRow extends StatelessWidget {
     final style = ts(
       theme.typeScale.ui,
       theme.railInk.withValues(alpha: selected ? 1 : Alpha.strong),
-      weight: selected ? Weight.bold : Weight.medium,
+      weight: selected ? Weight.strong : Weight.regular,
     );
     final typed = highlight;
     if (typed == null) {
@@ -263,6 +263,7 @@ class RailChatRow extends StatelessWidget {
                                 theme.typeScale.caption,
                                 theme.railMuted,
                                 mono: true,
+                                weight: Weight.regular,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -350,7 +351,7 @@ class RailMoreRow extends StatelessWidget {
             style: ts(
               theme.typeScale.ui,
               failed ? theme.dangerInk : theme.railMuted,
-              weight: Weight.medium,
+              weight: Weight.strong,
             ),
           ),
         ),
@@ -374,7 +375,7 @@ class ChatSearchBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    final style = ts(theme.typeScale.ui, theme.railInk, weight: Weight.medium);
+    final style = ts(theme.typeScale.ui, theme.railInk, weight: Weight.strong);
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.escape): () {
@@ -452,6 +453,7 @@ class ChatSearchBox extends StatelessWidget {
                             theme.typeScale.codeSmall,
                             theme.railMuted,
                             mono: true,
+                            weight: Weight.regular,
                           ),
                         ),
                     ],
@@ -538,14 +540,22 @@ class SearchNote extends StatelessWidget {
           children: [
             Text(
               title,
-              style: ts(theme.typeScale.ui, theme.railInk, weight: Weight.bold),
+              style: ts(
+                theme.typeScale.ui,
+                theme.railInk,
+                weight: Weight.strong,
+              ),
             ),
             if (body.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: Space.hair),
                 child: Text(
                   body,
-                  style: ts(theme.typeScale.ui, theme.railMuted),
+                  style: ts(
+                    theme.typeScale.ui,
+                    theme.railMuted,
+                    weight: Weight.regular,
+                  ),
                 ),
               ),
             if (label != null)
@@ -572,7 +582,7 @@ class SearchNote extends StatelessWidget {
                       style: ts(
                         theme.typeScale.ui,
                         theme.railInk,
-                        weight: Weight.semibold,
+                        weight: Weight.strong,
                       ),
                     ),
                   ),

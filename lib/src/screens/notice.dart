@@ -38,7 +38,7 @@ class Notice extends StatelessWidget {
                     style: ts(
                       theme.typeScale.h2,
                       theme.ink,
-                      weight: Weight.semibold,
+                      weight: Weight.strong,
                     ),
                   ),
                   const Gap(Space.sm),

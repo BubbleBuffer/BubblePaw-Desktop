@@ -364,6 +364,7 @@ class _PickerChip extends StatelessWidget {
                         theme.typeScale.uiSmall,
                         theme.railInk,
                         mono: true,
+                        weight: Weight.regular,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -478,7 +479,12 @@ class _PickerItem extends StatelessWidget {
               Expanded(
                 child: Text(
                   name,
-                  style: ts(theme.typeScale.uiSmall, theme.railInk, mono: true),
+                  style: ts(
+                    theme.typeScale.uiSmall,
+                    theme.railInk,
+                    mono: true,
+                    weight: Weight.regular,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -567,7 +573,7 @@ class _GroupHead extends StatelessWidget {
                               style: ts(
                                 theme.typeScale.ui,
                                 theme.railInk,
-                                weight: Weight.bold,
+                                weight: Weight.strong,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -585,7 +591,7 @@ class _GroupHead extends StatelessWidget {
                               group.active
                                   ? theme.constructiveInk
                                   : theme.railMuted,
-                              weight: Weight.semibold,
+                              weight: Weight.strong,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -696,7 +702,7 @@ class _HostButton extends StatelessWidget {
                           style: ts(
                             theme.typeScale.uiSmall,
                             theme.constructiveInk,
-                            weight: Weight.semibold,
+                            weight: Weight.strong,
                           ),
                         ),
                       ],
@@ -706,7 +712,7 @@ class _HostButton extends StatelessWidget {
                       style: ts(
                         theme.typeScale.ui,
                         theme.railInk,
-                        weight: Weight.bold,
+                        weight: Weight.strong,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -764,7 +770,7 @@ class _SettingsLink extends StatelessWidget {
                 style: ts(
                   theme.typeScale.ui,
                   theme.railMuted,
-                  weight: Weight.medium,
+                  weight: Weight.strong,
                 ),
               ),
             ],

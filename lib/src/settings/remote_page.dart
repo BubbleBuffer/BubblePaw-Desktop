@@ -170,7 +170,11 @@ class _RemotePageState extends State<RemotePage> {
             const Gap(Space.sm),
             Text(
               'Loading remote access…',
-              style: ts(context.bb.typeScale.ui, context.bb.muted),
+              style: ts(
+                context.bb.typeScale.ui,
+                context.bb.muted,
+                weight: Weight.regular,
+              ),
             ),
           ],
         ),
@@ -387,7 +391,11 @@ class _RemotePageState extends State<RemotePage> {
                         : 'Traffic is end-to-end encrypted between paired '
                               'devices. Cloudflare sees only encrypted data.',
                     key: const ValueKey('remote-consequence'),
-                    style: ts(theme.typeScale.uiSmall, theme.muted),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ),
               ],
@@ -427,7 +435,11 @@ class _RemotePageState extends State<RemotePage> {
             Expanded(
               child: Text(
                 'Waiting for you to finish signing in in the browser.',
-                style: ts(theme.typeScale.uiSmall, theme.muted),
+                style: ts(
+                  theme.typeScale.uiSmall,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
             ActionButton(
@@ -562,7 +574,11 @@ class _RemotePageState extends State<RemotePage> {
             'Not signed in to Cloudflare. The tunnel cannot start until you '
             'sign in.',
             key: const ValueKey('cf-signed-out'),
-            style: ts(theme.typeScale.uiSmall, theme.muted),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.muted,
+              weight: Weight.regular,
+            ),
           ),
           const Gap(Space.sm),
           Wrap(
@@ -588,7 +604,11 @@ class _RemotePageState extends State<RemotePage> {
           const Gap(Space.xs),
           Text(
             'Sign in opens your browser.',
-            style: ts(theme.typeScale.uiSmall, theme.muted),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.muted,
+              weight: Weight.regular,
+            ),
           ),
         ],
       ),
@@ -648,7 +668,11 @@ class _RemotePageState extends State<RemotePage> {
                   padding: const EdgeInsets.only(top: Space.xxs),
                   child: Text(
                     relay ? 'Relay' : 'Tunnel',
-                    style: ts(theme.typeScale.ui, theme.muted),
+                    style: ts(
+                      theme.typeScale.ui,
+                      theme.muted,
+                      weight: Weight.regular,
+                    ),
                   ),
                 ),
               ),
@@ -667,7 +691,11 @@ class _RemotePageState extends State<RemotePage> {
                         child: Text(
                           why,
                           key: const ValueKey('remote-why'),
-                          style: ts(theme.typeScale.uiSmall, theme.muted),
+                          style: ts(
+                            theme.typeScale.uiSmall,
+                            theme.muted,
+                            weight: Weight.regular,
+                          ),
                         ),
                       ),
                   ],
@@ -741,7 +769,11 @@ class _RemotePageState extends State<RemotePage> {
           intro: Text(
             "Download comes from Cloudflare's GitHub releases and is "
             'checked against its published checksum.',
-            style: ts(theme.typeScale.uiSmall, theme.muted),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.muted,
+              weight: Weight.regular,
+            ),
           ),
           download: Opacity(
             opacity: r.installing ? Alpha.muted : 1,
@@ -866,7 +898,11 @@ class _RemotePageState extends State<RemotePage> {
               child: Text(
                 'Restart sharing to run the new cloudflared.',
                 key: const ValueKey('cloudflared-restart'),
-                style: ts(theme.typeScale.uiSmall, theme.muted),
+                style: ts(
+                  theme.typeScale.uiSmall,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
           if (intro != null && buttons.isNotEmpty) const Gap(Space.sm),
@@ -916,7 +952,11 @@ class _RemotePageState extends State<RemotePage> {
               'No paired devices. Pair a device to open this computer from a '
               'phone or laptop.',
               key: const ValueKey('remote-no-devices'),
-              style: ts(theme.typeScale.ui, theme.muted),
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -943,7 +983,11 @@ class _RemotePageState extends State<RemotePage> {
                               ),
                               Text(
                                 lastSeenText(now, d.lastSeen),
-                                style: ts(theme.typeScale.uiSmall, theme.muted),
+                                style: ts(
+                                  theme.typeScale.uiSmall,
+                                  theme.muted,
+                                  weight: Weight.regular,
+                                ),
                               ),
                               if (d.egress)
                                 Text(
@@ -952,6 +996,7 @@ class _RemotePageState extends State<RemotePage> {
                                   style: ts(
                                     theme.typeScale.uiSmall,
                                     theme.muted,
+                                    weight: Weight.regular,
                                   ),
                                 ),
                             ],
@@ -1014,7 +1059,7 @@ class _Section extends StatelessWidget {
                     style: ts(
                       theme.typeScale.h2,
                       theme.ink,
-                      weight: Weight.semibold,
+                      weight: Weight.strong,
                     ),
                   ),
                 ),
@@ -1069,7 +1114,14 @@ class _Tag extends StatelessWidget {
           horizontal: Space.xs,
           vertical: Space.hair,
         ),
-        child: Text(text, style: ts(theme.typeScale.uiSmall, theme.muted)),
+        child: Text(
+          text,
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
+        ),
       ),
     );
   }

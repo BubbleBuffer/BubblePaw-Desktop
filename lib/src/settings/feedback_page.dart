@@ -56,13 +56,18 @@ class FeedbackPage extends StatelessWidget {
           Text(
             'Reports are plain files, so you or an agent can read them. '
             'Nothing is uploaded.',
-            style: ts(theme.typeScale.ui, theme.muted),
+            style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
           ),
           const Gap(Space.xxs),
           Text(
             feedback.location,
             key: const ValueKey('feedback-path'),
-            style: ts(theme.typeScale.uiSmall, theme.muted, mono: true),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.muted,
+              mono: true,
+              weight: Weight.regular,
+            ),
           ),
           const Gap(Space.md),
           if (compact) ...[
@@ -136,18 +141,18 @@ class _Empty extends StatelessWidget {
             const Gap(Space.sm),
             Text(
               'No feedback saved',
-              style: ts(
-                theme.typeScale.body,
-                theme.ink,
-                weight: Weight.semibold,
-              ),
+              style: ts(theme.typeScale.body, theme.ink, weight: Weight.strong),
             ),
             const Gap(Space.xxs),
             Text(
               'Send feedback saves a report on this computer: your text, a '
               'screenshot and diagnostics. Press Ctrl+Shift+F in any window.',
               textAlign: TextAlign.center,
-              style: ts(theme.typeScale.ui, theme.muted),
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
             const Gap(Space.md),
             FbButton(
@@ -205,7 +210,14 @@ class _ReportRow extends StatelessWidget {
         children: [
           glyphIcon(glyph, size: IconSize.xs, color: theme.muted),
           const Gap(Space.xxs),
-          Text(label, style: ts(theme.typeScale.uiSmall, theme.muted)),
+          Text(
+            label,
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.muted,
+              weight: Weight.regular,
+            ),
+          ),
         ],
       ),
     );
@@ -214,7 +226,12 @@ class _ReportRow extends StatelessWidget {
       children: [
         Text(
           reportStamp(entry.id),
-          style: ts(theme.typeScale.uiSmall, theme.muted, mono: true),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            mono: true,
+            weight: Weight.regular,
+          ),
         ),
         if (entry.hasScreenshot) indicator(glyphImage, 'Screenshot'),
         if (entry.hasChat) indicator(glyphMessagesSquare, 'Chat'),
@@ -225,7 +242,11 @@ class _ReportRow extends StatelessWidget {
               liveRegion: true,
               child: Text(
                 'Copied as Markdown',
-                style: ts(theme.typeScale.uiSmall, theme.muted),
+                style: ts(
+                  theme.typeScale.uiSmall,
+                  theme.muted,
+                  weight: Weight.regular,
+                ),
               ),
             ),
           ),

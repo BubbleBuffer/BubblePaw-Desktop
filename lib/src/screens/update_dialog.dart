@@ -95,7 +95,7 @@ class UpdateDialog extends StatelessWidget {
                                       style: ts(
                                         theme.typeScale.h2,
                                         theme.ink,
-                                        weight: Weight.semibold,
+                                        weight: Weight.strong,
                                       ),
                                     ),
                                   ),
@@ -133,8 +133,11 @@ class UpdateDialog extends StatelessWidget {
     );
   }
 
-  TextStyle _hint(BuildContext context) =>
-      ts(context.bb.typeScale.uiSmall, context.bb.muted);
+  TextStyle _hint(BuildContext context) => ts(
+    context.bb.typeScale.uiSmall,
+    context.bb.muted,
+    weight: Weight.regular,
+  );
 
   _Spec _available(BuildContext context) {
     final theme = context.bb;
@@ -202,7 +205,14 @@ class UpdateDialog extends StatelessWidget {
                 style: ts(theme.typeScale.ui, theme.ink),
               ),
             ),
-            Text(percent, style: ts(theme.typeScale.ui, theme.muted)),
+            Text(
+              percent,
+              style: ts(
+                theme.typeScale.ui,
+                theme.muted,
+                weight: Weight.regular,
+              ),
+            ),
           ],
         ),
         const Gap(Space.md),
@@ -245,7 +255,12 @@ class UpdateDialog extends StatelessWidget {
           Text(
             phase.file.path,
             key: const ValueKey('update-path'),
-            style: ts(theme.typeScale.ui, theme.ink, mono: true),
+            style: ts(
+              theme.typeScale.ui,
+              theme.ink,
+              mono: true,
+              weight: Weight.regular,
+            ),
           ),
           const Gap(Space.md),
           Text(
@@ -375,7 +390,11 @@ class UpdateDialog extends StatelessWidget {
         Text(
           'Check the connection, then retry. Retry starts the download '
           'again.',
-          style: ts(theme.typeScale.uiSmall, theme.muted),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
         ),
       ],
       actions: actions,

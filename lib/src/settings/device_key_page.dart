@@ -278,7 +278,11 @@ class _ExportDialogState extends State<_ExportDialog> {
           Text(
             'The file cannot be opened without its passphrase, and the '
             'passphrase cannot be recovered.',
-            style: ts(theme.typeScale.uiSmall, theme.muted),
+            style: ts(
+              theme.typeScale.uiSmall,
+              theme.muted,
+              weight: Weight.regular,
+            ),
           ),
         ],
         footer: dialogFooter([
@@ -464,7 +468,12 @@ class _ImportDialogState extends State<_ImportDialog> {
                   _file ?? 'No file chosen',
                   key: const ValueKey('import-file'),
                   overflow: TextOverflow.ellipsis,
-                  style: ts(theme.typeScale.uiSmall, theme.ink, mono: true),
+                  style: ts(
+                    theme.typeScale.uiSmall,
+                    theme.ink,
+                    mono: true,
+                    weight: Weight.regular,
+                  ),
                 ),
               ),
               const Gap(Space.sm),

@@ -392,7 +392,10 @@ class _Note extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.bb;
-    return Text(text, style: ts(theme.typeScale.ui, theme.muted));
+    return Text(
+      text,
+      style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
+    );
   }
 }
 
@@ -482,7 +485,11 @@ class _Providers extends StatelessWidget {
                     'New runs keep using this model until the host reloads.'
               : 'New runs in every chat use this model. A run in progress '
                     'keeps its own.',
-          style: ts(theme.typeScale.uiSmall, theme.muted),
+          style: ts(
+            theme.typeScale.uiSmall,
+            theme.muted,
+            weight: Weight.regular,
+          ),
         ),
         const Gap(Space.xs),
         Text(
@@ -500,7 +507,11 @@ class _Providers extends StatelessWidget {
             child: Text(
               'Saved as $restartModel. Applies after restart.',
               key: const ValueKey('provider-restart'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         if (pending)
@@ -509,7 +520,11 @@ class _Providers extends StatelessWidget {
             child: Text(
               'Saved as ${setup.main}.',
               key: const ValueKey('provider-saved'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         const SettingsHeading('Providers', top: Space.xl),
@@ -518,7 +533,7 @@ class _Providers extends StatelessWidget {
             'No providers are configured on this host. Add one to the host '
             'configuration, then reload it.',
             key: const ValueKey('provider-empty'),
-            style: ts(theme.typeScale.ui, theme.muted),
+            style: ts(theme.typeScale.ui, theme.muted, weight: Weight.regular),
           ),
         if (keysUnsupported && setup.providers.any((p) => p.keyEnv != null))
           Padding(
@@ -527,7 +542,11 @@ class _Providers extends StatelessWidget {
               'This host does not manage provider keys. Update BubblePaw '
               'Core to v0.13.0 or later to add them here.',
               key: const ValueKey('provider-keys-unsupported'),
-              style: ts(theme.typeScale.uiSmall, theme.muted),
+              style: ts(
+                theme.typeScale.uiSmall,
+                theme.muted,
+                weight: Weight.regular,
+              ),
             ),
           ),
         for (final provider in setup.providers)
@@ -634,7 +653,7 @@ class _ProviderCard extends StatelessWidget {
                       style: ts(
                         theme.typeScale.ui,
                         theme.ink,
-                        weight: Weight.bold,
+                        weight: Weight.strong,
                       ),
                     ),
                     Text(
@@ -643,6 +662,7 @@ class _ProviderCard extends StatelessWidget {
                         theme.typeScale.uiSmall,
                         theme.faint,
                         mono: true,
+                        weight: Weight.regular,
                       ),
                     ),
                   ],
@@ -650,7 +670,12 @@ class _ProviderCard extends StatelessWidget {
                 if (provider.baseUrl != null)
                   Text(
                     provider.baseUrl!,
-                    style: ts(theme.typeScale.uiSmall, theme.faint, mono: true),
+                    style: ts(
+                      theme.typeScale.uiSmall,
+                      theme.faint,
+                      mono: true,
+                      weight: Weight.regular,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -686,7 +711,11 @@ class _ProviderCard extends StatelessWidget {
                     padding: const EdgeInsets.only(top: Space.xxs),
                     child: Text(
                       'This provider lists no models.',
-                      style: ts(theme.typeScale.uiSmall, theme.muted),
+                      style: ts(
+                        theme.typeScale.uiSmall,
+                        theme.muted,
+                        weight: Weight.regular,
+                      ),
                     ),
                   ),
               ],
@@ -738,7 +767,10 @@ class _Hint extends StatelessWidget {
     final theme = context.bb;
     return Padding(
       padding: const EdgeInsets.only(top: Space.xxs),
-      child: Text(text, style: ts(theme.typeScale.uiSmall, theme.muted)),
+      child: Text(
+        text,
+        style: ts(theme.typeScale.uiSmall, theme.muted, weight: Weight.regular),
+      ),
     );
   }
 }
@@ -773,7 +805,7 @@ class _ViaPicker extends StatelessWidget {
     if (!hosts.loaded) {
       body = Text(
         'Loading hosts…',
-        style: ts(theme.typeScale.uiSmall, theme.muted),
+        style: ts(theme.typeScale.uiSmall, theme.muted, weight: Weight.regular),
       );
     } else if (hosts.error != null) {
       body = Text(
@@ -840,7 +872,7 @@ class _ViaPicker extends StatelessWidget {
               style: ts(
                 theme.typeScale.uiSmall,
                 theme.muted,
-                weight: Weight.semibold,
+                weight: Weight.strong,
               ),
             ),
           ),
@@ -937,7 +969,12 @@ class _ModelRowState extends State<_ModelRow> {
               Expanded(
                 child: Text(
                   widget.label,
-                  style: ts(theme.typeScale.ui, theme.ink, mono: true),
+                  style: ts(
+                    theme.typeScale.ui,
+                    theme.ink,
+                    mono: true,
+                    weight: Weight.regular,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
