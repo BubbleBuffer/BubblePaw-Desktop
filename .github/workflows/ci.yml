@@ -66,6 +66,7 @@ jobs:
         with:
           name: golden-failures
           path: test/failures
+          retention-days: 3
           if-no-files-found: ignore
       - name: native crate (fmt, clippy, tests)
         if: always()
@@ -225,6 +226,7 @@ jobs:
         with:
           name: bubblepaw-phone-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 3
           if-no-files-found: error
 
   android-smoke:
