@@ -12,17 +12,17 @@ dependencies:
   agent_kit:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: f6d0c374f2092d5c679395ed5be1a3bc91405eb7 # v0.21.0
+      ref: bee0480d7552dbf850253164232bf31f4afbb373 # v0.21.1
       path: packages/agent_kit
   agent_kit_core:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: f6d0c374f2092d5c679395ed5be1a3bc91405eb7 # v0.21.0
+      ref: bee0480d7552dbf850253164232bf31f4afbb373 # v0.21.1
       path: packages/agent_kit_core
   agent_kit_bubblepaw:
     git:
       url: https://github.com/BubbleBuffer/agent-kit
-      ref: f6d0c374f2092d5c679395ed5be1a3bc91405eb7 # v0.21.0
+      ref: bee0480d7552dbf850253164232bf31f4afbb373 # v0.21.1
       path: packages/agent_kit_bubblepaw
   # Same pin as the kit's own, so the primitives come from one place.
   bb_ui:

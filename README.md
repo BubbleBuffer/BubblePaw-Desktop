@@ -38,10 +38,10 @@ flowchart LR
 | Package | Path | What it does |
 | --- | --- | --- |
 | `bubblepaw_desktop` | [`lib/`](lib) | The desktop app shell for BubblePaw on the agent kit: the host's lifetime, settings, tray, feedback, updates |
-| `agent_kit` | [`packages/agent_kit`](https://github.com/BubbleBuffer/agent-kit/tree/f6d0c374f2092d5c679395ed5be1a3bc91405eb7/packages/agent_kit) | Flutter widgets for the agent kit: theme, status, transcript, composer, chrome, workspace |
+| `agent_kit` | [`packages/agent_kit`](https://github.com/BubbleBuffer/agent-kit/tree/bee0480d7552dbf850253164232bf31f4afbb373/packages/agent_kit) | Flutter widgets for the agent kit: theme, status, transcript, composer, chrome, workspace |
 | `bubblepaw_desktop_native` | [`native/`](native) | Rust crate on `bubblepaw-sdk` (Core `v0.13.0`): open, call, notifications and close, as JSON-RPC text. [`rust_builder/`](rust_builder) is the Cargokit glue that builds it with the app |
-| `agent_kit_core` | [`packages/agent_kit_core`](https://github.com/BubbleBuffer/agent-kit/tree/f6d0c374f2092d5c679395ed5be1a3bc91405eb7/packages/agent_kit_core) | Pure Dart agent UI core: view models, the `AgentBackend` port, the event reducer and a scripted fake backend |
-| `agent_kit_bubblepaw` | [`packages/agent_kit_bubblepaw`](https://github.com/BubbleBuffer/agent-kit/tree/f6d0c374f2092d5c679395ed5be1a3bc91405eb7/packages/agent_kit_bubblepaw) | Pure Dart BubblePaw stdio JSON-RPC backend for the agent kit |
+| `agent_kit_core` | [`packages/agent_kit_core`](https://github.com/BubbleBuffer/agent-kit/tree/bee0480d7552dbf850253164232bf31f4afbb373/packages/agent_kit_core) | Pure Dart agent UI core: view models, the `AgentBackend` port, the event reducer and a scripted fake backend |
+| `agent_kit_bubblepaw` | [`packages/agent_kit_bubblepaw`](https://github.com/BubbleBuffer/agent-kit/tree/bee0480d7552dbf850253164232bf31f4afbb373/packages/agent_kit_bubblepaw) | Pure Dart BubblePaw stdio JSON-RPC backend for the agent kit |
 | `bb_ui` | [`packages/bb_ui`](https://github.com/BubbleBuffer/bb-ui/tree/012d9f283b8378fb7197c6238e7068dfd3205c30/packages/bb_ui) | BubbleBuffer UI primitives for Flutter without Material |
 
 ## Build

@@ -21,7 +21,7 @@ DesktopIntegration   tray menu, close-to-tray, login entry (lib/src/platform/)
 ## Dependencies
 
 `agent_kit`, `agent_kit_core` and `agent_kit_bubblepaw` come from
-`BubbleBuffer/agent-kit` at a commit hash (currently 0.21.0, `f6d0c37`). The ref is the commit hash
+`BubbleBuffer/agent-kit` at a commit hash (currently 0.21.1, `bee0480`). The ref is the commit hash
 because the kit's packages depend on each other by path inside that repository,
 and pub resolves those to the hash; a tag in the app would conflict with it.
 v0.15.2 added `BubblePawBackend.connectionLost` (idle exit detection); v0.15.3
