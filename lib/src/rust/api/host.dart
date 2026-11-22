@@ -9,7 +9,7 @@ import 'hosts.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `current`, `plain`, `register_share`, `wrap`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`, `from`, `from`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `open_with`, `subscribe`
 
 /// The Core release this build embeds, such as `0.7.3`.
