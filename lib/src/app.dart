@@ -35,6 +35,7 @@ import 'screens/notice.dart';
 import 'screens/phone_home.dart';
 import 'screens/saved_notice.dart';
 import 'screens/tray_notice.dart';
+import 'screens/trust_notice.dart';
 import 'screens/update_dialog.dart';
 import 'screens/workspace_menu.dart';
 import 'settings/licences_page.dart';
@@ -204,7 +205,11 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) => RepaintBoundary(
     key: _root,
     child: ListenableBuilder(
-      listenable: Listenable.merge([controller, feedback]),
+      listenable: Listenable.merge([
+        controller,
+        feedback,
+        if (controller.trust != null) controller.trust!,
+      ]),
       builder: (context, _) => Stack(
         children: [
           Positioned.fill(child: _screen(context)),
@@ -212,6 +217,7 @@ class _AppShellState extends State<AppShell> {
           // each as tall as its text needs. Bounded on both sides, so a long
           // message wraps on a phone.
           if (controller.trayNoticePending ||
+              controller.trust?.pending != null ||
               controller.needsSetupPending ||
               feedback.savedId != null ||
               controller.openError != null)
@@ -239,6 +245,15 @@ class _AppShellState extends State<AppShell> {
                     NeedsSetupNotice(
                       onOpenModels: controller.openModelsFromNotice,
                       onDismiss: controller.dismissNeedsSetup,
+                    ),
+                  if (controller.trust?.pending case final pending?)
+                    TrustNotice(
+                      workspace: pending,
+                      busy: controller.trust!.busy(pending.path),
+                      error: controller.trust!.error,
+                      onTrust: () =>
+                          unawaited(controller.trust!.trustPending()),
+                      onDismiss: controller.trust!.dismiss,
                     ),
                   if (controller.trayNoticePending)
                     TrayNotice(onDismiss: controller.dismissTrayNotice),

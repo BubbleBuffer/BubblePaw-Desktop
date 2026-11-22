@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 
 import 'config.dart';
 import 'core/host_settings.dart';
+import 'core/workspace_trust.dart';
 import 'feedback/log_buffer.dart';
 import 'core/ffi_transport.dart';
 import 'guarded_backend.dart';
@@ -38,6 +39,7 @@ class StartedBackend {
     this.attached = false,
     this.version,
     this.settings,
+    this.trust,
     this.remote,
     this.remoteRows,
     this.searchChats,
@@ -61,6 +63,10 @@ class StartedBackend {
   /// The host's settings (config.get and config.set); null when the backend
   /// has none, as the scripted one.
   final HostSettings? settings;
+
+  /// This computer's workspace trust (`workspace_trust.*`); null for a saved
+  /// host, which never decides trust, and for the scripted backend.
+  final WorkspaceTrustHost? trust;
 
   /// Builds the sharing side of the embedded host for a device name; null
   /// when the host is attached, scripted or not embedded.
@@ -173,6 +179,10 @@ Future<StartedBackend> startBubblePaw(
       transport,
       rawRequest: transport.rawRequest,
     ),
+    trust: TransportWorkspaceTrust(
+      rawRequest: transport.rawRequest,
+      notifications: transport.notifications,
+    ),
     remote: _remoteFactory(transport, config),
     searchChats: searcher.canSearchTitles ? searcher.searchChats : null,
     chatWorkspace: rows.workspaceOf,
@@ -269,6 +279,7 @@ class HostController extends ChangeNotifier {
   HostFailure? _failure;
   GuardedBackend? _backend;
   HostSettings? _settings;
+  WorkspaceTrustController? _trust;
   RemoteController? _remote;
   Stream<ChatSummary>? _createdChats;
   DateTime? _now;
@@ -409,6 +420,14 @@ class HostController extends ChangeNotifier {
   /// The backend the workbench draws: the open remote host's, or this
   /// computer's.
   GuardedBackend? get backend => _remoteBackend ?? _backend;
+
+  /// This computer's workspace trust; null while its host is not running.
+  WorkspaceTrustController? get trust => _trust;
+
+  void _dropTrust() {
+    _trust?.dispose();
+    _trust = null;
+  }
 
   /// The running host's settings, or null when the backend has none. A
   /// remote host's own settings while it is open.
@@ -761,6 +780,8 @@ class HostController extends ChangeNotifier {
     _now = started.now;
     _attached = started.attached;
     _settings = started.settings;
+    final trust = started.trust;
+    _trust = trust == null ? null : WorkspaceTrustController(trust);
     _remote = _buildRemote(started.remote, started.settings);
     _backend = GuardedBackend(
       started.backend,
@@ -831,6 +852,7 @@ class HostController extends ChangeNotifier {
     final dispose = _dispose;
     _backend = null;
     _settings = null;
+    _dropTrust();
     _localSearch = null;
     _localWorkspaceOf = null;
     _openChat = null;
@@ -863,6 +885,7 @@ class HostController extends ChangeNotifier {
     _backend?.closing();
     _backend = null;
     _settings = null;
+    _dropTrust();
     _localSearch = null;
     _localWorkspaceOf = null;
     _openChat = null;

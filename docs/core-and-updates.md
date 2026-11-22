@@ -4,7 +4,7 @@ Core is part of the app, on purpose. If the UI dies, the agents stop with it, be
 the user could not otherwise tell they were still running. With "Keep running in the
 tray" on, closing the window keeps the app and the agents running in the tray. `native/`
 is a Rust crate (`bubblepaw_desktop_native`) that
-depends on `bubblepaw-sdk` at Core tag `v0.7.3`; flutter_rust_bridge exposes it to Dart.
+depends on `bubblepaw-sdk` at Core tag `v0.15.0`; flutter_rust_bridge exposes it to Dart.
 The app also checks for new versions of itself. Code: `native/`, `rust_builder/`,
 `lib/src/rust/` (generated), `lib/src/core/ffi_transport.dart`, `lib/src/updates/`,
 `lib/src/platform/download.dart`, `lib/src/semver.dart`.
