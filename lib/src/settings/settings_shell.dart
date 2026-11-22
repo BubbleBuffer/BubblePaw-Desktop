@@ -189,6 +189,7 @@ class _SettingsShellState extends State<SettingsShell> {
       widget.phone ? _live[section] : 'Servers and sign-in',
     SettingsSection.skills =>
       widget.phone ? _live[section] : 'Discovered skills',
+    SettingsSection.trust => 'Trusted workspaces',
     SettingsSection.remote =>
       widget.phone ? _hostsSummary() : 'Share this host and pair devices',
     SettingsSection.feedback => switch (widget.feedback.reports.length) {
@@ -205,7 +206,6 @@ class _SettingsShellState extends State<SettingsShell> {
     SettingsSection.tools => glyphWrench,
     SettingsSection.mcp => glyphPlug,
     SettingsSection.skills => glyphBookOpen,
-    SettingsSection.trust => 'Trusted workspaces',
     SettingsSection.trust => glyphShieldCheck,
     SettingsSection.remote => glyphGlobe,
     SettingsSection.feedback => glyphMessageSquareText,
