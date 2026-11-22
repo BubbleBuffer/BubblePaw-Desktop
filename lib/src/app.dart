@@ -205,11 +205,7 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) => RepaintBoundary(
     key: _root,
     child: ListenableBuilder(
-      listenable: Listenable.merge([
-        controller,
-        feedback,
-        if (controller.trust != null) controller.trust!,
-      ]),
+      listenable: Listenable.merge([controller, feedback]),
       builder: (context, _) => Stack(
         children: [
           Positioned.fill(child: _screen(context)),

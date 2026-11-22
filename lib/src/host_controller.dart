@@ -425,6 +425,7 @@ class HostController extends ChangeNotifier {
   WorkspaceTrustController? get trust => _trust;
 
   void _dropTrust() {
+    _trust?.removeListener(_notify);
     _trust?.dispose();
     _trust = null;
   }
@@ -782,6 +783,7 @@ class HostController extends ChangeNotifier {
     _settings = started.settings;
     final trust = started.trust;
     _trust = trust == null ? null : WorkspaceTrustController(trust);
+    _trust?.addListener(_notify);
     _remote = _buildRemote(started.remote, started.settings);
     _backend = GuardedBackend(
       started.backend,
