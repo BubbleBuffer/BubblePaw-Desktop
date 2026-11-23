@@ -6,6 +6,7 @@ enum SettingsSection {
   tools('Tools'),
   mcp('MCP servers'),
   skills('Skills'),
+  trust('Workspace trust'),
   remote('Remote access'),
   feedback('Feedback'),
   about('About');

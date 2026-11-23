@@ -16,7 +16,7 @@ mod share;
 mod sharing_tests;
 
 /// The Core release this build embeds (the `tag` of `bubblepaw-sdk` in Cargo.toml).
-pub const CORE_VERSION: &str = "0.13.0";
+pub const CORE_VERSION: &str = "0.15.0";
 
 #[cfg(test)]
 mod tests {

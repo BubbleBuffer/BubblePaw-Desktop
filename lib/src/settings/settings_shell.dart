@@ -28,6 +28,7 @@ import 'remote_page.dart';
 import 'settings_section.dart';
 import 'settings_widgets.dart';
 import 'skills_page.dart';
+import 'trust_page.dart';
 import 'tools_page.dart';
 import 'toolsets.dart' show ToolsConfig;
 
@@ -162,7 +163,9 @@ class _SettingsShellState extends State<SettingsShell> {
 
   List<SettingsSection> get _sections => [
     for (final s in SettingsSection.values)
-      if (!(widget.phone && s == SettingsSection.feedback)) s,
+      if (!(widget.phone &&
+          (s == SettingsSection.feedback || s == SettingsSection.trust)))
+        s,
   ];
 
   /// "2 hosts, 1 online" for the phone's list.
@@ -186,6 +189,7 @@ class _SettingsShellState extends State<SettingsShell> {
       widget.phone ? _live[section] : 'Servers and sign-in',
     SettingsSection.skills =>
       widget.phone ? _live[section] : 'Discovered skills',
+    SettingsSection.trust => 'Trusted workspaces',
     SettingsSection.remote =>
       widget.phone ? _hostsSummary() : 'Share this host and pair devices',
     SettingsSection.feedback => switch (widget.feedback.reports.length) {
@@ -202,6 +206,7 @@ class _SettingsShellState extends State<SettingsShell> {
     SettingsSection.tools => glyphWrench,
     SettingsSection.mcp => glyphPlug,
     SettingsSection.skills => glyphBookOpen,
+    SettingsSection.trust => glyphShieldCheck,
     SettingsSection.remote => glyphGlobe,
     SettingsSection.feedback => glyphMessageSquareText,
     SettingsSection.about => glyphInfo,
@@ -244,6 +249,11 @@ class _SettingsShellState extends State<SettingsShell> {
       SettingsSection.skills => SkillsPage(
         key: const ValueKey('page-skills'),
         settings: host.phase == HostPhase.running ? host.settings : null,
+        onBack: onBack,
+      ),
+      SettingsSection.trust => TrustPage(
+        key: const ValueKey('page-trust'),
+        trust: host.phase == HostPhase.running ? host.trust : null,
         onBack: onBack,
       ),
       SettingsSection.remote => RemotePage(

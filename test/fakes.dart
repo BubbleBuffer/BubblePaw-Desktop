@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
+import 'package:bubblepaw_desktop/src/core/workspace_trust.dart';
 import 'package:bubblepaw_desktop/src/platform/download.dart';
 import 'package:bubblepaw_desktop/src/updates/update_controller.dart';
 
@@ -352,4 +353,55 @@ class FakeHostSettings implements HostSettings {
 
   @override
   Stream<McpServerStatus> mcpUpdates() => _statusUpdates.stream;
+}
+
+/// A host's workspace trust in memory: the trusted folders it holds, the
+/// calls it received, and a way to send it a notification.
+class FakeWorkspaceTrust implements WorkspaceTrustHost {
+  FakeWorkspaceTrust([List<String> trusted = const []])
+    : trusted = [...trusted];
+
+  final List<String> trusted;
+
+  /// `trust:<path>` and `revoke:<path>`, in order.
+  final calls = <String>[];
+  final _events = StreamController<Map<String, Object?>>.broadcast();
+
+  @override
+  Stream<Map<String, Object?>> get notifications => _events.stream;
+
+  @override
+  Future<List<TrustedWorkspace>> list() async => [
+    for (final path in trusted)
+      TrustedWorkspace(path: path, trustedAt: '2026-11-21T18:00:00Z'),
+  ];
+
+  @override
+  Future<void> trust(String path) async {
+    calls.add('trust:$path');
+    if (!trusted.contains(path)) trusted.add(path);
+  }
+
+  @override
+  Future<void> revoke(String path) async {
+    calls.add('revoke:$path');
+    trusted.remove(path);
+  }
+
+  /// The `host_state_changed` event a new session carries while [path]'s
+  /// project config is skipped.
+  void untrusted(String path) => _events.add({
+    'jsonrpc': '2.0',
+    'method': 'event',
+    'params': {
+      'type': 'host_state_changed',
+      'key': 'workspace_trust',
+      'durable': true,
+      'value': {
+        'status': 'untrusted',
+        'workspace': path,
+        'config_file': '$path/.bubblepaw/config.toml',
+      },
+    },
+  });
 }

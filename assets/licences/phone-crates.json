@@ -1008,7 +1008,7 @@
   },
   {
    "name": "libsqlite3-sys",
-   "version": "0.38.2",
+   "version": "0.39.1",
    "license": "MIT",
    "texts": [
     50
@@ -1383,7 +1383,7 @@
   },
   {
    "name": "rusqlite",
-   "version": "0.40.2",
+   "version": "0.41.1",
    "license": "MIT",
    "texts": [
     50

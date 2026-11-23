@@ -7,6 +7,7 @@ import 'package:agent_kit_core/agent_kit_core.dart';
 import 'package:agent_kit_core/fake.dart';
 import 'package:bubblepaw_desktop/src/config.dart';
 import 'package:bubblepaw_desktop/src/core/host_settings.dart';
+import 'package:bubblepaw_desktop/src/core/workspace_trust.dart';
 import 'package:bubblepaw_desktop/src/remote/host_links.dart';
 import 'package:bubblepaw_desktop/src/remote/remote_access.dart';
 import 'package:bubblepaw_desktop/src/host_controller.dart';
@@ -143,6 +144,7 @@ class Played {
     this.version,
     this.attached = false,
     this.settings,
+    this.trust,
     this.remote,
     this.hostLinks,
   });
@@ -159,6 +161,9 @@ class Played {
 
   /// The host's settings; null for none.
   final HostSettings? settings;
+
+  /// The host's workspace trust; null for none.
+  final WorkspaceTrustHost? trust;
 
   /// The sharing side of the host; null for none.
   final RemoteAccessFactory? remote;
@@ -190,6 +195,7 @@ class Played {
       version: version,
       attached: attached,
       settings: settings,
+      trust: trust,
       remote: remote,
     );
   }
