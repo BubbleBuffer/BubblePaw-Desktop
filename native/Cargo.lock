@@ -363,7 +363,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-core"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.15.0#e3a7ecd44c4c3b635cd570593d5231cd4a837f62"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.16.1#822adf4460201b20a0fb471dd02b66150bafde84"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -384,7 +384,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-mcp"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.15.0#e3a7ecd44c4c3b635cd570593d5231cd4a837f62"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.16.1#822adf4460201b20a0fb471dd02b66150bafde84"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -403,7 +403,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-process"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.15.0#e3a7ecd44c4c3b635cd570593d5231cd4a837f62"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.16.1#822adf4460201b20a0fb471dd02b66150bafde84"
 dependencies = [
  "libc",
  "tokio",
@@ -413,7 +413,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-remote"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.15.0#e3a7ecd44c4c3b635cd570593d5231cd4a837f62"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.16.1#822adf4460201b20a0fb471dd02b66150bafde84"
 dependencies = [
  "aes-gcm 0.11.1",
  "argon2",
@@ -437,7 +437,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-runner"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.15.0#e3a7ecd44c4c3b635cd570593d5231cd4a837f62"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.16.1#822adf4460201b20a0fb471dd02b66150bafde84"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -478,7 +478,7 @@ dependencies = [
 [[package]]
 name = "bubblepaw-sdk"
 version = "0.2.1"
-source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.15.0#e3a7ecd44c4c3b635cd570593d5231cd4a837f62"
+source = "git+https://github.com/BubbleBuffer/BubblePaw-Core?tag=v0.16.1#822adf4460201b20a0fb471dd02b66150bafde84"
 dependencies = [
  "anyhow",
  "bubblepaw-core",
