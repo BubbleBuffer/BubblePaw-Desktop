@@ -23,22 +23,22 @@ presses), text entries, scroll gestures and key presses (including back).
 The menu count includes taps that open an overlay or push a route, so menus
 already contribute to the total through taps. Waits and assertions cost zero.
 See the pinned package docs for the step and report formats.
-[bb_ui_testing documentation](https://github.com/BubbleBuffer/bb-ui/blob/950d1b9b6ba0287385132f28c62533c0773e6228/docs/testing.md)
+[bb_ui_testing documentation](https://github.com/BubbleBuffer/bb-ui/blob/0df290fb96cc8982da361c6434c118fe59644c22/docs/testing.md)
 
 ## Read the report and update budgets
 
-Download the `journey-report` artifact from the **journeys and widget coverage**
-job. `report.json` lists the observed counts, total, number of completed steps
-and one-based `failedStep` for each goal. `screenshots/` holds the PNGs named
-by report order, goal and step number. On a failed step, start with its PNG and
-the test failure in the job log. A budget regression appears in that log with
-the goal, count, recorded limit and overage. Local test runs write the same
-files under `build/journeys/`.
+Download the `journey-report` artifact from the Linux **format, analyze, test,
+goldens, native host** job. `report.json` lists the observed counts, total,
+number of completed steps and one-based `failedStep` for each goal.
+`screenshots/` holds the PNGs named by report order, goal and step number. On
+a failed step, start with its PNG and the test failure in the job log. A
+budget regression appears in that log with the goal, count, recorded limit
+and overage. Local test runs write the same files under `build/journeys/`.
 
 `test/journeys/budgets.json` caps each goal's total and individual counts. When
 the steps change deliberately, run the `ci` workflow for the branch with
 **Record fresh journey budgets for review** enabled. Download the
-`journey-budgets` artifact after the run's journey job passes, replace
+`journey-budgets` artifact after the Flutter test step passes, replace
 `test/journeys/budgets.json` with its `budgets.json`, and review the diff. Remove
 the old budget entry if you rename or delete a goal. Commit the approved
 change and let normal CI check the new caps. On a test machine, running the
@@ -46,17 +46,26 @@ whole journey file with `BB_UI_UPDATE_BUDGETS=1` writes the same measurements.
 
 ## Widget coverage
 
-CI scans `lib/` for `StatelessWidget` and `StatefulWidget` declarations and
-their subclasses, including private classes. An exact class name in a text
-file under `test/` counts as a reference. The check measures source references.
-The artifact includes `widget-coverage.md` for the table and
-`widget-coverage.json` for tooling.
+The Linux Flutter test step runs widget tests, journeys and goldens together
+and collects line hits in LCOV format. CI scans `lib/` for `StatelessWidget`
+and `StatefulWidget` declarations and their subclasses, including private
+classes. A widget is covered when the test run hits a line in its `build`
+body. For stateful widgets, the scan uses the matching `State` class and
+falls back to its class body when it cannot locate `build`.
 
-`coverage-allowlist.txt` records the widgets that had no matching reference
-when the check was introduced. Add a test for a new widget and remove a widget
-from the list when a test covers it or the widget is deleted. The check fails
-on an uncovered, unlisted widget and on stale entries.
+The `journey-report` artifact includes `lcov.info`, `widget-coverage.md` for
+the table and `widget-coverage.json` for tooling. Use LCOV from the same
+source revision so the coverage line numbers match the declarations.
+
+`coverage-allowlist.txt` lists widgets whose builds the test suite has yet to
+exercise. Add coverage for new widgets. Remove an entry when its widget gains
+coverage or is deleted. CI fails for uncovered, unlisted widgets and for
+stale entries.
+
+Run the same check on a Flutter test machine:
 
 ```sh
-dart run bb_ui_testing:coverage --lib lib --test test --private --allow coverage-allowlist.txt
+flutter test --coverage --coverage-path=build/journeys/lcov.info --exclude-tags native
+dart run bb_ui_testing:coverage --lib lib --private \
+  --lcov build/journeys/lcov.info --allow coverage-allowlist.txt
 ```

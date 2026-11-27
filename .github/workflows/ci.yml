@@ -55,16 +55,35 @@ jobs:
       - name: dart analyze
         if: always()
         run: dart analyze --fatal-infos
-      - name: flutter test
+      # The same LCOV run includes widget tests, journeys and Linux goldens.
+      - name: flutter test with coverage
+        id: widget-tests
         if: always()
-        run: flutter test --exclude-tags "golden || native || journey"
-      # Goldens are rendered on Linux with the bundled fonts. To accept new
-      # renders, run this workflow by hand (workflow_dispatch): the last step
-      # regenerates the flutter_rust_bridge code, formats the code, re-renders
-      # the goldens and uploads the result as fix.patch (`git apply fix.patch`).
-      - name: goldens
+        env:
+          BB_UI_UPDATE_BUDGETS: ${{ inputs.update_journey_budgets && '1' || '0' }}
+        run: flutter test --coverage --coverage-path=build/journeys/lcov.info --exclude-tags native
+      - name: widget coverage
+        if: always() && steps.widget-tests.outcome == 'success'
+        run: >-
+          dart run bb_ui_testing:coverage --lib lib --private
+          --lcov build/journeys/lcov.info --allow coverage-allowlist.txt
+          --json build/journeys/widget-coverage.json --md build/journeys/widget-coverage.md
+      - name: Save journey and coverage reports
         if: always()
-        run: flutter test --tags golden
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: journey-report
+          path: build/journeys/
+          retention-days: 3
+          if-no-files-found: error
+      - name: Save updated budgets
+        if: always() && steps.widget-tests.outcome == 'success' && inputs.update_journey_budgets
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: journey-budgets
+          path: test/journeys/budgets.json
+          retention-days: 3
+          if-no-files-found: error
       - name: Save golden failures
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -130,48 +149,6 @@ jobs:
           name: fix-patch
           path: fix.patch
           if-no-files-found: ignore
-
-  journeys:
-    name: journeys and widget coverage
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-        with:
-          channel: stable
-          flutter-version: 3.47.7
-      - name: Linux desktop development files
-        run: sudo apt-get install -y -qq pkg-config libgtk-3-dev libx11-dev libxi-dev
-      - run: flutter pub get
-      - name: widget coverage
-        run: >-
-          dart run bb_ui_testing:coverage --lib lib --test test --private
-          --allow coverage-allowlist.txt --json build/journeys/widget-coverage.json
-          --md build/journeys/widget-coverage.md
-      - name: user journeys
-        if: always()
-        env:
-          BB_UI_UPDATE_BUDGETS: ${{ inputs.update_journey_budgets && '1' || '0' }}
-        run: flutter test --reporter expanded test/journeys_test.dart
-      - name: Save journey and coverage reports
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: journey-report
-          path: build/journeys/
-          retention-days: 3
-          if-no-files-found: error
-      - name: Save updated budgets
-        if: success() && inputs.update_journey_budgets
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: journey-budgets
-          path: test/journeys/budgets.json
-          retention-days: 3
-          if-no-files-found: error
 
   licences:
     name: crate licences up to date
