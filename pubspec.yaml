@@ -53,6 +53,11 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  bb_ui_testing:
+    git:
+      url: https://github.com/BubbleBuffer/bb-ui
+      ref: 950d1b9b6ba0287385132f28c62533c0773e6228
+      path: packages/bb_ui_testing
   flutter_lints: ^6.0.0
 
 flutter:

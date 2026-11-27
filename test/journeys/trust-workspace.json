@@ -1,0 +1,14 @@
+{
+  "goal": "Trust a workspace from its notice and revoke it in Settings",
+  "steps": [
+    {"expect": {"find": {"text": "Trust garden?"}}},
+    {"tap": {"key": "trust-notice-trust"}},
+    {"expect": {"find": {"key": "trust-notice"}, "present": false}},
+    {"tap": {"key": "rail-settings"}},
+    {"tap": {"key": "settings-nav-trust"}},
+    {"expect": {"find": {"key": "trust-row-/home/user/garden"}}},
+    {"tap": {"key": "trust-revoke-/home/user/garden"}},
+    {"expect": {"find": {"key": "trust-row-/home/user/garden"}, "present": false}},
+    {"expect": {"find": {"key": "trust-empty"}}}
+  ]
+}

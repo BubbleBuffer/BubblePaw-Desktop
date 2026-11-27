@@ -1,0 +1,10 @@
+{
+  "goal": "Find an old chat with search",
+  "steps": [
+    {"type": {"find": {"key": "chat-search-field"}, "text": "plan"}},
+    {"wait": 350},
+    {"expect": {"find": {"key": "search-row-c3"}}},
+    {"tap": {"key": "search-row-c3"}},
+    {"expect": {"find": {"text": "Plan the settings page"}}}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "goal": "Add a provider key",
+  "steps": [
+    {"tap": {"key": "rail-settings"}},
+    {"tap": {"key": "settings-nav-models"}},
+    {"tap": {"key": "key-button-openrouter"}},
+    {"type": {"find": {"key": "key-field"}, "text": "MARKER-NOT-A-KEY"}},
+    {"tap": {"key": "key-save"}},
+    {"expect": {"find": {"key": "key-field"}, "present": false}},
+    {"expect": {"find": {"text": "Key set"}}},
+    {"expect": {"find": {"text": "Edit key"}}}
+  ]
+}
