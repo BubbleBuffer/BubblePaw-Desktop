@@ -1,0 +1,13 @@
+{
+  "goal": "Add an MCP server",
+  "steps": [
+    {"tap": {"key": "rail-settings"}},
+    {"tap": {"key": "settings-nav-mcp"}},
+    {"tap": {"key": "add-server"}},
+    {"type": {"find": {"key": "srv-name"}, "text": "journey-files"}},
+    {"type": {"find": {"key": "srv-command"}, "text": "journey-mcp-fake"}},
+    {"tap": {"key": "srv-save"}},
+    {"expect": {"find": {"key": "srv-save"}, "present": false}},
+    {"expect": {"find": {"key": "server-journey-files"}}}
+  ]
+}

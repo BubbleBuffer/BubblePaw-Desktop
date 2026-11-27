@@ -11,3 +11,4 @@ How the app works now. Plans and decisions live in the notes vault, not here.
 | [phone-app.md](phone-app.md) | The Android app: a remote-only client (what it has and leaves out), the push-based navigation, phone Settings, adding a host by QR code or pairing link, the native crate without the embedded host, and how CI builds the APK |
 | [licences.md](licences.md) | The Licences page under About: where the Rust crate licences come from (cargo-about, the committed `assets/licences` files, the CI staleness check), the accepted licences, the phone list and how to update them |
 | [releases.md](releases.md) | Stable and nightly release process, artifacts and installation |
+| [testing.md](testing.md) | User journeys, action budgets, CI screenshots and widget coverage |

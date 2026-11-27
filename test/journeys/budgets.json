@@ -1,0 +1,68 @@
+{
+  "goals": {
+    "Add an MCP server": {
+      "taps": 4,
+      "textEntries": 2,
+      "scrolls": 0,
+      "keys": 0,
+      "menus": 1,
+      "total": 6
+    },
+    "Add a provider key": {
+      "taps": 4,
+      "textEntries": 1,
+      "scrolls": 0,
+      "keys": 0,
+      "menus": 1,
+      "total": 5
+    },
+    "Find an old chat with search": {
+      "taps": 1,
+      "textEntries": 1,
+      "scrolls": 0,
+      "keys": 0,
+      "menus": 0,
+      "total": 2
+    },
+    "Send the first message in a new chat": {
+      "taps": 2,
+      "textEntries": 1,
+      "scrolls": 0,
+      "keys": 0,
+      "menus": 0,
+      "total": 3
+    },
+    "Add a host on the phone by scanning its pairing link": {
+      "taps": 5,
+      "textEntries": 0,
+      "scrolls": 0,
+      "keys": 0,
+      "menus": 1,
+      "total": 5
+    },
+    "Open diff review for a changed file": {
+      "taps": 1,
+      "textEntries": 0,
+      "scrolls": 0,
+      "keys": 0,
+      "menus": 0,
+      "total": 1
+    },
+    "Switch the chat model": {
+      "taps": 2,
+      "textEntries": 0,
+      "scrolls": 0,
+      "keys": 0,
+      "menus": 1,
+      "total": 2
+    },
+    "Trust a workspace from its notice and revoke it in Settings": {
+      "taps": 4,
+      "textEntries": 0,
+      "scrolls": 0,
+      "keys": 0,
+      "menus": 0,
+      "total": 4
+    }
+  }
+}

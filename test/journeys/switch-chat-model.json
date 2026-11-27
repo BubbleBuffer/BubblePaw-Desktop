@@ -1,0 +1,8 @@
+{
+  "goal": "Switch the chat model",
+  "steps": [
+    {"tap": {"text": "Model"}},
+    {"tap": {"text": "demo/scripted-fast"}},
+    {"expect": {"find": {"text": "demo/scripted-fast"}}}
+  ]
+}

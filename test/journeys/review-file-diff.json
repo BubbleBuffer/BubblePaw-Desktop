@@ -1,0 +1,9 @@
+{
+  "goal": "Open diff review for a changed file",
+  "steps": [
+    {"tap": {"text": "Review diff"}},
+    {"expect": {"find": {"key": "diff-path"}}},
+    {"expect": {"find": {"text": "crates/harbor-runtime/src/usage/mod.rs"}}},
+    {"expect": {"find": {"key": "diff-close"}}}
+  ]
+}

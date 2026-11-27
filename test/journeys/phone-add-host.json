@@ -1,0 +1,14 @@
+{
+  "goal": "Add a host on the phone by scanning its pairing link",
+  "steps": [
+    {"tap": {"key": "phone-settings"}},
+    {"tap": {"key": "settings-nav-remote"}},
+    {"tap": {"key": "hosts-add"}},
+    {"tap": {"key": "add-host-scan"}},
+    {"expect": {"find": {"text": "482 913"}}},
+    {"wait": 2100},
+    {"expect": {"find": {"key": "add-host-added"}}},
+    {"tap": {"key": "add-host-done"}},
+    {"expect": {"find": {"key": "host-HOST-9Z8Y-7X6W-5V4U"}}}
+  ]
+}
